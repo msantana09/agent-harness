@@ -51,7 +51,8 @@ surface is the one the user has worked on this session. If any is unclear or dif
 
 Pick the orchestration tier by *shape*, not headcount: a few independent tasks → inline `Agent`
 fan-out; fan-out-then-verify / loops / multi-phase / migrations / audits → `Workflow`; state that
-must survive compaction → the durable-file fallback. `Workflow` is main-loop-only.
+must survive compaction → files the agents read and update, since context does not survive it.
+`Workflow` is main-loop-only.
 
 Standing authorization: launch a Workflow directly when the shape fits; announce a one-line scale
 note; pick per-stage effort per core-rules EXECUTE DIRECTLY.
@@ -65,11 +66,11 @@ Locating code across 10+ files goes to Explore; reading them in full goes to gen
 Assume commits landed while you were working: run `~/.claude/scripts/git_state.sh` before
 summarizing or editing. A status answer ("where are we", "is it up to date", a workstream or
 PR-stack report) is a summary: after `git fetch origin <integration branch>`, open it with
-`git_state.sh <worktree> origin/<integration branch>` for each worktree it names
-(`behind_base=N`; a branch with no worktree: `git rev-list --count <branch>..origin/<integration
-branch>`), and check each item it lists as open at its binding surface first. Run `git_state.sh` on the main checkout before
-creating a worktree and before handing the user a step that needs local files: a note or summary
-line saying the main tree is someone else's or detached is a snapshot, not a rule. After a
+`git_state.sh <worktree> origin/<integration branch>` for each worktree it names (`behind_base=N`; a
+branch with no worktree: `git rev-list --count <branch>..origin/<integration branch>`), and check
+each item it lists as open at its binding surface first. Run `git_state.sh` on the main checkout
+before creating a worktree and before handing the user a step that needs local files: a note or
+summary line saying the main tree is someone else's or detached is a snapshot, not a rule. After a
 compaction, the first action re-checks the summary's environment lines (current branch, which
 checkout belongs to whom, what is dirty, what is deployed) with `git_state.sh`.
 

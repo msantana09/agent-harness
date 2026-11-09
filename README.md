@@ -42,12 +42,13 @@ git clone https://github.com/msantana09/agent-harness
 cp -r agent-harness/skills/self-optimize agent-harness/skills/transcripts ~/.claude/skills/
 ```
 
-A plugin cannot install rules. Link them, with the scripts they name, from the clone; Claude Code
-loads every file in `~/.claude/rules/` at the start of each session:
+A plugin cannot install rules. Link them from the clone, with the skills and scripts they name by
+path; Claude Code loads every file in `~/.claude/rules/` at the start of each session:
 
 ```bash
-mkdir -p ~/.claude/rules ~/.claude/scripts
+mkdir -p ~/.claude/rules ~/.claude/skills ~/.claude/scripts
 ln -s "$PWD"/agent-harness/rules/*.md ~/.claude/rules/
+ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
 ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
 ```
 
