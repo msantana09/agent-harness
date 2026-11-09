@@ -91,6 +91,13 @@ LITERAL_OPERATOR = ""
 REDIRECTION = re.compile(r"\d*(?:&>>?|>>?|<>|<|>&|<&|>\|)")
 # A heredoc operator and its delimiter word, quoted or not (`<<<`, a here-string, is not one).
 HEREDOC = re.compile(r"<<(?!<)-?\s*(['\"]?)([\w.-]+)\1")
+# An ANSI-C quoted string, `$'...'`, and the escapes the shell decodes inside one.
+ANSI_C = re.compile(r"\$'((?:[^'\\]|\\.)*)'", re.DOTALL)
+ANSI_C_ESCAPE = re.compile(
+    r"\\(x[0-9A-Fa-f]{1,2}|u[0-9A-Fa-f]{1,4}|U[0-9A-Fa-f]{1,8}|[0-7]{1,3}|c.|.)", re.DOTALL
+)
+ANSI_C_LETTERS = {"a": "\a", "b": "\b", "e": "\x1b", "E": "\x1b", "f": "\f", "n": "\n"}
+ANSI_C_LETTERS |= {"r": "\r", "t": "\t", "v": "\v", "\\": "\\", "'": "'", '"': '"', "?": "?"}
 # The fallback for a command the parser cannot read (a substitution, unbalanced quotes): a cd,
 # pushd, popd or chdir after any command separator or then/do/else, behind assignments, builtin
 # or command, quoted or not.
@@ -263,6 +270,22 @@ def result_text(content: Any) -> str:
     return ""
 
 
+def ansi_c_text(body: str) -> str:
+    """The text an ANSI-C quoted string `$'body'` stands for, its escapes decoded."""
+
+    def decode(escape: re.Match[str]) -> str:
+        code = escape.group(1)
+        if code[0] in "xuU":
+            return chr(min(int(code[1:], 16), 0x10FFFF))
+        if code[0] in "01234567":
+            return chr(int(code, 8))
+        if code[0] == "c" and len(code) == 2:
+            return chr(ord(code[1]) & 0x1F)
+        return ANSI_C_LETTERS.get(code, "\\" + code)  # the shell keeps an unknown escape as written
+
+    return ANSI_C_ESCAPE.sub(decode, body)
+
+
 def runnable_text(command: str) -> tuple[str, bool]:
     """(`command` without its comments and heredoc bodies, whether it runs a substitution).
 
@@ -272,7 +295,8 @@ def runnable_text(command: str) -> tuple[str, bool]:
     `$(` or a backtick outside single quotes, or `<(` or `>(` outside any quotes, none of them
     escaped: it runs commands its words do not show. A `;`, `&`, `|`, parenthesis or newline inside
     quotes or escaped is data, not an operator: it becomes LITERAL_OPERATOR, so no word of the
-    split reads as a separator.
+    split reads as a separator. An ANSI-C quoted string outside quotes (`$'c\\x64'`) becomes the
+    single-quoted text it decodes to, which shlex cannot read in its `$'...'` form.
     """
     out: list[str] = []
     quote = None
@@ -285,6 +309,13 @@ def runnable_text(command: str) -> tuple[str, bool]:
         heredoc = None
         if quote is None and pair == "<<" and command[i - 1 : i] != "<":
             heredoc = HEREDOC.match(command, i)
+        ansi_c = ANSI_C.match(command, i) if quote is None and pair == "$'" else None
+        if ansi_c:
+            text = ansi_c_text(ansi_c.group(1))
+            text = "".join(LITERAL_OPERATOR if c in OPERATOR_CHARS else c for c in text)
+            out.append("'" + text.replace("'", "'\\''") + "'")
+            i = ansi_c.end()
+            continue
         if char == "\\" and quote != "'":
             escaped = command[i + 1 : i + 2]
             if quote is None and escaped == "\n":

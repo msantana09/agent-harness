@@ -200,6 +200,11 @@ def test_each_row_carries_its_cwd_and_a_call_after_a_sibling_cd_is_uncertain(
         ("G='Read(a/**)'; (cd sub && ls)", True),
         ("ls ~/Library/Application\\ Support/x; cd /p", True),
         ('s=\'for f in $(cd "$d" && ls); do :; done\'; echo "$s"', False),
+        ("$'cd' /tmp", True),
+        ("$'c\\x64' /tmp", True),
+        ("builtin $'cd' /tmp", True),
+        ("c$'d' /tmp", True),
+        ("printf $'a;b\\n' cd; echo $'cd'", False),
     ],
 )
 def test_a_command_moves_the_directory_only_when_the_shell_runs_a_cd(
