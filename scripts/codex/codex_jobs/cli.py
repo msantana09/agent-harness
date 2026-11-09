@@ -591,7 +591,7 @@ def _task_succeeded(job_dir: Path) -> bool | None:
 def _task_failure(job: dict[str, Any], job_dir: Path) -> str | None:
     """Why a `succeeded` job still failed its caller.
 
-    Its result says Codex did not complete the task.
+    Its result says Codex did not complete the task, or that a review's head moved while it ran.
 
     A review names the reason its attestation records, when it records one.
     """

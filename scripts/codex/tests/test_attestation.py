@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -203,8 +204,11 @@ def test_a_native_review_narrower_than_the_branch_diff_is_never_ok(repo, target,
     assert status.startswith("failure: not attestable") and reason in status
 
 
-@pytest.mark.parametrize("when", ["launch", "completion"])
-def test_a_native_review_with_uncommitted_tracked_changes_is_never_ok(repo, when):
+@pytest.mark.parametrize(
+    "when, prefix",
+    [("launch", "failure: not attestable"), ("completion", attestation.TREE_CHANGED)],
+)
+def test_a_native_review_with_uncommitted_tracked_changes_is_never_ok(repo, when, prefix):
     # Codex's base review diffs the working tree; with change.txt deleted there it sees no change
     # while the committed diff has one.
     if when == "launch":
@@ -213,7 +217,29 @@ def test_a_native_review_with_uncommitted_tracked_changes_is_never_ok(repo, when
     if when == "completion":
         (repo / "change.txt").unlink()
     status = attestation.complete(snap, job(repo), failure=None)["exit_status"]
-    assert status.startswith("failure: not attestable") and "change.txt" in status
+    assert status.startswith(prefix) and "change.txt" in status
+
+
+def test_a_repository_unreadable_at_completion_is_not_reported_as_a_moved_head(repo, prompt):
+    snap = attestation.snapshot(repo, prompt)
+    shutil.rmtree(repo)
+    status = attestation.complete(snap, job(repo), failure=None)["exit_status"]
+    assert status.startswith(attestation.UNREADABLE)
+
+
+@pytest.mark.parametrize(
+    "status, is_stale",
+    [
+        (attestation.HEAD_MOVED, True),
+        (f"{attestation.TREE_CHANGED}:  D change.txt", True),
+        (f"{attestation.UNREADABLE}: cannot run git", True),
+        ("ok", False),
+        ("failure: not attestable: not a git repository", False),
+        ("failure: review blocked", False),
+    ],
+)
+def test_only_a_state_changed_or_unreadable_since_launch_makes_a_review_stale(status, is_stale):
+    assert attestation.stale(status) is is_stale
 
 
 @pytest.mark.parametrize("branch", ["dev", "origin/dev"])

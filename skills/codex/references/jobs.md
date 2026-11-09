@@ -38,8 +38,13 @@ holds:
 | `attestation.json` | Repo root, branch, merge base, head and diff hashes, `job_id`, model, effort; `exit_status` is `ok` only when head and diff at completion equal those at launch; `uncommitted_tracked` is the tracked files' `git status --porcelain` at launch. A push gate reads it from `<repo>/.artifacts/codex/**` |
 | `result.json` | As in `consult` (`../SKILL.md` § 4. Wait for the Result); `review_approved` is `true` when the verdict is `approve`, `false` when it needs attention, null unless the review completed |
 
-A review the model answers `blocked` or `failed`, one missing the headings, or one whose findings
-the validator rejects prints `FAILURE:` (exit 1) and keeps its files. A review outside a git repo,
+A review the model answers `blocked` or `failed`, one missing the headings, one whose findings
+the validator rejects, or one whose repository changed while it ran prints `FAILURE:` (exit 1)
+and keeps its files; its `result.json` says `task_succeeded: false`. A changed repository is a
+head or diff that moved (`head moved during review`: a commit, or a fetch that moved the base), a
+native review's tracked files edited mid-run (`tracked files changed during review`), or a
+repository that could no longer be read when the review ended; relaunch once the repository is
+settled. A review outside a git repo,
 in one with no commit yet, or in one without `origin/HEAD`, runs and is never attested `ok`
 (`git remote set-head origin --auto` sets the base). Read `review.md` for the full review and
 `findings.md` for the list.
@@ -51,8 +56,9 @@ Only a `base:<branch>` review whose merge base with HEAD is the repo's default-b
 (`base:origin/dev` in a repo whose `origin/HEAD` is dev) is attested `ok`; `uncommitted`, `commit:`
 and any other base cover less than the branch's diff, so the attestation says `not attestable` and
 a push gate rejects it. Codex's reviewer diffs the working tree, so a `base:` review is also
-`not attestable` when tracked files have staged or unstaged changes at launch or at completion:
-commit or discard them first. `--target` is required with `--native` and refused without it; the
+`not attestable` when tracked files have staged or unstaged changes at launch (commit or discard
+them first), and fails with `tracked files changed during review` when they change before it
+ends. `--target` is required with `--native` and refused without it; the
 MCP `codex_review` tool takes `native` and `target`.
 
 ## Writing Jobs

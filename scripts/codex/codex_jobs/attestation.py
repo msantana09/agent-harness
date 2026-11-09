@@ -25,6 +25,8 @@ from typing import Any
 SNAPSHOT_FILE = "attestation-snapshot.json"
 ATTESTATION_FILE = "attestation.json"
 HEAD_MOVED = "failure: head moved during review"
+TREE_CHANGED = "failure: tracked files changed during review"
+UNREADABLE = "failure: the repository could not be read at completion"
 
 # The diff flags of the hash contract above; a gate that recomputes the hash uses the same ones.
 DIFF_FLAGS = ("--no-color", "--no-ext-diff")
@@ -191,11 +193,12 @@ def complete(snap: Snapshot | None, job: dict[str, Any], failure: str | None) ->
     """The attestation for a job that has reached a terminal state.
 
     `failure` is why the review did not complete (None when it did). The git state is recomputed
-    here; a review whose head or diff differs from the snapshot is `HEAD_MOVED`, and so is one
-    whose state can no longer be read. A native review whose tracked files now have uncommitted
-    changes is not attestable. With no snapshot the git fields are null and the status is
-    a failure, and so is the status of a snapshot taken outside a repository, before its first
-    commit, or without a base.
+    here; a review whose head or diff differs from the snapshot is `HEAD_MOVED`, a native review
+    whose tracked files have uncommitted changes now but not at launch is `TREE_CHANGED`, and one
+    whose state can no longer be read is `UNREADABLE`. With no snapshot the git fields are null
+    and the status is a failure, and so is the status of a snapshot taken outside a repository,
+    before its first commit, without a base, or of a native review with uncommitted changes at
+    launch.
     """
     if failure is not None:
         exit_status = f"failure: {failure}"
@@ -209,11 +212,13 @@ def complete(snap: Snapshot | None, job: dict[str, Any], failure: str | None) ->
             if (now["head_sha"], now["diff_sha256"]) != (snap.head_sha, snap.diff_sha256):
                 exit_status = HEAD_MOVED
             elif snap.review_target is not None and now["uncommitted_tracked"]:
-                exit_status = f"failure: not attestable: {_uncommitted(now['uncommitted_tracked'])}"
+                exit_status = (
+                    f"{TREE_CHANGED}: {'; '.join(now['uncommitted_tracked'].splitlines())}"
+                )
             else:
                 exit_status = "ok"
-        except AttestationError:
-            exit_status = HEAD_MOVED
+        except AttestationError as exc:
+            exit_status = f"{UNREADABLE}: {exc}"
     git_fields = asdict(snap) if snap is not None else dict.fromkeys(Snapshot.__dataclass_fields__)
     return {
         **git_fields,
@@ -226,6 +231,12 @@ def complete(snap: Snapshot | None, job: dict[str, Any], failure: str | None) ->
         "completed_at": datetime.now(UTC).isoformat(),
         "exit_status": exit_status,
     }
+
+
+def stale(exit_status: str) -> bool:
+    """Whether a completed review read a state the repository no longer has, or one that can no
+    longer be checked: its findings do not describe the branch as it is now."""
+    return exit_status == HEAD_MOVED or exit_status.startswith((TREE_CHANGED, UNREADABLE))
 
 
 def write(job_dir: Path, job: dict[str, Any], failure: str | None) -> dict[str, Any]:
