@@ -81,8 +81,8 @@ ended.
 ## 4. Check the last changes first
 
 Read `~/.claude/self-optimize/ledger.md`. Re-count every entry marked `applied` whose newest
-Re-count line is missing, `did not work` or `too early`, on the same machine and transcript
-folders as its baseline and per session with activity. A correction measure carries the last
+Re-count line is missing, `on track`, `did not work` or `too early`, on the same machine and
+transcript folders as its baseline and per session with activity. A correction measure carries the last
 count forward and adds only the days since, from this run's step 2 output; a hook measure is
 read again from the scan. Each Re-count line replaces the numbers on the ones before it. The
 line, the verdicts and the statuses are in `references/ledger.md`.
@@ -139,7 +139,9 @@ and the review.
 
 On their yes, apply the changes as that file describes, the way the user's own instructions say
 changes to each file are made, and add one ledger entry for the proposal. On a no, add the entry
-with `Status: declined <date>` so later runs do not propose it again.
+with `Status: declined <date>` so later runs do not propose it again. When they ask for another
+attempt, go back to step 6 with what the eval showed; the ledger entry is written once, for the
+attempt they answer.
 
 ## What to tell the user at the end
 

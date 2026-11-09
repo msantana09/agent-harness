@@ -15,7 +15,7 @@ runs count the same corrections again to check whether it worked.
 flowchart TD
     scan["Scan your transcripts<br/>(free)"]
     flag["Flag the messages that correct<br/>the agent (small model)"]
-    recount["Re-count earlier changes:<br/>worked, did not work, too early"]
+    recount["Re-count earlier changes:<br/>worked, on track, did not work, too early"]
     pick["Pick the costliest pattern,<br/>with your quotes as evidence"]
     diagnose["Find the instruction<br/>that governs it"]
     test["Score the current and changed text<br/>on cases from other sessions"]

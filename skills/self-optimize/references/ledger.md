@@ -38,6 +38,16 @@ One entry per proposal, whether or not it was applied:
 When a change was skipped at apply, the Status line says which and why:
 `applied <date>, except <path>: <reason>`.
 
+When the user asks for another attempt instead of answering yes or no, the entry is written once,
+for the attempt they finally answered: its Files, Change and Eval lines describe that attempt, and
+each dropped attempt gets one line after Eval, so the next run does not try it again:
+
+```markdown
+- Earlier attempt: <files>, <current score> vs <edited score>; <why it was dropped>
+```
+
+The entry keeps a single Status line.
+
 ## States
 
 The Status line holds what the user decided. A Re-count line holds what the measure showed.
@@ -52,7 +62,8 @@ Set `reverted` when the user says they undid the changes.
 
 | Verdict | When |
 |---|---|
-| `worked` | The rate is at most half the baseline, over at least as many sessions. Final |
+| `worked` | The rate is at most half the baseline even with one more correction counted, over at least as many sessions, and the previous Re-count line reads `on track`. Final |
+| `on track` | The rate is at most half the baseline, over at least as many sessions, but `worked` does not hold yet |
 | `did not work` | The rate is above half the baseline, over at least as many sessions |
 | `too early` | Fewer sessions than the baseline window |
 | `no baseline` | No baseline was recorded, or it was under 5, too few to show a drop. Final |
@@ -60,9 +71,9 @@ Set `reverted` when the user says they undid the changes.
 
 ## Re-counting
 
-Re-count every `applied` entry whose newest Re-count line is missing, `did not work` or
-`too early`. Count on the machine and folders of its baseline; an entry from another machine waits
-for a run there.
+Re-count every `applied` entry whose newest Re-count line is missing, `on track`, `did not work`
+or `too early`. Count on the machine and folders of its baseline; an entry from another machine
+waits for a run there.
 
 Each Re-count line is cumulative from the day after the apply date, so the newest line is the
 whole count and earlier lines are never summed with it:
