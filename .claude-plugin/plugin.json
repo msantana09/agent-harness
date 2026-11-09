@@ -1,0 +1,7 @@
+{
+  "name": "harness-skills",
+  "description": "Rules, skills and hooks for building software with coding agents.",
+  "author": { "name": "Miguel Santana" },
+  "repository": "https://github.com/msantana09/harness-skills",
+  "license": "MIT"
+}
