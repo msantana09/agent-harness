@@ -28,7 +28,9 @@ Step 1 names the repo. Per-repo notes live at `~/.claude/ship-notes/<owner>/<rep
 from the `nameWithOwner` Step 1 prints. A repo with a notes file has steps the generic loop lacks
 (its tests, its pre-hand-off checks, its post-merge steps); when that file exists, read it in
 full at Step 1 and apply it wherever a step says **repo notes**. A note overrides the generic
-line it names.
+line it names. Step 1 says which in the turn, `Repo notes: <path>` or
+`Repo notes: none (<path> not found)`, and Step 5's status block repeats that line, so a run
+without notes is never silent.
 
 A repo without one runs the generic loop as written: its tests come from its `CLAUDE.md`, and it
 has no pre-hand-off checks beyond Step 5's.
