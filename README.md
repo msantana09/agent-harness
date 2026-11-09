@@ -11,9 +11,13 @@ instructions improve from what happens in real sessions.
 | [self-optimize](docs/self-optimize.md) | Finds where you corrected the agent in your own Claude Code sessions, then proposes and tests the instruction change that would have prevented it. |
 | [transcripts](skills/transcripts/SKILL.md) | Lets the agent read past Claude Code sessions as plain text: search what was typed, list tool calls and results, and show the context around one message. |
 
-`scripts/` holds the shared scripts skills call: `scripts/codex/codex-jobs` runs Codex review,
-consult and run jobs as a CLI or an MCP server, and `scripts/triage_run.sh` runs a long command
-and prints a short digest of what failed.
+`rules/` holds the instructions every session follows: when to act and when to ask, how to verify
+and review, and how to report back.
+
+`scripts/` holds the shared scripts skills and rules call: `scripts/codex/codex-jobs` runs Codex
+review, consult and run jobs as a CLI or an MCP server, `scripts/triage_run.sh` runs a long
+command and prints a short digest of what failed, and `scripts/git_state.sh` prints a repo's
+branch, drift and dirty count on one line.
 
 More will be added as I clean them up.
 
@@ -36,6 +40,15 @@ folder. self-optimize reads sessions through transcripts, so it needs both:
 ```bash
 git clone https://github.com/msantana09/agent-harness
 cp -r agent-harness/skills/self-optimize agent-harness/skills/transcripts ~/.claude/skills/
+```
+
+A plugin cannot install rules. Link them, with the scripts they name, from the clone; Claude Code
+loads every file in `~/.claude/rules/` at the start of each session:
+
+```bash
+mkdir -p ~/.claude/rules ~/.claude/scripts
+ln -s "$PWD"/agent-harness/rules/*.md ~/.claude/rules/
+ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
 ```
 
 ## Requirements
