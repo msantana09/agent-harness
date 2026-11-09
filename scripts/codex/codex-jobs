@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Launcher for the codex_jobs CLI and MCP server: runs `python3 -m codex_jobs` with this script's
+# own folder on PYTHONPATH, so a symlink to it works from any directory. python3 is the first one
+# on PATH and must be 3.14 or newer.
+set -euo pipefail
+
+script="${BASH_SOURCE[0]}"
+while [[ -L "$script" ]]; do
+    dir="$(cd -P "$(dirname "$script")" && pwd)"
+    script="$(readlink "$script")"
+    [[ "$script" = /* ]] || script="$dir/$script"
+done
+codex_dir="$(cd -P "$(dirname "$script")" && pwd)"
+
+PYTHONPATH="$codex_dir" exec python3 -m codex_jobs "$@"
