@@ -56,8 +56,9 @@ Only a `base:<branch>` review whose merge base with HEAD is the repo's default-b
 (`base:origin/dev` in a repo whose `origin/HEAD` is dev) is attested `ok`; `uncommitted`, `commit:`
 and any other base cover less than the branch's diff, so the attestation says `not attestable` and
 a push gate rejects it. Codex's reviewer diffs the working tree, so a `base:` review is also
-`not attestable` when tracked files have staged or unstaged changes at launch or at completion:
-commit or discard them first. `--target` is required with `--native` and refused without it; the
+`not attestable` when tracked files have staged or unstaged changes at launch (commit or discard
+them first), and fails with `tracked files changed during review` when they change before it
+ends. `--target` is required with `--native` and refused without it; the
 MCP `codex_review` tool takes `native` and `target`.
 
 ## Writing Jobs
