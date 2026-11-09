@@ -24,7 +24,7 @@ SECTION_CITATION = re.compile(r"([\w./<>-]+\.md)`? § ([^\n`*]+)")
 SKILL_PATH = re.compile(r"(?:\$\{CLAUDE_SKILL_DIR\}/)?\b((?:scripts|references)/[\w./-]*\w\.\w+)")
 REPO_PATH = re.compile(r"(?<![\w./-])((?:docs|hooks|rules|scripts|skills)/[\w./-]*\w\.\w+)")
 PYTHON_COMMAND = re.compile(r"\b(python[\d.]*)\s+(?:-m\s+\w+|\S+\.py)\b")
-SHEBANG = "#!/usr/bin/env python3.14"
+SHEBANG = "#!/usr/bin/env python3"
 DESCRIPTION_LIMIT = 1024
 
 
@@ -141,7 +141,7 @@ def test_both_plugin_files_parse_and_name_the_repo() -> None:
     assert [entry["name"] for entry in marketplace["plugins"]] == [repo]
 
 
-def test_shebangs_and_command_lines_name_python3_14() -> None:
+def test_shebangs_and_command_lines_name_python3() -> None:
     wrong = []
     for path in files(".py"):
         first = path.read_text().split("\n", 1)[0]
@@ -150,6 +150,6 @@ def test_shebangs_and_command_lines_name_python3_14() -> None:
     for path in [*files(".py"), *files(".md")]:
         text = path.read_text()
         for found in PYTHON_COMMAND.finditer(text):
-            if found.group(1) != "python3.14":
+            if found.group(1) != "python3":
                 wrong.append(f"{where(path, text, found.start())}: {found.group(0)}")
     assert wrong == []

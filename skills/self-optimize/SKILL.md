@@ -26,7 +26,7 @@ The scripts are in this skill's `scripts/` folder. Reports, eval suites and the 
 ## 1. Scan (free)
 
 ```bash
-python3.14 ${CLAUDE_SKILL_DIR}/scripts/scan.py --since <start date> --until <yesterday>
+python3 ${CLAUDE_SKILL_DIR}/scripts/scan.py --since <start date> --until <yesterday>
 ```
 
 Every run stops at yesterday, since today's sessions are still going. Start the day after the
@@ -53,7 +53,7 @@ outputs apart: rates differ by machine, so a later count compares a machine only
 ## 2. Find the corrections
 
 ```bash
-python3.14 ${CLAUDE_SKILL_DIR}/scripts/corrections.py --since <same date> --until <yesterday>
+python3 ${CLAUDE_SKILL_DIR}/scripts/corrections.py --since <same date> --until <yesterday>
 ```
 
 A small model reads the user's typed messages and flags the ones that correct the agent or state

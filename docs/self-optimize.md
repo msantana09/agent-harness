@@ -61,7 +61,8 @@ git clone https://github.com/msantana09/agent-harness
 cp -r agent-harness/skills/self-optimize ~/.claude/skills/
 ```
 
-Needs Claude Code and Python 3.14, called as `python3.14`. No other dependencies.
+Needs Claude Code and Python 3.12 or newer, run as `python3`; tested on 3.14. No other
+dependencies.
 
 Reports, test cases and the ledger stay on your machine in `~/.claude/self-optimize/`, since they
 quote your messages.

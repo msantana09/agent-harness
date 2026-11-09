@@ -1,11 +1,11 @@
-#!/usr/bin/env python3.14
+#!/usr/bin/env python3
 """Find the messages where you corrected the assistant or stated a lasting preference.
 
 Reads the same transcripts as scan.py, keeps the messages a person typed (transcripts.py's rules
 decide what counts), and asks Claude, through `claude -p`, which of them are corrections or
 preferences.
 
-    python3.14 corrections.py [--days N | --since YYYY-MM-DD] [--until YYYY-MM-DD]
+    python3 corrections.py [--days N | --since YYYY-MM-DD] [--until YYYY-MM-DD]
                               [--root DIR ...] [--estimate] [--json PATH]
 
 Inputs: the main session transcripts under each `--root` (default $CLAUDE_CONFIG_DIR/projects,
