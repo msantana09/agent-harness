@@ -108,7 +108,11 @@ def test_python_imports_only_the_standard_library_or_the_repo() -> None:
                 continue
             for name in names:
                 top = name.split(".")[0]
-                sibling = (path.parent / f"{top}.py").is_file()
+                # A script imports the scripts in its own folder, or another skill's that it puts
+                # on its path.
+                sibling = (path.parent / f"{top}.py").is_file() or any(
+                    SKILLS.glob(f"*/scripts/{top}.py")
+                )
                 runner = top == "pytest" and "tests" in path.relative_to(ROOT).parts
                 if top not in sys.stdlib_module_names and not sibling and not runner:
                     outside.append(f"{path.relative_to(ROOT)}:{node.lineno}: {name}")

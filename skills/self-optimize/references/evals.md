@@ -70,9 +70,11 @@ FAIL if the reply <the behavior the user corrected>, for example <a phrasing tha
 ## Writing held-out cases
 
 A fresh subagent writes them, never the agent that diagnosed the problem. Give it one sentence
-naming the behavior and the session ids to skip. It searches the transcript folders for other
-sessions where the same situation came up (`grep` over the `.jsonl` files is enough), reads each
-one around the moment, and writes one case pair per instance, naming the session it came from.
+naming the behavior and the session ids to skip. It finds other sessions where the same
+situation came up with the transcripts skill (`Skill("transcripts")`): `messages --typed` with
+`--search` or `--match`, and one `--skip-session` per session to skip. It reads each one around
+the moment with `around` and `since-reply`, and writes one case pair per instance, naming the
+session it came from.
 Three to five instances are enough; fewer than two cannot separate the versions.
 
 ## Running
@@ -106,8 +108,9 @@ held-out instances. The subagent that finds the instances saves, for each one, t
 should have happened, judged from what followed in that session: the hook should have blocked the
 call or let it through, the script should have printed a given line. It never sees the edit.
 
-- **Hook input** is built from the transcript record of the tool call, with every field taken from
-  that record, its working directory included. Never use one fixed folder: hooks often decide by
-  the folder they run in.
+- **Hook input** is built from the tool call's row in the transcripts skill (`tools --results
+  --json`), with every field taken from that row, its `cwd` included. Never use one fixed folder:
+  hooks often decide by the folder they run in. A row marked `cwd_uncertain` ran after a sibling
+  call changed directory, so its folder is unknown: leave it out of the cases.
 - **Run each case** through the current and the edited script or hook, and compare each output
   with what should have happened. The edited version scores higher when it gets more cases right.

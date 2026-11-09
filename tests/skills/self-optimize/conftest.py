@@ -11,12 +11,17 @@ from types import ModuleType
 
 import pytest
 
-SCRIPTS = Path(__file__).resolve().parents[3] / "skills" / "self-optimize" / "scripts"
+SKILLS = Path(__file__).resolve().parents[3] / "skills"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 PROJECT = "-home-ada-demo"
 MODIFIED_AFTER_EVERY_RECORD = 4102444800  # 2100-01-01
-# Each script after the ones it imports.
-LOAD_ORDER = ("pricing", "transcripts", "scan", "corrections")
+# Each script after the ones it imports; the transcript reader is its own skill.
+LOAD_ORDER = {
+    "pricing": SKILLS / "self-optimize" / "scripts" / "pricing.py",
+    "transcripts": SKILLS / "transcripts" / "scripts" / "transcripts.py",
+    "scan": SKILLS / "self-optimize" / "scripts" / "scan.py",
+    "corrections": SKILLS / "self-optimize" / "scripts" / "corrections.py",
+}
 
 type Place = Callable[..., Path]
 
@@ -32,10 +37,8 @@ def load_scripts() -> dict[str, ModuleType]:
     modules: dict[str, ModuleType] = {}
     previous = {name: sys.modules.get(name) for name in LOAD_ORDER}
     try:
-        for name in LOAD_ORDER:
-            spec = importlib.util.spec_from_file_location(
-                f"self_optimize_{name}", SCRIPTS / f"{name}.py"
-            )
+        for name, path in LOAD_ORDER.items():
+            spec = importlib.util.spec_from_file_location(f"self_optimize_{name}", path)
             assert spec is not None and spec.loader is not None
             module = importlib.util.module_from_spec(spec)
             sys.modules[spec.name] = module  # dataclasses look their module up here

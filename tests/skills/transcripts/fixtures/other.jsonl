@@ -1,0 +1,2 @@
+{"type": "user", "uuid": "o-1", "timestamp": "2099-06-01T12:00:00.000Z", "cwd": "/home/ada/demo", "message": {"role": "user", "content": "Rename the flag in the docs too."}}
+{"type": "assistant", "uuid": "o-2", "timestamp": "2099-06-01T12:01:00.000Z", "cwd": "/home/ada/demo", "message": {"id": "om-1", "role": "assistant", "content": [{"type": "text", "text": "Renamed it in README.md."}]}}

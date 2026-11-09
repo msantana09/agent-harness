@@ -54,11 +54,12 @@ Code, run:
 /plugin install agent-harness@agent-harness
 ```
 
-Or on its own, copied into your skills folder, where it runs as `/self-optimize`:
+Or on its own, copied into your skills folder with the transcripts skill it reads sessions
+through, where it runs as `/self-optimize`:
 
 ```bash
 git clone https://github.com/msantana09/agent-harness
-cp -r agent-harness/skills/self-optimize ~/.claude/skills/
+cp -r agent-harness/skills/self-optimize agent-harness/skills/transcripts ~/.claude/skills/
 ```
 
 Needs Claude Code and Python 3.14 or newer, run as `python3`; tested on 3.14 and 3.15. No other

@@ -9,6 +9,7 @@ instructions improve from what happens in real sessions.
 | Skill | What it does |
 |---|---|
 | [self-optimize](docs/self-optimize.md) | Finds where you corrected the agent in your own Claude Code sessions, then proposes and tests the instruction change that would have prevented it. |
+| [transcripts](skills/transcripts/SKILL.md) | Lets the agent read past Claude Code sessions as plain text: search what was typed, list tool calls and results, and show the context around one message. |
 
 More will be added as I clean them up.
 
@@ -26,11 +27,11 @@ To update later, run `claude plugin marketplace update agent-harness`, then
 `claude plugin update agent-harness@agent-harness`.
 
 Or copy single skills. Each skill is a folder; copy the ones you want into your Claude Code skills
-folder:
+folder. self-optimize reads sessions through transcripts, so it needs both:
 
 ```bash
 git clone https://github.com/msantana09/agent-harness
-cp -r agent-harness/skills/self-optimize ~/.claude/skills/
+cp -r agent-harness/skills/self-optimize agent-harness/skills/transcripts ~/.claude/skills/
 ```
 
 ## Requirements

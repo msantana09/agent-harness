@@ -47,7 +47,10 @@ from pathlib import Path
 from typing import Any
 
 import pricing
-import transcripts
+
+# The transcript reader is its own skill, installed beside this one.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "transcripts" / "scripts"))
+import transcripts  # noqa: E402
 
 HOOK_VALUES_SHOWN = 3  # quoted parts listed under a hook block in the report; --json has all
 HOOK_VALUE_CHARS = 60  # each shown at most this long, its middle cut; --json has it whole

@@ -47,7 +47,10 @@ from pathlib import Path
 from typing import Any
 
 import pricing
-import transcripts
+
+# The transcript reader is its own skill, installed beside this one.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "transcripts" / "scripts"))
+import transcripts  # noqa: E402
 
 # Bytes of serialized messages per model call; keeps each call well inside the model's context.
 CHUNK_BYTES = 150_000
