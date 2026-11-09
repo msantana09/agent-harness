@@ -5,6 +5,7 @@ tmp_path and reads the script's single output line.
 """
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -100,3 +101,34 @@ def test_a_folder_outside_git_or_an_unknown_base_ref_exits_1(tmp_path: Path) -> 
     repo = new_repo(tmp_path / "repo")
     unknown = state(str(repo), "origin/nope")
     assert (unknown.returncode, unknown.stderr) == (1, "unknown base-ref: origin/nope\n")
+
+
+def test_a_worktree_listing_longer_than_a_pipe_buffer_still_prints_the_summary(
+    tmp_path: Path,
+) -> None:
+    repo = new_repo(tmp_path / "repo")
+    real_git = shutil.which("git")
+    assert real_git
+    # A stand-in git whose worktree listing is the real one followed by 150 KB of records, more
+    # than a pipe holds, so a reader that stops after the first line leaves the writer blocked.
+    fake = tmp_path / "bin" / "git"
+    fake.parent.mkdir()
+    fake.write_text(
+        "#!/bin/sh\n"
+        'if [ "$3" = worktree ]; then\n'
+        f'  "{real_git}" "$@"\n'
+        "  i=0\n"
+        "  while [ $i -lt 5000 ]; do\n"
+        '    printf "worktree /elsewhere/%s\\nHEAD 0\\n\\n" $i\n'
+        "    i=$((i + 1))\n"
+        "  done\n"
+        "  exit 0\n"
+        "fi\n"
+        f'exec "{real_git}" "$@"\n'
+    )
+    fake.chmod(0o755)
+    env = {**GIT_ENV, "PATH": f"{fake.parent}{os.pathsep}{GIT_ENV['PATH']}"}
+    result = subprocess.run(
+        [str(SCRIPT), str(repo)], env=env, capture_output=True, text=True, check=False
+    )
+    assert (result.returncode, result.stdout.split()[-1]) == (0, f"main-tree={repo}")
