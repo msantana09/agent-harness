@@ -20,8 +20,9 @@ from typing import Any
 type Rates = tuple[float, float, float]  # USD per million (input, output), cache-read multiple
 
 # Anthropic list prices, USD per million tokens: (input, output, cache-read multiple of input).
-# Prices as published in October 2026; add a row when a model shows up as unpriced.
+# Prices as published in November 2026; add a row when a model shows up as unpriced.
 PRICES: dict[str, Rates] = {
+    "claude-fable-5-2": (8.0, 40.0, 0.025),
     "claude-fable-5-1": (10.0, 50.0, 0.025),
     "claude-fable-5": (10.0, 50.0, 0.1),
     "claude-opus-5-5": (4.0, 20.0, 0.05),
