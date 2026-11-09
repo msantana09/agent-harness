@@ -36,8 +36,9 @@ class AttestationError(Exception):
 
 @dataclass(frozen=True)
 class Snapshot:
-    """The reviewed git state. Every git field is None when the directory is not in a git repository,
-    and `head_sha`, `merge_base_sha` and `diff_sha256` are None before the repository's first commit."""
+    """The reviewed git state. Every git field is None when the directory is not in a git
+    repository, and `head_sha`, `merge_base_sha` and `diff_sha256` are None before the
+    repository's first commit."""
 
     repo_root: str | None
     git_branch: str | None
@@ -75,7 +76,8 @@ def _git_out(cwd: Path, *args: str) -> bytes:
 def _state(cwd: Path) -> dict[str, str | None]:
     """The git fields of a snapshot for `cwd`: all None outside a repository; the head, merge base
     and diff None in a repository whose HEAD names no commit yet (an unborn branch); and the merge
-    base and diff None in a repository without `origin/HEAD`, which has no base branch to diff against."""
+    base and diff None in a repository without `origin/HEAD`, which has no base branch to diff
+    against."""
     top = _git(cwd, "rev-parse", "--show-toplevel")
     if top.returncode != 0:
         return dict.fromkeys(
@@ -120,28 +122,38 @@ def _not_attestable(snap: Snapshot) -> str | None:
     if snap.head_sha is None:
         return "unborn HEAD: the repository has no commit yet"
     if snap.diff_sha256 is None:
-        return "no origin/HEAD, so no base branch to diff against (`git remote set-head origin --auto` sets it)"
+        return (
+            "no origin/HEAD, so no base branch to diff against (`git remote set-head origin "
+            "--auto` sets it)"
+        )
     target = snap.review_target
     if target is not None and target["type"] != "baseBranch":
         return f"a native review of {target['type']} does not cover the branch's diff from its base"
     if target is not None and snap.target_merge_base_sha != snap.merge_base_sha:
-        return f"a native review against {target['branch']} did not review the diff from the attested base"
+        return (
+            f"a native review against {target['branch']} did not review the diff from the "
+            "attested base"
+        )
     if target is not None and snap.uncommitted_tracked:
         return _uncommitted(snap.uncommitted_tracked)
     return None
 
 
 def _uncommitted(porcelain: str) -> str:
-    return f"a native review reads the working tree, and tracked files have uncommitted changes: {'; '.join(porcelain.splitlines())}"
+    return (
+        "a native review reads the working tree, and tracked files have uncommitted changes: "
+        f"{'; '.join(porcelain.splitlines())}"
+    )
 
 
 def snapshot(
     cwd: Path, prompt_file: Path | None, *, review_target: dict[str, str] | None = None
 ) -> Snapshot:
-    """The repository state at `cwd` and the hash of the prompt file (None for a review that has no prompt). Call before the review is dispatched.
+    """The repository state at `cwd` and the hash of the prompt file (None for a review that has
+    no prompt). Call before the review is dispatched.
 
-    A native review passes its `review_target`: only a `baseBranch` target whose merge base with HEAD
-    is the attested merge base reviewed the diff the gate checks.
+    A native review passes its `review_target`: only a `baseBranch` target whose merge base with
+    HEAD is the attested merge base reviewed the diff the gate checks.
     """
     prompt_sha256 = (
         hashlib.sha256(Path(prompt_file).read_bytes()).hexdigest()
@@ -217,7 +229,8 @@ def complete(snap: Snapshot | None, job: dict[str, Any], failure: str | None) ->
 
 
 def write(job_dir: Path, job: dict[str, Any], failure: str | None) -> dict[str, Any]:
-    """Build the job's attestation from its saved snapshot and write `attestation.json` in `job_dir`."""
+    """Build the job's attestation from its saved snapshot and write `attestation.json` in
+    `job_dir`."""
     attestation = complete(load(job_dir), job, failure)
     (Path(job_dir) / ATTESTATION_FILE).write_text(json.dumps(attestation, indent=2) + "\n")
     return attestation

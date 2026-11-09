@@ -1,4 +1,5 @@
-"""Breadth lifecycle tests against the fake Codex: fork permissions, resume's recorded cwd and model."""
+"""Breadth lifecycle tests against the fake Codex: fork permissions, resume's recorded cwd and
+model."""
 
 import importlib.util
 import json
@@ -28,7 +29,8 @@ def finished_run(env, repo, branch, *extra):
 
 
 def fork(env, repo, source, *extra, answer=ANSWER):
-    """Fork `source`; the fake answers the fork's turn with `answer` (a consult answer unless the fork writes)."""
+    """Fork `source`; the fake answers the fork's turn with `answer` (a consult answer unless the
+    fork writes)."""
     env.fake.set_script({"turn": {"final_answer": answer}})
     return env.run(
         "fork",
@@ -285,7 +287,8 @@ def test_resume_of_a_run_job_is_refused_while_it_is_still_running(env, repo):
 
 def test_resume_right_after_a_run_finishes_waits_for_its_app_server_to_stop(env, repo):
     parent = finished_run(env, repo, "codex/resume-settling")
-    # The runner marks the job finished just before it stops the app-server: stand in a group that exits shortly.
+    # The runner marks the job finished just before it stops the app-server: stand in a group that
+    # exits shortly.
     server = subprocess.Popen(["sleep", "0.5"], start_new_session=True)
     threading.Thread(target=server.wait, daemon=True).start()
     records.update_job(env.root, parent["job_id"], pgid=server.pid, appserver_stopped_at=None)
@@ -302,7 +305,8 @@ def test_resume_of_a_run_job_is_refused_after_release_or_removal(env, repo):
     assert (
         code == 1
         and lines[-1]
-        == f"FAILURE: job {parent['job_id']} released its worktree {parent['worktree']}; start a new run instead"
+        == f"FAILURE: job {parent['job_id']} released its worktree {parent['worktree']}; "
+        "start a new run instead"
     )
     other = finished_run(env, repo, "codex/resume-removed")
     shutil.rmtree(other["worktree"])
@@ -335,12 +339,13 @@ def test_resume_of_a_run_job_is_refused_once_another_job_holds_its_lease(env, re
     assert (
         code == 1
         and lines[-1]
-        == f"FAILURE: {parent['worktree']} is now leased by {taker['job_id']}; resume that job instead"
+        == f"FAILURE: {parent['worktree']} is now leased by {taker['job_id']}; "
+        "resume that job instead"
     )
     assert worktrees.find_lease(env.root, taker["job_id"]) is not None
 
 
-def test_resent_idempotency_key_on_resume_returns_the_first_job_even_when_the_source_directory_is_gone(
+def test_a_resent_resume_key_returns_the_first_job_even_when_the_source_directory_is_gone(
     env, tmp_path
 ):
     env.fake.set_script({"turn": {"final_answer": ANSWER}})

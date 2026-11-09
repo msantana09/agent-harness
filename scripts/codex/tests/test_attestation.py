@@ -205,7 +205,8 @@ def test_a_native_review_narrower_than_the_branch_diff_is_never_ok(repo, target,
 
 @pytest.mark.parametrize("when", ["launch", "completion"])
 def test_a_native_review_with_uncommitted_tracked_changes_is_never_ok(repo, when):
-    # Codex's base review diffs the working tree; with change.txt deleted there it sees no change while the committed diff has one.
+    # Codex's base review diffs the working tree; with change.txt deleted there it sees no change
+    # while the committed diff has one.
     if when == "launch":
         (repo / "change.txt").unlink()
     snap = attestation.snapshot(repo, None, review_target={"type": "baseBranch", "branch": "dev"})

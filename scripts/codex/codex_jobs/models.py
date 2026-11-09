@@ -66,7 +66,8 @@ def load_catalog(catalog_path: Path) -> tuple[dict[str, tuple[str, ...]], str | 
         }
     except (KeyError, TypeError) as exc:
         raise ModelResolutionError(
-            f"model catalog {catalog_path} lacks models[].slug / supported_reasoning_levels[].effort ({exc!r})"
+            f"model catalog {catalog_path} lacks models[].slug / "
+            f"supported_reasoning_levels[].effort ({exc!r})"
         ) from None
     return models, raw.get("fetched_at")
 

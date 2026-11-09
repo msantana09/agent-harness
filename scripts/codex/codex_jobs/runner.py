@@ -2,7 +2,8 @@
 
 `python3 -m codex_jobs.runner <job_dir> [--adopt] [--crash-at POINT]` is started detached by
 `spawn_runner`. It owns one job from `queued` to a terminal state: slot admission, app-server
-launch, usage check, thread, turn, journal, result, delivery, app-server shutdown. `--adopt` is for a job whose
+launch, usage check, thread, turn, journal, result, delivery, app-server shutdown. `--adopt` is for
+a job whose
 runner died while its turn still ran: the new runner waits for that turn instead of starting one.
 
 A runner never sends a second `turn/start`. Just before sending it the runner journals a
@@ -57,26 +58,29 @@ USAGE_LIMIT_ERROR = (
 DELIVERED_FILES = ("result.json", "answer.md", *review.DELIVERABLES, attestation.ATTESTATION_FILE)
 
 _CONSULT_CONTRACT = (
-    "OUTPUT CONTRACT: Return the JSON object required by the output schema. Set status to completed only "
-    "if you performed the requested work. Set status to blocked if tool access or missing inputs prevent "
-    "it, or failed for another execution failure. Put the complete Markdown answer in answer, following "
-    "the prompt's response format. List questions the caller must resolve in open_questions (an empty "
-    "array if none). This envelope takes precedence over instructions about final-message formatting in "
-    "the prompt. Do not create, modify, or delete repository files or change git state."
+    "OUTPUT CONTRACT: Return the JSON object required by the output schema. Set status to "
+    "completed only if you performed the requested work. Set status to blocked if tool access or "
+    "missing inputs prevent it, or failed for another execution failure. Put the complete Markdown "
+    "answer in answer, following the prompt's response format. List questions the caller must "
+    "resolve in open_questions (an empty array if none). This envelope takes precedence over "
+    "instructions about final-message formatting in the prompt. Do not create, modify, or delete "
+    "repository files or change git state."
 )
 
 _RUN_CONTRACT = (
-    "OUTPUT CONTRACT: Return the JSON object required by the output schema. Set status to completed only "
-    "if you performed the requested work. Set status to blocked if tool access or missing inputs prevent "
-    "it, or failed for another execution failure. Put a Markdown summary of what you did in summary, list "
-    "the files you changed in changed_files and the commands you ran to check the work in tests_run, and "
-    "list anything that stopped you in blockers (an empty array if none). This envelope takes precedence "
-    "over instructions about final-message formatting in the prompt. Work only inside the current "
-    "working directory."
+    "OUTPUT CONTRACT: Return the JSON object required by the output schema. Set status to "
+    "completed only if you performed the requested work. Set status to blocked if tool access or "
+    "missing inputs prevent it, or failed for another execution failure. Put a Markdown summary of "
+    "what you did in summary, list the files you changed in changed_files and the commands you ran "
+    "to check the work in tests_run, and list anything that stopped you in blockers (an empty "
+    "array if none). This envelope takes precedence over instructions about final-message "
+    "formatting in the prompt. Work only inside the current working directory."
 )
 
-# Codex may ask to run a command outside the sandbox. Every request goes to this runner, which declines
-# and journals it: never to Codex's own auto-reviewer (a user's `approvals_reviewer = "auto_review"`),
+# Codex may ask to run a command outside the sandbox. Every request goes to this runner, which
+# declines
+# and journals it: never to Codex's own auto-reviewer (a user's `approvals_reviewer =
+# "auto_review"`),
 # which could grant a read-only job write access.
 APPROVAL_POLICY = "on-request"
 APPROVALS_REVIEWER = "user"
@@ -102,7 +106,8 @@ class InvalidAnswer(Exception):
 
 @dataclass
 class TurnOutcome:
-    """How a turn ended. `status` is a turn status (`completed`, `failed`, `interrupted`) or `unknown`.
+    """How a turn ended. `status` is a turn status (`completed`, `failed`, `interrupted`) or
+    `unknown`.
 
     `usage` is the turn's last `thread/tokenUsage/updated` token counts; `error_info` the failed
     turn's `codexErrorInfo`; `rate_limits_after` the account's limits read once the turn ended.
@@ -127,7 +132,8 @@ def spawn_runner(
     """Start the runner for `job_dir` detached in its own session and record its pid on the job.
 
     stdout and stderr append to `<job_dir>/runner.log`. The returned `Popen` lets a caller that
-    waits on the job `poll()` it, which reaps the child; `reap_spawned` reaps the ones nobody waits on.
+    waits on the job `poll()` it, which reaps the child; `reap_spawned` reaps the ones nobody waits
+    on.
     """
     reap_spawned()
     job_dir = Path(job_dir)
@@ -156,7 +162,8 @@ def reap_spawned() -> None:
     """Reap every runner this process spawned that has exited, whatever its job's state.
 
     A long-lived process (the MCP server) spawns a runner per job and stops looking at a job once
-    it is terminal, so an exited runner would otherwise stay a zombie. Running runners are left alone.
+    it is terminal, so an exited runner would otherwise stay a zombie. Running runners are left
+    alone.
     """
     for pid, process in list(_spawned.items()):
         if process.poll() is not None:
@@ -202,7 +209,8 @@ def _kind_spec(job: dict[str, Any]) -> tuple[dict[str, Any], str]:
 
 
 def preflight_code_mode_host(codex_bin: str, log_path: Path) -> None:
-    """Run the `codex-code-mode-host` next to `codex_bin`, if any, so a quarantined host fails before inference."""
+    """Run the `codex-code-mode-host` next to `codex_bin`, if any, so a quarantined host fails
+    before inference."""
     host = Path(codex_bin).with_name("codex-code-mode-host")
     with open(log_path, "wb") as log:
         if not host.is_file():
@@ -269,7 +277,8 @@ def validate_instance(value: Any, schema: dict[str, Any], path: str = "$") -> li
 
 
 def parse_answer(job: dict[str, Any], text: str | None) -> dict[str, Any]:
-    """The model's final message as JSON that satisfies the job kind's schema, else `InvalidAnswer`."""
+    """The model's final message as JSON that satisfies the job kind's schema, else
+    `InvalidAnswer`."""
     if text is None:
         raise InvalidAnswer("the turn ended without a final answer")
     try:
@@ -302,7 +311,8 @@ def _turns(client: AppServerClient, thread_id: str) -> Iterator[dict[str, Any]]:
 
 
 def read_turn(client: AppServerClient, thread_id: str, turn_id: str) -> dict[str, Any] | None:
-    """The turn's status and error from `thread/turns/list`, or None if the thread has no such turn."""
+    """The turn's status and error from `thread/turns/list`, or None if the thread has no such
+    turn."""
     return next((turn for turn in _turns(client, thread_id) if turn["id"] == turn_id), None)
 
 
@@ -322,7 +332,8 @@ def thread_is_active(client: AppServerClient, thread_id: str) -> bool:
 
 
 def is_final_message(item: dict[str, Any], *, native: bool = False) -> bool:
-    """Whether `item` is the agent message that ends a turn: phase `final_answer`, or for a native review (whose message has no phase) any phase-less one."""
+    """Whether `item` is the agent message that ends a turn: phase `final_answer`, or for a native
+    review (whose message has no phase) any phase-less one."""
     if item.get("type") != "agentMessage":
         return False
     return item.get("phase") == "final_answer" or (native and item.get("phase") is None)
@@ -361,7 +372,8 @@ def outcome_of_turn(turn: dict[str, Any], *, native: bool = False) -> TurnOutcom
 def settled_outcome(
     client: AppServerClient, thread_id: str, turn: dict[str, Any], *, native: bool = False
 ) -> TurnOutcome:
-    """The outcome of a finished turn; a completed turn whose payload lacks its final answer gets it from `thread/items/list`."""
+    """The outcome of a finished turn; a completed turn whose payload lacks its final answer gets it
+    from `thread/items/list`."""
     outcome = outcome_of_turn(turn, native=native)
     if outcome.status == "completed" and outcome.final_text is None:
         outcome.final_text = read_final_text(client, thread_id, turn["id"], native=native)
@@ -438,7 +450,8 @@ def _deliver(job_dir: Path, output_dir: Path) -> None:
 
 
 def unconfirmed_dispatch(job_dir: Path) -> dict[str, Any] | None:
-    """The `dispatching` event's data when `turn/start` was sent and the server did not refuse it, else None.
+    """The `dispatching` event's data when `turn/start` was sent and the server did not refuse it,
+    else None.
 
     The data names the thread and the ids of the turns it held before the send (`prior_turn_ids`).
     Callers check `turn_id` themselves: a recorded turn id confirms the dispatch.
@@ -549,9 +562,11 @@ def finalize(
 
 
 def applied_effort(job_dir: Path, thread_id: str | None) -> str | None:
-    """The effort the server last reported for the thread's turn (`thread/settings/updated`), from the journal; None if it never did.
+    """The effort the server last reported for the thread's turn (`thread/settings/updated`), from
+    the journal; None if it never did.
 
-    The server sends it after `turn/start`, not after `review/start`: a native review's effort is the one
+    The server sends it after `turn/start`, not after `review/start`: a native review's effort is
+    the one
     its `thread/start` reply reported.
     """
     effort = None
@@ -568,7 +583,8 @@ def applied_effort(job_dir: Path, thread_id: str | None) -> str | None:
 
 
 def _usage_block(job: dict[str, Any], outcome: TurnOutcome) -> dict[str, Any]:
-    """The result's `usage`: token counts, the limits read before and after the turn, and the limit a failure hit.
+    """The result's `usage`: token counts, the limits read before and after the turn, and the limit
+    a failure hit.
 
     `rate_limit_reached_type` is set only when the job failed on a usage limit (refused at
     admission, or the turn ended `usageLimitExceeded`), from the latest snapshot read.
@@ -589,7 +605,8 @@ def _usage_block(job: dict[str, Any], outcome: TurnOutcome) -> dict[str, Any]:
 
 
 def _rate_limits_after(job_dir: Path, client: AppServerClient) -> dict[str, Any] | None:
-    """The account's limits once the turn ended; a failed read is journaled and left out, since the turn's result does not depend on it."""
+    """The account's limits once the turn ended; a failed read is journaled and left out, since the
+    turn's result does not depend on it."""
     config = admission.load_config(admission.DEFAULT_CONFIG_PATH)
     try:
         return admission.check_usage(client.call(admission.RATE_LIMITS_METHOD), config).record
@@ -636,9 +653,11 @@ def _leader_status(pgid: int) -> tuple[str, str] | None:
 
 
 def _group_reused(job_dir: Path, pgid: int) -> str | None:
-    """The leader's command line when process group `pgid` now belongs to another program, else None.
+    """The leader's command line when process group `pgid` now belongs to another program, else
+    None.
 
-    The group is the job's while its leader runs with the launch argument `unix://<job_dir>/app.sock`,
+    The group is the job's while its leader runs with the launch argument
+    `unix://<job_dir>/app.sock`,
     or while the leader is gone or a zombie (a pid is not reused while its group still has members).
     """
     leader = _leader_status(pgid)
@@ -649,7 +668,8 @@ def _group_reused(job_dir: Path, pgid: int) -> str | None:
 
 
 def stop_server(job_dir: Path, *, grace: float = appserver.DEFAULT_STOP_GRACE) -> bool:
-    """Stop the job's app-server process group and stamp `appserver_stopped_at` once the group is gone.
+    """Stop the job's app-server process group and stamp `appserver_stopped_at` once the group is
+    gone.
 
     The stamp rests on `killpg(pgid, 0)` raising, not on what the stop call reports. A job with no
     recorded group has nothing to stop and is not stamped. A group whose leader is now another
@@ -695,7 +715,8 @@ class _Run:
         return bool(self.job()["cancel_requested_at"])
 
     def check_not_cancelled(self) -> None:
-        """Stop before the turn is dispatched when a cancel was recorded; the handler settles the job as cancelled."""
+        """Stop before the turn is dispatched when a cancel was recorded; the handler settles the
+        job as cancelled."""
         if self.cancel_requested():
             raise RunnerError("cancel requested before the turn was dispatched")
 
@@ -747,7 +768,8 @@ class _Run:
 
 
 def open_thread(client: AppServerClient, job: dict[str, Any]) -> tuple[str, str | None]:
-    """`(thread id, model the server reports)` from `thread/start`, or `thread/resume` / `thread/fork` of the source thread."""
+    """`(thread id, model the server reports)` from `thread/start`, or `thread/resume` /
+    `thread/fork` of the source thread."""
     sandbox, _ = permissions.sandbox_for(job)
     params = {
         "cwd": job["cwd"],
@@ -768,13 +790,15 @@ def open_thread(client: AppServerClient, job: dict[str, Any]) -> tuple[str, str 
         )
     if job["review_target"] is not None and reply.get("reasoningEffort") != job["effort_requested"]:
         raise RunnerError(
-            f"the server runs the review at effort {reply.get('reasoningEffort')!r}, not the requested {job['effort_requested']!r}"
+            f"the server runs the review at effort {reply.get('reasoningEffort')!r}, "
+            f"not the requested {job['effort_requested']!r}"
         )
     return reply["thread"]["id"], reply.get("model")
 
 
 def start_native_review(client: AppServerClient, job: dict[str, Any], thread_id: str) -> str:
-    """Start Codex's built-in reviewer on the job's thread with `review/start`; the id of the review turn.
+    """Start Codex's built-in reviewer on the job's thread with `review/start`; the id of the review
+    turn.
 
     The method takes no prompt, effort, sandbox or output schema: effort is set on the thread,
     and the reviewer answers in prose.
@@ -811,7 +835,8 @@ def start_turn(client: AppServerClient, job: dict[str, Any], thread_id: str, pro
 def _follow_turn(
     run: _Run, client: AppServerClient, thread_id: str, turn_id: str, deadline: float
 ) -> TurnOutcome:
-    """Read the turn's notifications until `turn/completed`; interrupt it when the deadline passes."""
+    """Read the turn's notifications until `turn/completed`; interrupt it when the deadline
+    passes."""
     native = run.job()["review_target"] is not None
     final_text: str | None = None
     usage: dict[str, Any] | None = None
@@ -858,7 +883,8 @@ def _run_new(run: _Run) -> None:
     native = job["review_target"] is not None
     prompt_path = run.job_dir / "prompt.txt"
     config = admission.load_config(admission.DEFAULT_CONFIG_PATH)
-    # The slot is taken while the job is still `queued`, so a waiting job costs no app-server process.
+    # The slot is taken while the job is still `queued`, so a waiting job costs no app-server
+    # process.
     if not admission.admit(
         run.root,
         run.job_id,
@@ -935,7 +961,8 @@ def _run_new(run: _Run) -> None:
             records.DISPATCHED,
             thread_id=thread_id,
             turn_id=turn_id,
-            # a native review runs at its thread's effort, which open_thread checked against the request
+            # a native review runs at its thread's effort, which open_thread checked against the
+            # request
             effort_used=job["effort_requested"] if native else None,
         )
         run.crash_point("after-accept")
@@ -945,7 +972,8 @@ def _run_new(run: _Run) -> None:
 
 
 def _adopt(run: _Run) -> None:
-    """Wait for the dispatched turn of a job whose runner died, by listing its turns (a second client gets no turn stream).
+    """Wait for the dispatched turn of a job whose runner died, by listing its turns (a second
+    client gets no turn stream).
 
     The turn is read once per `POLL_SECONDS`. Notifications that arrive in between are journaled
     but do not bring the next read forward: the server answers some reads with a notification of
@@ -999,11 +1027,13 @@ def run_job(
     crash_at: str | None = None,
     recheck_seconds: float = admission.RECHECK_SECONDS,
 ) -> int:
-    """Run (or adopt) the job in `job_dir` to a terminal state; the exit status is 0 only for `succeeded`.
+    """Run (or adopt) the job in `job_dir` to a terminal state; the exit status is 0 only for
+    `succeeded`.
 
     A failure before `turn/start` was sent, or one the server answered with an error, fails the job,
     or cancels it when a cancel was recorded (the cancel is what interrupted the runner's wait), and
-    the settled job has its app-server stopped. A failure once `turn/start` was sent and not refused,
+    the settled job has its app-server stopped. A failure once `turn/start` was sent and not
+    refused,
     whether or not its reply arrived, is journaled as `runner_error` and leaves the job and its
     app-server as they are: reconcile finds the turn on the server (or learns that none started)
     and settles the job from the server or the rollout once this runner has exited.

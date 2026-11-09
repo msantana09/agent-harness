@@ -277,7 +277,8 @@ def admit(
     The count and the transition happen under an exclusive `flock` on `<root>/admission.lock`,
     so concurrent callers cannot all see a free slot: at most `max_concurrent_jobs` jobs are
     ever in a slot state with a live runner or app-server. `queued` jobs are never counted, so
-    any number of waiters can poll without blocking each other. While at the cap, each change in the set of
+    any number of waiters can poll without blocking each other. While at the cap, each change in the
+    set of
     holders is journaled on the job as a `queued_behind` event, then it sleeps
     `recheck_seconds` and tries again. `root` must exist.
     """

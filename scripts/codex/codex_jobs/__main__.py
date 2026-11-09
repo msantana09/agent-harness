@@ -12,7 +12,8 @@ from .cli import main
 
 
 def job_root() -> Path:
-    """The job root in the user's data folder: `$XDG_DATA_HOME`, which defaults to `~/.local/share`."""
+    """The job root in the user's data folder: `$XDG_DATA_HOME`, which defaults to
+    `~/.local/share`."""
     data = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
     return Path(data) / "agent-harness" / "codex-jobs"
 

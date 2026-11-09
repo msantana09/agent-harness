@@ -41,7 +41,8 @@ APPROVAL = {
 
 
 def start_turn(client: AppServerClient) -> tuple[str, str]:
-    """initialize + thread/start + turn/start with the real v2 keys; returns (thread id, turn id)."""
+    """initialize + thread/start + turn/start with the real v2 keys; returns (thread id, turn
+    id)."""
     client.initialize()
     thread_id = client.call("thread/start", THREAD_START)["thread"]["id"]
     turn = client.call(
@@ -473,7 +474,8 @@ def make_gh(tmp_path: Path, accounts: tuple[str, ...]) -> Path:
     gh.write_text(
         "#!/bin/sh\n"
         'if [ "$1 $2 $3" = "auth token -u" ]; then\n'
-        f'  for a in {" ".join(accounts)}; do [ "$a" = "$4" ] && {{ echo "tok-$a"; exit 0; }}; done\n'
+        f"  for a in {' '.join(accounts)}; do "
+        f'[ "$a" = "$4" ] && {{ echo "tok-$a"; exit 0; }}; done\n'
         '  echo "no account $4" >&2; exit 1\n'
         "fi\n"
         "exit 2\n"

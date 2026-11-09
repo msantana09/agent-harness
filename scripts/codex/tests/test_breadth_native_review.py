@@ -273,12 +273,16 @@ def test_a_native_review_that_ends_without_a_message_fails(env, review_repo):
     )
 
 
-# The review sub-thread's last message and the text the server delivered for the same review, from codex 0.167.
+# The review sub-thread's last message and the text the server delivered for the same review,
+# from codex 0.167.
 REVIEW_OUTPUT = {
     "findings": [
         {
             "title": "[P1] Preserve addition semantics in `add`",
-            "body": "For any caller that uses `add(a, b)`, this change now subtracts `b`.\nRestore addition.",
+            "body": (
+                "For any caller that uses `add(a, b)`, this change now subtracts `b`.\n"
+                "Restore addition."
+            ),
             "confidence_score": 1.0,
             "priority": 1,
             "code_location": {
@@ -304,8 +308,10 @@ REVIEW_OUTPUT = {
 REVIEW_PROSE = (
     "Both issues are visible in the changed code.\n\nFull review comments:\n\n"
     "- [P1] Preserve addition semantics in `add` \u2014 /r/calc.py:2-2\n"
-    "  For any caller that uses `add(a, b)`, this change now subtracts `b`.\n  Restore addition.\n\n"
-    "- [P1] Pass commands safely to the shell \u2014 /r/util.py:4-6\n  Concatenating `cmd` lets shell syntax execute."
+    "  For any caller that uses `add(a, b)`, this change now subtracts `b`.\n"
+    "  Restore addition.\n\n"
+    "- [P1] Pass commands safely to the shell \u2014 /r/util.py:4-6\n"
+    "  Concatenating `cmd` lets shell syntax execute."
 )
 CLEAN_OUTPUT = {
     "findings": [],

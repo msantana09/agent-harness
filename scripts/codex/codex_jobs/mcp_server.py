@@ -54,15 +54,22 @@ _JOB_FLAGS: dict[str, Any] = {
     },
     "model": {
         "type": "string",
-        "description": "Tier (luna, terra, sol, astra) or catalog slug. Default sol (resume, fork: the source job's).",
+        "description": (
+            "Tier (luna, terra, sol, astra) or catalog slug. Default sol (resume, fork: the "
+            "source job's)."
+        ),
     },
     "effort": {
         "type": "string",
-        "description": "Reasoning effort the model lists. Default high (resume, fork: the source job's).",
+        "description": (
+            "Reasoning effort the model lists. Default high (resume, fork: the source job's)."
+        ),
     },
     "project_dir": {
         "type": "string",
-        "description": "Project directory. Default: git root of the server's cwd, else the cwd; pass it.",
+        "description": (
+            "Project directory. Default: git root of the server's cwd, else the cwd; pass it."
+        ),
     },
     "output_dir": {
         "type": "string",
@@ -76,13 +83,19 @@ _JOB_FLAGS: dict[str, Any] = {
     },
     "wait": {
         "type": "boolean",
-        "description": "Follow the job to its end and return its result (a task when the client supports tasks). Default false: return the job id at once.",
+        "description": (
+            "Follow the job to its end and return its result (a task when the client supports "
+            "tasks). Default false: return the job id at once."
+        ),
     },
 }
 _PLACEMENT_FLAGS: dict[str, Any] = {
     "branch": {
         "type": "string",
-        "description": "Create a worktree on this new branch of project_dir's repo (project_dir is required with it).",
+        "description": (
+            "Create a worktree on this new branch of project_dir's repo (project_dir is required "
+            "with it)."
+        ),
     },
     "worktree": {"type": "string", "description": "Use this clean linked worktree."},
 }
@@ -90,13 +103,18 @@ _RUN_FLAGS: dict[str, Any] = {
     **_PLACEMENT_FLAGS,
     "allow_commit": {
         "type": "boolean",
-        "description": "Let the job commit to the worktree's branch. Default false: the caller commits.",
+        "description": (
+            "Let the job commit to the worktree's branch. Default false: the caller commits."
+        ),
     },
 }
 _REVIEW_FLAGS: dict[str, Any] = {
     "native": {
         "type": "boolean",
-        "description": "Run Codex's built-in reviewer: give no prompt or prompt_file; review.md is prose and there is no findings.json. Needs target.",
+        "description": (
+            "Run Codex's built-in reviewer: give no prompt or prompt_file; review.md is prose and "
+            "there is no findings.json. Needs target."
+        ),
     },
     "target": {
         "type": "string",
@@ -158,12 +176,21 @@ TOOLS: list[dict[str, Any]] = [
     ),
     _tool(
         "codex_run",
-        "Start a Codex task job that writes in a worktree; model and effort are required, and exactly one of branch and worktree. Returns the job id at once.",
+        (
+            "Start a Codex task job that writes in a worktree; model and effort are required, and "
+            "exactly one of branch and worktree. Returns the job id at once."
+        ),
         {**_JOB_FLAGS, **_RUN_FLAGS},
     ),
     _tool(
         "codex_resume",
-        "Continue a thread (job id or thread id) in a new job. A job id supplies the source's working directory, model and effort unless model or effort is given. Resuming a finished run job continues it with its write access in the same worktree, which the new job takes over; refused while the run job is live, after its worktree was released, or once that worktree is off the job's branch.",
+        (
+            "Continue a thread (job id or thread id) in a new job. A job id supplies the source's "
+            "working directory, model and effort unless model or effort is given. Resuming a "
+            "finished run job continues it with its write access in the same worktree, which the "
+            "new job takes over; refused while the run job is live, after its worktree was "
+            "released, or once that worktree is off the job's branch."
+        ),
         {
             "source": {"type": "string", "description": "Job id or thread id to continue."},
             **_JOB_FLAGS,
@@ -172,7 +199,13 @@ TOOLS: list[dict[str, Any]] = [
     ),
     _tool(
         "codex_fork",
-        "Branch a thread (job id or thread id) in a new job. A job id supplies the source's working directory, model and effort unless model or effort is given. The fork is read-only; a fork of a run job that gets its own branch or worktree keeps the run job's write access. Pointed at the source's own worktree it silently stays read-only: the job record's sandbox says which.",
+        (
+            "Branch a thread (job id or thread id) in a new job. A job id supplies the source's "
+            "working directory, model and effort unless model or effort is given. The fork is "
+            "read-only; a fork of a run job that gets its own branch or worktree keeps the run "
+            "job's write access. Pointed at the source's own worktree it silently stays "
+            "read-only: the job record's sandbox says which."
+        ),
         {
             "source": {"type": "string", "description": "Job id or thread id to branch."},
             **_JOB_FLAGS,
@@ -195,12 +228,18 @@ TOOLS: list[dict[str, Any]] = [
     ),
     _tool(
         "codex_wait",
-        "Wait for a job to end and return its result envelope. A client that supports tasks gets a task that completes with the envelope; otherwise the call blocks until the job ends or max_seconds pass, then returns the envelope or the running state.",
+        (
+            "Wait for a job to end and return its result envelope. A client that supports tasks "
+            "gets a task that completes with the envelope; otherwise the call blocks until the "
+            "job ends or max_seconds pass, then returns the envelope or the running state."
+        ),
         {
             "job_id": _JOB_ID,
             "max_seconds": {
                 "type": "integer",
-                "description": "Longest blocking wait. Default: until the job ends. Ignored for a task.",
+                "description": (
+                    "Longest blocking wait. Default: until the job ends. Ignored for a task."
+                ),
             },
         },
         ["job_id"],

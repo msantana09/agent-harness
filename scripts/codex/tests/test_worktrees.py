@@ -1,4 +1,5 @@
-"""Tests for codex_jobs.worktrees against real temporary git repos (a bare `origin` plus a clone)."""
+"""Tests for codex_jobs.worktrees against real temporary git repos (a bare `origin` plus a
+clone)."""
 
 import os
 import signal
@@ -25,7 +26,8 @@ def run_git(cwd: Path, *args: str) -> str:
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    """A main checkout on `trunk` with a bare origin whose HEAD is set, as a clone of a hosted repo has."""
+    """A main checkout on `trunk` with a bare origin whose HEAD is set, as a clone of a hosted repo
+    has."""
     origin = tmp_path / "origin.git"
     subprocess.run(["git", "init", "-q", "--bare", "-b", DEFAULT_BRANCH, str(origin)], check=True)
     main = tmp_path / "proj"
@@ -185,7 +187,8 @@ def test_release_by_an_old_holder_after_a_takeover_keeps_the_new_lease_and_workt
     armed = [True]
 
     def load_job(root_arg, job_id):
-        # The old holder's release has found its lease; the new job takes the worktree over before it acts.
+        # The old holder's release has found its lease; the new job takes the worktree over before
+        # it acts.
         if armed[0] and job_id == old["job_id"]:
             armed[0] = False
             worktrees.use_worktree(root, new["job_id"], wt.path)
@@ -275,7 +278,8 @@ def test_a_rival_that_dirties_and_finishes_between_the_clean_check_and_the_claim
 
     def git(cwd, *args):
         out = real_git(cwd, *args)
-        # The first submission has just read the status; the rival tries to take the worktree before it claims.
+        # The first submission has just read the status; the rival tries to take the worktree before
+        # it claims.
         if args[:1] == ("status",) and armed[0]:
             armed[0] = False
             rival.start()

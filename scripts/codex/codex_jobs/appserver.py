@@ -83,7 +83,8 @@ def _apply_mask(data: bytes, mask: bytes) -> bytes:
 
 
 def _connectable_path(path: str | os.PathLike[str]) -> str:
-    """`path`, or the symlink target when `path` is too long for sun_path (Codex symlinks long ones)."""
+    """`path`, or the symlink target when `path` is too long for sun_path (Codex symlinks long
+    ones)."""
     text = os.fspath(path)
     if len(os.fsencode(text)) < _SUN_PATH_LIMIT:
         return text
@@ -126,7 +127,8 @@ class WebSocketConnection:
             sock.connect(_connectable_path(path))
             key = base64.b64encode(os.urandom(16))
             sock.sendall(
-                b"GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                b"GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\n"
+                b"Connection: Upgrade\r\n"
                 b"Sec-WebSocket-Key: " + key + b"\r\nSec-WebSocket-Version: 13\r\n\r\n"
             )
             head, leftover = _read_http_head(sock)
@@ -351,7 +353,8 @@ class AppServerClient:
         return result
 
     def call(self, method: str, params: dict[str, Any] | None = None, timeout: float = 60.0) -> Any:
-        """Send a request and return its `result`; raise `RpcError`, `TimeoutError` or `ConnectionClosed`."""
+        """Send a request and return its `result`; raise `RpcError`, `TimeoutError` or
+        `ConnectionClosed`."""
         request_id = next(self._ids)
         answer: queue.Queue[Any] = queue.Queue(maxsize=1)
         with self._lock:
@@ -389,7 +392,8 @@ class AppServerClient:
         self._send({"id": request_id, "error": error})
 
     def next_notification(self, timeout: float | None = None) -> dict[str, Any] | None:
-        """The next notification, None on timeout; raises `ConnectionClosed` once the stream has ended."""
+        """The next notification, None on timeout; raises `ConnectionClosed` once the stream has
+        ended."""
         try:
             item = self._notifications.get(timeout=timeout)
         except queue.Empty:
@@ -551,7 +555,8 @@ def build_app_server_env(gh_token: str | None) -> dict[str, str]:
     """The app-server's whole environment: HOME, the caller's PATH and a few basics, plus GH_TOKEN.
 
     `shell_environment_policy.ignore_default_excludes=true` (set when there is a token) passes every
-    KEY/TOKEN/SECRET variable through to commands Codex runs, so nothing else of the caller's is inherited.
+    KEY/TOKEN/SECRET variable through to commands Codex runs, so nothing else of the caller's is
+    inherited.
     """
     env = {"HOME": os.environ["HOME"], "PATH": os.environ["PATH"]}
     for name in _ENV_PASSTHROUGH:
@@ -582,7 +587,8 @@ def _wait_until_listening(
         returncode = proc.poll()
         if returncode is not None:
             raise AppServerStartError(
-                f"codex app-server exited with status {returncode} before listening\n{_log_tail(log_path)}"
+                f"codex app-server exited with status {returncode} before "
+                f"listening\n{_log_tail(log_path)}"
             )
         probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
@@ -595,7 +601,8 @@ def _wait_until_listening(
             probe.close()
         if time.monotonic() >= deadline:
             raise AppServerStartError(
-                f"codex app-server not accepting connections on {socket_path} after {timeout}s ({last_error})\n{_log_tail(log_path)}"
+                f"codex app-server not accepting connections on {socket_path} after "
+                f"{timeout}s ({last_error})\n{_log_tail(log_path)}"
             )
         time.sleep(0.05)
 
@@ -610,13 +617,16 @@ def launch_app_server(
     token_resolver: Callable[[Path], str | None] = resolve_gh_token,
     on_spawn: Callable[[int, int], None] | None = None,
 ) -> AppServer:
-    """Start `codex app-server --listen unix://<job_dir>/app.sock` in its own session and wait for the socket.
+    """Start `codex app-server --listen unix://<job_dir>/app.sock` in its own session and wait for
+    the socket.
 
-    Commands always run in a non-login shell (`-c allow_login_shell=false`). `extra_config` is a list of `key=value` strings, each passed as `-c key=value`. The environment
+    Commands always run in a non-login shell (`-c allow_login_shell=false`). `extra_config` is a
+    list of `key=value` strings, each passed as `-c key=value`. The environment
     is `build_app_server_env`; `token_resolver(repo_dir)` supplies GH_TOKEN, and when it returns one
     the launcher also sets `shell_environment_policy.ignore_default_excludes=true`. Output goes to
-    `<job_dir>/app-server.log`. `on_spawn(pid, pgid)` is called as soon as the process exists, before
-    the wait for its socket, so a caller can record what to stop if it dies during that wait. On
+    `<job_dir>/app-server.log`. `on_spawn(pid, pgid)` is called as soon as the process exists,
+    before the wait for its socket, so a caller can record what to stop if it dies during that
+    wait. On
     failure to listen, or when `on_spawn` raises, the process group is stopped; a failure to listen
     raises `AppServerStartError` with the log tail.
     """

@@ -1,4 +1,5 @@
-"""Permission classes: which sandbox a job's thread and turns run under, and what git says it changed.
+"""Permission classes: which sandbox a job's thread and turns run under, and what git says it
+changed.
 
     read          review/consult: nothing writable, network on (gh and git ls-remote keep working)
     write         run: the job's worktree is writable, the task envelope forbids commit and push
@@ -74,7 +75,8 @@ def permission_class_for(job: dict[str, Any]) -> str:
 
 
 def sandbox_for(job: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    """The sandbox a job's runner sends: its class from `permission_class_for`, its `cwd` as the worktree."""
+    """The sandbox a job's runner sends: its class from `permission_class_for`, its `cwd` as the
+    worktree."""
     return policy_for(permission_class_for(job), job["cwd"])
 
 
@@ -84,7 +86,8 @@ def fork_permission_class(
     fork_worktree: str | os.PathLike[str] | None,
     parent_worktree: str | os.PathLike[str] | None,
 ) -> str:
-    """The class a fork starts with: its parent's only inside a worktree of its own, otherwise `read`."""
+    """The class a fork starts with: its parent's only inside a worktree of its own, otherwise
+    `read`."""
     if parent_class == READ or fork_worktree is None:
         return READ
     if (
@@ -101,7 +104,8 @@ def commit_line(allow_commit: bool) -> str:
 
 
 def changed_files(worktree: str | os.PathLike[str]) -> list[str]:
-    """Paths `git status --porcelain` reports (untracked files listed one by one); a rename lists both paths."""
+    """Paths `git status --porcelain` reports (untracked files listed one by one); a rename lists
+    both paths."""
     entries = git(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split("\0")
     paths: list[str] = []
     i = 0

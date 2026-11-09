@@ -53,7 +53,10 @@ class FakeCodex:
         self.script_path.write_text(json.dumps(script))
 
     def launch(self, name: str = "job", **kwargs: Any) -> appserver.AppServer:
-        """Start the fake through `launch_app_server`; stopped at teardown. No gh token unless asked."""
+        """Start the fake through `launch_app_server`; stopped at teardown.
+
+        No gh token unless asked.
+        """
         job_dir = self.root / name
         job_dir.mkdir(exist_ok=True)
         kwargs.setdefault("token_resolver", lambda repo_dir: None)
@@ -92,7 +95,8 @@ class FakeCodex:
             time.sleep(0.02)
 
     def shutdown(self) -> None:
-        """Stop every fake app-server this run started: the ones from `launch` and the ones a runner launched."""
+        """Stop every fake app-server this run started: the ones from `launch` and the ones a
+        runner launched."""
         pgids = {server.pgid for server in self._servers} | {
             row["pgid"] for row in self.records("start")
         }
@@ -122,7 +126,8 @@ def commit_file() -> Callable[..., None]:
 
 @pytest.fixture
 def review_repo(tmp_path: Path) -> Path:
-    """A feature branch one commit ahead of `origin/trunk`, with `origin/HEAD` set: what a review is attested against."""
+    """A feature branch one commit ahead of `origin/trunk`, with `origin/HEAD` set: what a review
+    is attested against."""
     origin = tmp_path / "review-origin.git"
     subprocess.run(["git", "init", "-q", "--bare", "-b", "trunk", str(origin)], check=True)
     repo = tmp_path / "review-repo"
@@ -148,7 +153,8 @@ def fake_codex(tmp_path: Path) -> Iterator[FakeCodex]:
 
 @pytest.fixture
 def hold_slots(tmp_path: Path) -> Iterator[Callable[[Path, int], list[subprocess.Popen]]]:
-    """`hold(root, n)`: n `admitted` jobs under `root` whose runner is a live `sleep`; returns the sleepers."""
+    """`hold(root, n)`: n `admitted` jobs under `root` whose runner is a live `sleep`; returns the
+    sleepers."""
     sleepers: list[subprocess.Popen] = []
 
     def hold(root: Path, count: int) -> list[subprocess.Popen]:

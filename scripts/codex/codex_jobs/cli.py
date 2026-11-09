@@ -5,14 +5,15 @@ for `status <id>`, `result` and `capabilities` and one tab-separated line per jo
 
     SUCCESS: <output-dir>            the job finished and its deliverable is in <output-dir>
     FAILURE: <reason>                the command did not do what was asked
-    FAILURE: usage limit (resets <ISO>)   the usage gate refused the job or its turn ran out of usage (`wait` and `result` print it last)
+    FAILURE: usage limit (resets <ISO>)   the usage gate refused the job or its turn ran out of
+                                     usage (`wait` and `result` print it last)
     JOB: <job-id>                    a job was started (or an idempotency key found its owner)
     STATE: <job-id> <state>          a job's state after `wait`, `cancel`, `steer`, `interrupt`
     <path>                           `release`: the worktree whose lease the job dropped
     RUNNING: <job-id> <state>        `wait` ran out of time with the job still active
 
-Exit codes: 0 done, 1 failure, 2 usage error, 75 `wait` timed out. Every path the command touches arrives as a parameter of `main`; `__main__.py` supplies the
-real ones.
+Exit codes: 0 done, 1 failure, 2 usage error, 75 `wait` timed out. Every path the command touches
+arrives as a parameter of `main`; `__main__.py` supplies the real ones.
 """
 
 import argparse
@@ -302,7 +303,10 @@ def _prepare_output_dir(path: Path) -> None:
 
 
 def _source_for(ctx: _Context, source: str) -> tuple[str, dict[str, Any] | None]:
-    """(thread id, parent job record) for a `resume`/`fork` argument that is a job id or a thread id."""
+    """(thread id, parent job record) for a `resume`/`fork` argument.
+
+    The argument is a job id or a thread id.
+    """
     if records.JOB_ID_RE.match(source):
         parent = records.load_job(ctx.root, source)
         if not parent["thread_id"]:
@@ -312,7 +316,10 @@ def _source_for(ctx: _Context, source: str) -> tuple[str, dict[str, Any] | None]
 
 
 def _review_target(args: argparse.Namespace) -> dict[str, str] | None:
-    """The `review/start` target of a `review --native` start, or None for any other start; CliError for flags that do not fit."""
+    """The `review/start` target of a `review --native` start, or None for any other start.
+
+    CliError for flags that do not fit.
+    """
     if args.command != "review":
         return None
     if not args.native:
@@ -325,7 +332,8 @@ def _review_target(args: argparse.Namespace) -> dict[str, str] | None:
         raise CliError(f"--native needs --target {review.TARGET_FORMS}")
     if args.prompt_file is not None or args.image:
         raise CliError(
-            "--native takes no prompt file or --image: Codex's built-in reviewer is given the target only"
+            "--native takes no prompt file or --image: "
+            "Codex's built-in reviewer is given the target only"
         )
     try:
         return review.parse_target(args.target)
@@ -334,12 +342,16 @@ def _review_target(args: argparse.Namespace) -> dict[str, str] | None:
 
 
 def _fork_permission_class(args: argparse.Namespace, parent: dict[str, Any] | None) -> str:
-    """The class a fork starts with: the parent's when the fork holds a worktree of its own, else `read`."""
+    """The class a fork starts with.
+
+    The parent's when the fork holds a worktree of its own, else `read`.
+    """
     if not (args.branch or args.worktree):
         return permissions.READ
     if parent is None or permissions.permission_class_for(parent) == permissions.READ:
         raise CliError(
-            "--branch and --worktree apply to a fork of a run job; this source has no worktree to inherit"
+            "--branch and --worktree apply to a fork of a run job; "
+            "this source has no worktree to inherit"
         )
     if args.branch:
         if not args.project_dir:
@@ -431,7 +443,8 @@ def _start_job(ctx: _Context, args: argparse.Namespace, parser: argparse.Argumen
         thread_cwd = Path(parent["cwd"])
         if not thread_cwd.is_dir():
             raise CliError(
-                f"job {parent['job_id']} ran in {thread_cwd}, which is gone; {args.command} its thread id instead"
+                f"job {parent['job_id']} ran in {thread_cwd}, which is gone; "
+                f"{args.command} its thread id instead"
             )
 
     auto_dir = args.output_dir is None
@@ -459,7 +472,8 @@ def _start_job(ctx: _Context, args: argparse.Namespace, parser: argparse.Argumen
         source_mode=source_mode,
         source_thread_id=source_thread_id,
         review_target=review_target,
-        runner_pid=os.getpid(),  # this process owns the job through preparation, until its runner starts
+        # this process owns the job through preparation, until its runner starts
+        runner_pid=os.getpid(),
     )
     if not created:
         if auto_dir:
@@ -513,7 +527,8 @@ def _start_job(ctx: _Context, args: argparse.Namespace, parser: argparse.Argumen
         return EXIT_FAILURE
 
     _log(
-        f"job {job_id} started (model={resolution.slug}, effort={resolution.effort}, timeout={args.timeout}s)"
+        f"job {job_id} started "
+        f"(model={resolution.slug}, effort={resolution.effort}, timeout={args.timeout}s)"
     )
     if args.detach:
         _say(f"JOB: {job_id}")
@@ -532,7 +547,8 @@ def _start_job(ctx: _Context, args: argparse.Namespace, parser: argparse.Argumen
 
 
 def _usage_refusal(job: dict[str, Any]) -> str | None:
-    """`usage limit (resets <ISO>)` for a job the usage gate refused or whose turn ran out of usage, else None.
+    """`usage limit (resets <ISO>)` for a job the usage gate refused or whose turn ran out of
+    usage, else None.
 
     The reset time is the usage window's, from the limits read at the turn's start.
     """
@@ -572,13 +588,18 @@ def _task_succeeded(job_dir: Path) -> bool | None:
 
 
 def _task_failure(job: dict[str, Any], job_dir: Path) -> str | None:
-    """Why a `succeeded` job still failed its caller: its result says Codex did not complete the task.
+    """Why a `succeeded` job still failed its caller.
+
+    Its result says Codex did not complete the task.
 
     A review names the reason its attestation records, when it records one.
     """
     if _task_succeeded(job_dir) is False:
         reason = _review_failure(job_dir) if job["kind"] == "review" else None
-        return f"{reason or 'codex reported the task did not complete'} (job {job['job_id']}; see {job['output_dir']})"
+        return (
+            f"{reason or 'codex reported the task did not complete'} "
+            f"(job {job['job_id']}; see {job['output_dir']})"
+        )
     return None
 
 
@@ -679,7 +700,8 @@ def _cmd_wait(ctx: _Context, args: argparse.Namespace, parser: argparse.Argument
 def _server_settled(ctx: _Context, job: dict[str, Any]) -> dict[str, Any]:
     """`job` reloaded once its app-server has stopped, or after `SERVER_SETTLE_SECONDS`.
 
-    A job turns terminal just before its runner stops the app-server; this gives that stop time to land.
+    A job turns terminal just before its runner stops the app-server; this gives that stop time
+    to land.
     """
     deadline = time.monotonic() + SERVER_SETTLE_SECONDS
     while (

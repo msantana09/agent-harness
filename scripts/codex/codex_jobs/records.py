@@ -237,7 +237,8 @@ def key_path(root: Path, key: str) -> Path:
 
 
 def _key_owner(path: Path) -> str:
-    """The job id in the index entry at `path`; the winner writes it straight after creating the file, so an empty entry is read again briefly."""
+    """The job id in the index entry at `path`; the winner writes it straight after creating the
+    file, so an empty entry is read again briefly."""
     for _ in range(_KEY_READ_ATTEMPTS):
         owner = path.read_text().strip()
         if owner:
@@ -306,9 +307,11 @@ def create_job(
     `catalog_fetched_at` is the model catalog's `fetched_at` at that resolution. `codex_bin` is the
     resolved Codex executable the runner launches. `images` are absolute
     paths sent with the prompt. `allow_commit` lets a `run` job commit to its branch; `worktree`,
-    `branch` and `base_commit` are set (with `cwd`) once the job holds its worktree. `source_mode` (`resume` or `fork`) and `source_thread_id` go
+    `branch` and `base_commit` are set (with `cwd`) once the job holds its worktree. `source_mode`
+    (`resume` or `fork`) and `source_thread_id` go
     together: the job continues or branches that thread instead of starting a new one.
-    `review_target` (a `review/start` target object) makes a review job run Codex's built-in reviewer on it.
+    `review_target` (a `review/start` target object) makes a review job run Codex's built-in
+    reviewer on it.
     `runner_pid` is the live process that owns the job from the first write: the submitting CLI,
     until the runner it spawns records its own pid.
 

@@ -1,4 +1,5 @@
-"""Tests for codex_jobs.runner and codex_jobs.reconcile: a consult job end to end and its crash recovery.
+"""Tests for codex_jobs.runner and codex_jobs.reconcile: a consult job end to end and its crash
+recovery.
 
 Runners are real detached subprocesses (`spawn_runner`) against tests/fake_codex.py, so a
 `--crash-at` point really ends the process and the fake app-server really outlives it.
@@ -95,7 +96,8 @@ def group_gone(pgid):
 
 
 class Lab:
-    """A job root, a project, an output dir and a sessions dir under tmp_path, driving the fake codex."""
+    """A job root, a project, an output dir and a sessions dir under tmp_path, driving the fake
+    codex."""
 
     def __init__(self, tmp_path, fake):
         self.fake = fake

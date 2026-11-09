@@ -19,14 +19,18 @@ CATALOG = {
         for slug in ("slug-sol", "slug-astra", "slug-terra", "gpt-6-luna")
     ],
 }
-MODELS_SH = "CODEX_MODEL_SOL=slug-sol\nCODEX_MODEL_ASTRA=slug-astra\nCODEX_MODEL_TERRA=slug-terra\nCODEX_MODEL_LUNA=gpt-6-luna\n"
+MODELS_SH = (
+    "CODEX_MODEL_SOL=slug-sol\nCODEX_MODEL_ASTRA=slug-astra\n"
+    "CODEX_MODEL_TERRA=slug-terra\nCODEX_MODEL_LUNA=gpt-6-luna\n"
+)
 TASKS_META = {
     "_meta": {mcp_server.META_CAPABILITIES: {"extensions": {mcp_server.TASKS_EXTENSION: {}}}}
 }
 SUBAGENT_META = {"_meta": {mcp_server.META_CAPABILITIES: {"roots": {"listChanged": True}}}}
 EXPECTED_TOOLS = {
-    "codex_capabilities", "codex_review", "codex_consult", "codex_run", "codex_status", "codex_result",
-    "codex_wait", "codex_cancel", "codex_resume", "codex_fork", "codex_steer", "codex_interrupt",
+    "codex_capabilities", "codex_review", "codex_consult", "codex_run", "codex_status",
+    "codex_result", "codex_wait", "codex_cancel", "codex_resume", "codex_fork", "codex_steer",
+    "codex_interrupt",
 }  # fmt: skip
 
 

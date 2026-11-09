@@ -34,7 +34,8 @@ _SHA_RE = re.compile(r"[0-9a-fA-F]{7,40}")
 # `schema_version` of the findings contract the answer is written under (see `findings.py`).
 FINDINGS_SCHEMA_VERSION = 2
 
-# Heading sets a completed review must carry: Summary with Review Findings, or Findings with Verdict.
+# Heading sets a completed review must carry: Summary with Review Findings, or Findings with
+# Verdict.
 REQUIRED_HEADINGS = ({"Summary", "Review Findings"}, {"Findings", "Verdict"})
 
 # The strict output schema makes every finding field required, so a finding with no single
@@ -43,19 +44,21 @@ NO_FILE = ""
 NO_LINE = 0
 
 REVIEW_CONTRACT = (
-    "OUTPUT CONTRACT: Return the JSON object required by the output schema. Set status to completed "
-    "only if you read the prompt and performed the requested review. Set status to blocked if tool "
-    "access or missing inputs prevent completing the review, or failed for another execution failure; "
-    "then set verdict to needs-attention, findings to an empty array and explain why in review. Status "
-    "describes review completion, not whether the reviewed code is ready to merge. Put the complete "
-    "Markdown review in review, following the prompt's response format or, if none, using '## Summary' "
-    "and '## Review Findings'. Put the same findings in findings, one item each: severity is exactly "
-    "critical, high, medium or low (a Blocker is critical); title, body and recommendation are "
-    "non-empty; file is the repository path, or an empty string when the finding has no single file; "
-    "line_start and line_end are 1-based, or 0 when the finding has no single location; confidence is "
-    "a number from 0 to 1; category is the closest of the schema's values. Set verdict to approve only "
-    "when findings is empty. This envelope takes precedence over instructions about final-message "
-    "formatting in the prompt. Do not create, modify, or delete repository files or change git state."
+    "OUTPUT CONTRACT: Return the JSON object required by the output schema. Set status to "
+    "completed only if you read the prompt and performed the requested review. Set status to "
+    "blocked if tool access or missing inputs prevent completing the review, or failed for "
+    "another execution failure; then set verdict to needs-attention, findings to an empty "
+    "array and explain why in review. Status describes review completion, not whether the "
+    "reviewed code is ready to merge. Put the complete Markdown review in review, following "
+    "the prompt's response format or, if none, using '## Summary' and '## Review Findings'. "
+    "Put the same findings in findings, one item each: severity is exactly critical, high, "
+    "medium or low (a Blocker is critical); title, body and recommendation are non-empty; "
+    "file is the repository path, or an empty string when the finding has no single file; "
+    "line_start and line_end are 1-based, or 0 when the finding has no single location; "
+    "confidence is a number from 0 to 1; category is the closest of the schema's values. Set "
+    "verdict to approve only when findings is empty. This envelope takes precedence over "
+    "instructions about final-message formatting in the prompt. Do not create, modify, or "
+    "delete repository files or change git state."
 )
 
 
@@ -79,7 +82,10 @@ def load_schema() -> dict[str, Any]:
 
 
 def parse_target(text: str) -> dict[str, str]:
-    """The `review/start` target for a `--target` value (`TARGET_FORMS`); `ValueError` for anything else."""
+    """The `review/start` target for a `--target` value (`TARGET_FORMS`).
+
+    `ValueError` for anything else.
+    """
     if text == "uncommitted":
         return {"type": "uncommittedChanges"}
     kind, _, value = text.partition(":")
@@ -91,7 +97,9 @@ def parse_target(text: str) -> dict[str, str]:
 
 
 def render_review_output(output: dict[str, Any]) -> str:
-    """The prose of a native review from the structured output its sub-thread ended with (`overall_explanation`, `findings`).
+    """The prose of a native review from the structured output its sub-thread ended with.
+
+    The output carries `overall_explanation` and `findings`.
 
     Reproduces the text the app-server delivers as the review's agent message: the explanation, then
     `Review comment:` (one finding) or `Full review comments:` and one `- title — path:start-end`
@@ -106,7 +114,10 @@ def render_review_output(output: dict[str, Any]) -> str:
         for finding in findings:
             location = finding["code_location"]
             span = location["line_range"]
-            head = f"- {finding['title']} \u2014 {location['absolute_file_path']}:{span['start']}-{span['end']}"
+            head = (
+                f"- {finding['title']} \u2014 {location['absolute_file_path']}"
+                f":{span['start']}-{span['end']}"
+            )
             items.append(
                 head + "\n" + "\n".join(f"  {line}" for line in finding["body"].split("\n"))
             )
@@ -122,7 +133,10 @@ def lacks_required_headings(review: str) -> bool:
 
 
 def _findings_document(answer: dict[str, Any]) -> dict[str, Any]:
-    """The answer's verdict, summary and findings as the validator's input, locations the schema forced dropped."""
+    """The answer's verdict, summary and findings as the validator's input.
+
+    Locations the schema forced are dropped.
+    """
     findings = []
     for finding in answer["findings"]:
         finding = dict(finding)
@@ -184,7 +198,10 @@ def write_deliverables(directory: Path, answer: dict[str, Any]) -> ReviewOutcome
 
 
 def write_native_deliverable(directory: Path, text: str) -> ReviewOutcome:
-    """Write a native review's message as `review.md`. It has no findings, so no verdict (`review_approved` None)."""
+    """Write a native review's message as `review.md`.
+
+    It has no findings, so no verdict (`review_approved` None).
+    """
     (Path(directory) / "review.md").write_text(text.rstrip() + "\n")
     return ReviewOutcome(
         task_succeeded=True, review_approved=None, problems=(), files=("review.md",)

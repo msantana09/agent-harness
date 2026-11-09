@@ -12,8 +12,9 @@ sends `turn/start`: a turn that did not start is failed, never retried. Routes, 
    through the routes below. No new turn on an idle thread: the job failed, never dispatched.
    Anything else (the server gone, several new turns, an active thread listing none) is
    `outcome_unknown`, with `ran` null in the result.
-2. the app-server answers on `<job_dir>/app.sock`: `thread/turns/list` shows the turn. Still running:
-   start an adopt runner. Finished: finalize from the thread (`recovered_via = "thread/read"`).
+2. the app-server answers on `<job_dir>/app.sock`: `thread/turns/list` shows the turn. Still
+   running: start an adopt runner. Finished: finalize from the thread
+   (`recovered_via = "thread/read"`).
 3. the app-server is gone: Codex's rollout file for the thread has the turn's end
    (`recovered_via = "rollout"`), else the job is `outcome_unknown`. A native review's turn ends in
    that file with no message; its text is the last message of the review sub-thread's own rollout.
@@ -57,7 +58,8 @@ def _exclusive(job_dir: Path) -> Generator[None]:
 
 
 def _probe_server(job_dir: Path, job: dict[str, Any]) -> TurnOutcome | str | None:
-    """Ask the job's app-server about its turn: `"running"`, a finished turn's outcome, or None (server gone or turn unknown)."""
+    """Ask the job's app-server about its turn: `"running"`, a finished turn's outcome, or None
+    (server gone or turn unknown)."""
     thread_id = job["thread_id"]
     try:
         with AppServerClient(job_dir / "app.sock", connect_timeout=PROBE_TIMEOUT) as client:
@@ -88,7 +90,8 @@ def _rollout_rows(path: Path) -> Iterator[dict[str, Any]]:
 
 
 def _is_review_subthread(path: Path, parent_thread_id: str) -> bool:
-    """Whether the rollout's first row says it is a review sub-agent thread of `parent_thread_id`."""
+    """Whether the rollout's first row says it is a review sub-agent thread of
+    `parent_thread_id`."""
     first = next(_rollout_rows(path), None)
     meta = (first or {}).get("payload") or {}
     return (
@@ -99,7 +102,8 @@ def _is_review_subthread(path: Path, parent_thread_id: str) -> bool:
 
 
 def _native_review_outcome(job: dict[str, Any], sessions_dir: Path, parent: Path) -> TurnOutcome:
-    """A native review's text from the rollout of its review sub-agent thread, which started after `parent` did.
+    """A native review's text from the rollout of its review sub-agent thread, which started after
+    `parent` did.
 
     The parent's turn ends with no message; the sub-thread's last message is the structured review,
     rendered to prose. Anything but exactly one such sub-thread is `unknown`.
@@ -140,7 +144,8 @@ def _native_review_outcome(job: dict[str, Any], sessions_dir: Path, parent: Path
 
 
 def _outcome_from_rollout(job: dict[str, Any], sessions_dir: Path) -> TurnOutcome | None:
-    """The end of the job's turn as Codex wrote it to `rollout-*-<thread id>.jsonl`, or None if it never ended there."""
+    """The end of the job's turn as Codex wrote it to `rollout-*-<thread id>.jsonl`, or None if it
+    never ended there."""
     for path in sorted(Path(sessions_dir).rglob(f"rollout-*-{job['thread_id']}.jsonl")):
         for row in _rollout_rows(path):
             payload = row.get("payload") or {}
@@ -162,7 +167,8 @@ def _settle(job_dir: Path, outcome: TurnOutcome, recovered_via: str | None) -> d
 
 
 def _probe_dispatch(job_dir: Path, sent: dict[str, Any]) -> tuple[str, str | None]:
-    """What the app-server shows after an unrecorded `turn/start`: `("started", turn id)`, `("none", None)` or `("unknown", None)`.
+    """What the app-server shows after an unrecorded `turn/start`: `("started", turn id)`,
+    `("none", None)` or `("unknown", None)`.
 
     `started` is exactly one turn not among the thread's earlier turns; `none` is no such turn on
     an idle thread; anything else, the server being gone included, is `unknown`.
@@ -188,7 +194,8 @@ def _probe_dispatch(job_dir: Path, sent: dict[str, Any]) -> tuple[str, str | Non
 def _reconcile_undispatched(
     job_dir: Path, job: dict[str, Any], sessions_dir: Path
 ) -> dict[str, Any]:
-    """Settle a job with no recorded turn id, finding its turn on the server when `turn/start` was sent."""
+    """Settle a job with no recorded turn id, finding its turn on the server when `turn/start` was
+    sent."""
     sent = runner.unconfirmed_dispatch(job_dir)
     if sent is None:
         records.append_event(job_dir, "reconciled", {"route": "never-dispatched"})
@@ -229,7 +236,10 @@ def _reconcile_undispatched(
         job_dir,
         TurnOutcome(
             "unknown",
-            error="turn/start was sent but its acceptance was not recorded, and the app-server cannot show whether a turn started",
+            error=(
+                "turn/start was sent but its acceptance was not recorded, and the app-server "
+                "cannot show whether a turn started"
+            ),
         ),
         None,
     )
@@ -275,7 +285,8 @@ def _needs_reconcile(job: dict[str, Any]) -> bool:
 
 
 def reconcile_job(root: Path, job_id: str, *, sessions_dir: Path) -> dict[str, Any]:
-    """Settle `job_id` if its runner is dead, or stop the app-server a dead runner left behind; return the record."""
+    """Settle `job_id` if its runner is dead, or stop the app-server a dead runner left behind;
+    return the record."""
     root = Path(root)
     job = records.load_job(root, job_id)
     if not _needs_reconcile(job) or runner.runner_alive(job):
@@ -293,7 +304,8 @@ def reconcile_job(root: Path, job_id: str, *, sessions_dir: Path) -> dict[str, A
 
 
 def reconcile_all(root: Path, *, sessions_dir: Path) -> list[dict[str, Any]]:
-    """Reconcile every job that was not terminal or still has an app-server to stop; return their records afterwards."""
+    """Reconcile every job that was not terminal or still has an app-server to stop; return their
+    records afterwards."""
     return [
         reconcile_job(root, job["job_id"], sessions_dir=sessions_dir)
         for job in records.list_jobs(root)

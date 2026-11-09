@@ -172,7 +172,8 @@ def test_wait_fails_when_codex_reports_the_task_did_not_complete(env):
         1,
         [
             f"STATE: {job_id} succeeded",
-            f"FAILURE: codex reported the task did not complete (job {job_id}; see {job['output_dir']})",
+            f"FAILURE: codex reported the task did not complete "
+            f"(job {job_id}; see {job['output_dir']})",
         ],
     )
 

@@ -1,4 +1,5 @@
-"""Tests for codex_jobs.records: state machine, journal, atomic write, idempotency, result envelope."""
+"""Tests for codex_jobs.records: state machine, journal, atomic write, idempotency, result
+envelope."""
 
 import json
 import re

@@ -76,7 +76,10 @@ def _git_env() -> dict[str, str]:
 
 
 def git(cwd: str | os.PathLike[str], *args: str) -> str:
-    """Run `git -C cwd <args>` and return stdout; a nonzero exit raises `WorktreeError` with stderr."""
+    """Run `git -C cwd <args>` and return stdout.
+
+    A nonzero exit raises `WorktreeError` with stderr.
+    """
     proc = subprocess.run(
         ["git", "-C", str(cwd), *args],
         capture_output=True,
@@ -92,7 +95,10 @@ def git(cwd: str | os.PathLike[str], *args: str) -> str:
 
 
 def main_checkout(path: str | os.PathLike[str]) -> Path:
-    """The main checkout of the repo `path` belongs to: the first entry of `git worktree list --porcelain`."""
+    """The main checkout of the repo `path` belongs to.
+
+    It is the first entry of `git worktree list --porcelain`.
+    """
     for line in git(path, "worktree", "list", "--porcelain").splitlines():
         if line.startswith("worktree "):
             return Path(line.removeprefix("worktree ")).resolve()
@@ -104,7 +110,10 @@ def worktree_toplevel(path: str | os.PathLike[str]) -> Path:
 
 
 def refuse_main_checkout(cwd: str | os.PathLike[str]) -> Path:
-    """Return the top level of the checkout `cwd` is in; refuse when that is the repo's main checkout."""
+    """Return the top level of the checkout `cwd` is in.
+
+    Refuse when that is the repo's main checkout.
+    """
     top = worktree_toplevel(Path(cwd).resolve())
     main = main_checkout(top)
     if top == main:
@@ -119,7 +128,8 @@ def default_branch(main: str | os.PathLike[str]) -> str:
         ref = git(main, "symbolic-ref", "--short", "refs/remotes/origin/HEAD").strip()
     except WorktreeError as exc:
         raise WorktreeError(
-            f"cannot tell the default branch of {main}: origin/HEAD is not set (git remote set-head origin -a)"
+            f"cannot tell the default branch of {main}: origin/HEAD is not set "
+            "(git remote set-head origin -a)"
         ) from exc
     return ref.removeprefix("origin/")
 
@@ -156,7 +166,10 @@ def lease_path(root: Path, worktree: str | os.PathLike[str]) -> Path:
 
 @contextmanager
 def _lease_lock(root: Path, worktree: str | os.PathLike[str]) -> Generator[None]:
-    """Hold `worktree`'s lease lock; the file sits outside `leases/` so `find_lease` never reads it."""
+    """Hold `worktree`'s lease lock.
+
+    The file sits outside `leases/` so `find_lease` never reads it.
+    """
     path = Path(root) / "lease-locks" / _digest(worktree)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
@@ -215,7 +228,10 @@ def lease_holder(root: Path, worktree: str | os.PathLike[str]) -> str | None:
 
 
 def _refuse_if_held(root: Path, worktree: str | os.PathLike[str]) -> None:
-    """Raise `leased by <job-id>` when a live job holds `worktree`. The caller holds the lease lock."""
+    """Raise `leased by <job-id>` when a live job holds `worktree`.
+
+    The caller holds the lease lock.
+    """
     existing = _read_lease(lease_path(root, worktree))
     if existing is not None and _holder_live(root, existing):
         raise WorktreeError(f"{Path(worktree).resolve()} is leased by {existing['job_id']}")
@@ -230,7 +246,10 @@ def _write_lease(
     branch: str,
     created: bool,
 ) -> None:
-    """Replace any lease on `worktree` with one for `job_id`. The caller holds the lease lock and has run `_refuse_if_held`."""
+    """Replace any lease on `worktree` with one for `job_id`.
+
+    The caller holds the lease lock and has run `_refuse_if_held`.
+    """
     path = lease_path(root, worktree)
     payload = json.dumps(
         {
@@ -243,7 +262,8 @@ def _write_lease(
     )
     path.unlink(missing_ok=True)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # O_EXCL creates the file before the payload lands; readers outside the lock re-read an empty one.
+    # O_EXCL creates the file before the payload lands; readers outside the lock re-read an
+    # empty one.
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w") as handle:
         handle.write(payload)
@@ -258,8 +278,9 @@ def claim_lease(
     branch: str,
     created: bool,
 ) -> None:
-    """Take the lease on `worktree` for `job_id`; refuse with `leased by <job-id>` when a live job holds it.
+    """Take the lease on `worktree` for `job_id`.
 
+    Refuse with `leased by <job-id>` when a live job holds it.
     A lease left by a finished job whose app-server is gone is replaced.
     """
     with _lease_lock(root, worktree):
@@ -284,12 +305,16 @@ def _run_script(main: Path, argv: list[str]) -> None:
     )
     if proc.returncode != 0:
         raise WorktreeError(
-            f"{argv[0]} {' '.join(argv[1:])} failed in {main}: {(proc.stderr or proc.stdout).strip()}"
+            f"{argv[0]} {' '.join(argv[1:])} failed in {main}: "
+            f"{(proc.stderr or proc.stdout).strip()}"
         )
 
 
 def planned_worktree_path(main: str | os.PathLike[str], branch: str) -> Path:
-    """Where a service-created worktree for `branch` lands: `<main>/.claude/worktrees/<last segment of branch>`."""
+    """Where a service-created worktree for `branch` lands.
+
+    The path is `<main>/.claude/worktrees/<last segment of branch>`.
+    """
     return Path(main) / WORKTREE_DIR / branch.rsplit("/", 1)[-1]
 
 
@@ -337,7 +362,10 @@ def create_worktree(
 
 
 def use_worktree(root: Path, job_id: str, path: str | os.PathLike[str]) -> Worktree:
-    """Lease a caller-supplied worktree to `job_id`; refuse a main checkout, a protected branch, a leased or a dirty tree."""
+    """Lease a caller-supplied worktree to `job_id`.
+
+    Refuse a main checkout, a protected branch, a leased or a dirty tree.
+    """
     top = refuse_main_checkout(path)
     if top != Path(path).resolve():
         raise WorktreeError(
@@ -367,11 +395,13 @@ def _refuse_unfinished(job: dict[str, Any], action: str) -> None:
     """Refuse while the job is not finished or its app-server process group may still be alive."""
     if job["state"] in records.ACTIVE_STATES:
         raise WorktreeError(
-            f"job {job['job_id']} is {job['state']}; cancel it or wait for it to finish before {action}"
+            f"job {job['job_id']} is {job['state']}; "
+            f"cancel it or wait for it to finish before {action}"
         )
     if appserver_running(job):
         raise WorktreeError(
-            f"job {job['job_id']}: app-server process group {job['pgid']} is still alive; stop it first"
+            f"job {job['job_id']}: app-server process group {job['pgid']} is still alive; "
+            "stop it first"
         )
 
 
@@ -407,7 +437,8 @@ def resume_worktree(root: Path, job_id: str, parent: dict[str, Any]) -> Worktree
     refuse_protected_branch(lease["main"], branch)
     if branch != parent["branch"]:
         raise WorktreeError(
-            f"{top} is on {branch}, not job {parent['job_id']}'s branch {parent['branch']}; switch it back first"
+            f"{top} is on {branch}, not job {parent['job_id']}'s branch {parent['branch']}; "
+            "switch it back first"
         )
     claim_lease(
         root, job_id, top, main=lease["main"], branch=lease["branch"], created=lease["created"]

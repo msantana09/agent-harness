@@ -1,4 +1,5 @@
-"""Tests for codex_jobs.permissions: policy per class (checked on the wire), forks, envelope and git facts."""
+"""Tests for codex_jobs.permissions: policy per class (checked on the wire), forks, envelope and
+git facts."""
 
 import subprocess
 import sys

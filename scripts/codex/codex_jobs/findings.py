@@ -211,7 +211,8 @@ def validate(data: dict) -> list[str]:
                         errors.append(f"Finding [{i}]: '{str_field}' must be a non-empty string")
                 if "file" in finding and not isinstance(finding["file"], str):
                     errors.append(
-                        f"Finding [{i}]: 'file' must be a string, got {type(finding['file']).__name__}"
+                        f"Finding [{i}]: 'file' must be a string, "
+                        f"got {type(finding['file']).__name__}"
                     )
                 # Schema v2 fields (optional). domain is free-form; lens and
                 # dimension_impact are enumerated.
