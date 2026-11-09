@@ -1,0 +1,9 @@
+{"type":"user","uuid":"i-01","isMeta":true,"timestamp":"2099-06-02T12:00:00.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Stay inside the project directory when editing files"}}
+{"type":"user","uuid":"i-02","isCompactSummary":true,"isVisibleInTranscriptOnly":true,"timestamp":"2099-06-02T12:00:01.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Summary of the earlier conversation: the parser was rewritten."}}
+{"type":"user","uuid":"i-03","isSidechain":true,"timestamp":"2099-06-02T12:00:02.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Search the repository for the parser"}}
+{"type":"user","uuid":"i-04","origin":{"kind":"peer"},"timestamp":"2099-06-02T12:00:03.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Another Claude session sent a message: the build is green"}}
+{"type":"user","uuid":"i-05","timestamp":"2099-06-02T12:00:04.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Here is a note offered by a side agent:\n\n> try the other index"}}
+{"type":"user","uuid":"i-06","timestamp":"2099-06-02T12:00:05.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Here is a note offered by a side agent:\n\n> try the other index\n\nactually keep the index as it is"}}
+{"type":"user","uuid":"i-07","origin":{"kind":"plugin"},"timestamp":"2099-06-02T12:00:06.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"The demo plugin sent a message: ready"}}
+{"type":"user","uuid":"i-08","timestamp":"2099-06-02T12:00:07.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"[Image #1]"}}
+{"type":"user","uuid":"i-09","timestamp":"2099-06-02T12:00:08.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Rename the helper to fetch_with_retry"}}

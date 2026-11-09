@@ -1,0 +1,2 @@
+{"type":"user","uuid":"t-01","timestamp":"2099-06-08T12:00:00.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Profile the import step"}}
+{"type":"user","uuid":"t-02","timestamp":"2099-06-08T12:00:20.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}

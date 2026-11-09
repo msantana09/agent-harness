@@ -1,0 +1,5 @@
+{"type":"user","uuid":"e-01","timestamp":"2099-06-03T12:00:00.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Start the migration"}}
+{"type":"assistant","uuid":"e-02","isApiErrorMessage":true,"timestamp":"2099-06-03T12:00:05.000Z","cwd":"/home/ada/demo","message":{"model":"<synthetic>","role":"assistant","content":[{"type":"text","text":"API Error: overloaded"}]}}
+{"type":"user","uuid":"e-03","timestamp":"2099-06-03T12:00:10.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Start the migration"}}
+{"type":"assistant","uuid":"e-04","requestId":"req-e","timestamp":"2099-06-03T12:00:15.000Z","cwd":"/home/ada/demo","message":{"id":"msg-e","model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"tool_use","id":"toolu_e","name":"Bash","input":{"command":"make migrate"}}],"usage":{"input_tokens":100,"output_tokens":20}}}
+{"type":"user","uuid":"e-05","timestamp":"2099-06-03T12:00:30.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"No, that is the wrong table"}}

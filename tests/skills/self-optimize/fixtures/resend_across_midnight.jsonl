@@ -1,0 +1,5 @@
+{"type":"user","uuid":"m-01","timestamp":"2099-06-02T23:59:58.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Start the migration"}}
+{"type":"assistant","uuid":"m-02","isApiErrorMessage":true,"timestamp":"2099-06-02T23:59:59.000Z","cwd":"/home/ada/demo","message":{"model":"<synthetic>","role":"assistant","content":[{"type":"text","text":"API Error: overloaded"}]}}
+{"type":"user","uuid":"m-03","timestamp":"2099-06-03T00:00:01.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Start the migration"}}
+{"type":"assistant","uuid":"m-04","timestamp":"2099-06-03T00:00:05.000Z","cwd":"/home/ada/demo","message":{"model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"text","text":"Running it now."}]}}
+{"type":"user","uuid":"m-05","timestamp":"2099-06-03T00:00:30.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"No, that is the wrong table"}}
