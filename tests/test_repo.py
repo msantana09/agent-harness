@@ -109,9 +109,12 @@ def test_python_imports_only_the_standard_library_or_the_repo() -> None:
             for name in names:
                 top = name.split(".")[0]
                 # A script imports the scripts in its own folder, or another skill's that it puts
-                # on its path.
-                sibling = (path.parent / f"{top}.py").is_file() or any(
-                    SKILLS.glob(f"*/scripts/{top}.py")
+                # on its path. A hook imports the lib_shared package or a module in it.
+                sibling = (
+                    (path.parent / f"{top}.py").is_file()
+                    or any(SKILLS.glob(f"*/scripts/{top}.py"))
+                    or (ROOT / "hooks" / top / "__init__.py").is_file()
+                    or (ROOT / "hooks" / "lib_shared" / f"{top}.py").is_file()
                 )
                 runner = top == "pytest" and "tests" in path.relative_to(ROOT).parts
                 if top not in sys.stdlib_module_names and not sibling and not runner:
