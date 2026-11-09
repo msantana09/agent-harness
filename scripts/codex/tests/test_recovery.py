@@ -868,7 +868,9 @@ def test_review_job_delivers_its_files_and_attests_the_state_it_read(lab, review
     assert attestation == attestation_of(job_dir)
 
 
-def test_head_moving_during_the_review_is_not_ok(lab, review_repo, commit_file):
+def test_a_review_whose_head_moved_while_it_ran_is_not_ok_and_did_not_succeed(
+    lab, review_repo, commit_file
+):
     lab.fake.set_script({"turn": {"final_delay": 3, **REVIEW_TURN}})
     job_dir = review_job(lab, review_repo)
     process = runner.spawn_runner(job_dir)
@@ -876,7 +878,13 @@ def test_head_moving_during_the_review_is_not_ok(lab, review_repo, commit_file):
     commit_file(review_repo, "late.txt")
     assert process.wait(timeout=60) == 0
     assert attestation_of(lab.output)["exit_status"] == "failure: head moved during review"
-    assert json.loads((lab.output / "result.json").read_text())["task_succeeded"] is True
+    result = json.loads((lab.output / "result.json").read_text())
+    records.validate_result(result)
+    assert (result["state"], result["task_succeeded"], result["review_approved"]) == (
+        "succeeded",
+        False,
+        None,
+    )
 
 
 @pytest.mark.parametrize(

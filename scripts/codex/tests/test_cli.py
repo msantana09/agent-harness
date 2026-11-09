@@ -415,6 +415,20 @@ def test_blocked_review_exits_nonzero_with_the_reason_and_keeps_its_files(env, r
     )
 
 
+def test_a_review_whose_head_moved_while_it_ran_exits_nonzero(env, review_repo, commit_file):
+    env.script(final_answer=REVIEW, final_delay=3)
+    code, lines = review_in(env, review_repo, "--detach")
+    assert code == 0 and lines[0].startswith("JOB: "), lines
+    job = env.wait_for_turn(lines[0].removeprefix("JOB: "))
+    commit_file(review_repo, "late.txt")
+    failure = f"FAILURE: head moved during review (job {job['job_id']}; see {job['output_dir']})"
+    assert env.run("wait", job["job_id"], "--max-seconds", "30") == (
+        1,
+        [f"STATE: {job['job_id']} succeeded", failure],
+    )
+    assert (Path(job["output_dir"]) / "review.md").exists()
+
+
 def test_capabilities_lists_tiers_models_and_efforts(env):
     code, lines = env.run("capabilities", "--codex-bin", str(env.fake.bin))
     caps = json.loads("\n".join(lines))

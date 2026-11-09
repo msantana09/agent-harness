@@ -38,8 +38,10 @@ holds:
 | `attestation.json` | Repo root, branch, merge base, head and diff hashes, `job_id`, model, effort; `exit_status` is `ok` only when head and diff at completion equal those at launch; `uncommitted_tracked` is the tracked files' `git status --porcelain` at launch. A push gate reads it from `<repo>/.artifacts/codex/**` |
 | `result.json` | As in `consult` (`../SKILL.md` § 4. Wait for the Result); `review_approved` is `true` when the verdict is `approve`, `false` when it needs attention, null unless the review completed |
 
-A review the model answers `blocked` or `failed`, one missing the headings, or one whose findings
-the validator rejects prints `FAILURE:` (exit 1) and keeps its files. A review outside a git repo,
+A review the model answers `blocked` or `failed`, one missing the headings, one whose findings
+the validator rejects, or one whose head or diff moved while it ran (`head moved during review`:
+relaunch on the new head) prints `FAILURE:` (exit 1) and keeps its files; its `result.json` says
+`task_succeeded: false`. A review outside a git repo,
 in one with no commit yet, or in one without `origin/HEAD`, runs and is never attested `ok`
 (`git remote set-head origin --auto` sets the base). Read `review.md` for the full review and
 `findings.md` for the list.
