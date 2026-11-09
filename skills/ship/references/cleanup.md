@@ -48,7 +48,7 @@ git ls-remote --heads origin <branch>                    # must print nothing; t
 
 Merge-by-instruction sequence (the user said "merge and pull" / "merge it" in chat). Merge
 from the main tree in one Bash call, then run the cleanup block above as the next call: the
-auto-mode classifier has denied a whole call that chained other writes onto a merge. Nothing
+auto-mode classifier can deny a whole call that chains other writes onto a merge. Nothing
 that removes the worktree or a branch runs until the PR reads MERGED. A refused merge stops at
 the cleanup's gate with the worktree and branch untouched:
 
