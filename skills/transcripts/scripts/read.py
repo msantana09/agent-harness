@@ -682,8 +682,7 @@ def main(argv: list[str] | None = None) -> int:
         return transcripts.NO_TRANSCRIPTS
     if not index.fts5_available():
         print(
-            "read.py: this Python's SQLite lacks FTS5 with contentless delete (SQLite 3.43 or "
-            "newer), which the index needs",
+            "read.py: this Python's SQLite lacks FTS5, which the index needs",
             file=sys.stderr,
         )
         return UNUSABLE_INDEX

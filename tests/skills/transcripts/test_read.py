@@ -369,6 +369,41 @@ def test_a_deleted_transcript_leaves_the_index(place: Place, run: Run, index: Mo
     conn.close()
 
 
+def test_search_finds_a_tool_inputs_words_and_forgets_them_when_the_file_changes_or_goes(
+    root: Path, run: Run, index: ModuleType
+) -> None:
+    session = root / "-home-ada-demo" / "cccc3333.jsonl"
+    session.parent.mkdir(parents=True)
+
+    def write(command: str, mtime: int) -> None:
+        call = {"type": "tool_use", "id": "c-9", "name": "Bash", "input": {"command": command}}
+        record = {
+            "type": "assistant",
+            "uuid": "a-9",
+            "timestamp": "2099-06-01T10:00:00.000Z",
+            "cwd": "/home/ada/demo",
+            "message": {"id": "m-9", "role": "assistant", "content": [call]},
+        }
+        session.write_text(json.dumps(record) + "\n")
+        os.utime(session, (mtime, mtime))
+
+    def found(word: str) -> list[str]:
+        return [r["id"] for r in rows(run, "tools", "--search", word)]
+
+    # A newline in the input is an escape in its stored JSON, which must not join the words.
+    write("cd src\nmake build", 4102444800)
+    assert found("make") == ["c-9"]
+    write("pytest -q", 4102444801)
+    assert (found("make"), found("pytest")) == ([], ["c-9"])
+    conn = sqlite3.connect(index.db_path())
+    conn.execute("INSERT INTO rows_text (rows_text, rank) VALUES ('integrity-check', 1)")
+    conn.close()
+    session.unlink()
+    kept = root / "-home-ada-demo" / "dddd4444.jsonl"
+    kept.write_text("")
+    assert found("pytest") == []
+
+
 def test_the_index_is_private_to_the_user(place: Place, run: Run, index: ModuleType) -> None:
     place(MAIN, "correction.jsonl")
     rows(run, "messages")

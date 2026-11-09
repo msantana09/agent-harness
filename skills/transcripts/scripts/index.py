@@ -48,7 +48,7 @@ import transcripts
 VERSION = hashlib.sha256(
     Path(__file__).read_bytes() + Path(transcripts.__file__).read_bytes()
 ).hexdigest()
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 # Waiting out another session's write, including one still building the index.
 BUSY_TIMEOUT_SECONDS = 300
 # Below this many stale files, starting worker processes costs more than it saves.
@@ -56,6 +56,9 @@ POOL_THRESHOLD = 32
 WORKERS = 8
 
 # AUTOINCREMENT: a session holding an id read earlier must never reach another file through it.
+# The search table keeps no text of its own: it reads each row's searched text from rows_search,
+# which is `search` where that differs from `body` (a tool call's input words, not its JSON).
+# That works on any SQLite with FTS5, unlike a contentless table that deletes (3.43 and newer).
 SCHEMA = """
 CREATE TABLE files (
     id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT NOT NULL UNIQUE, size INTEGER NOT NULL,
@@ -65,11 +68,14 @@ CREATE TABLE rows (
     id INTEGER PRIMARY KEY AUTOINCREMENT, file_id INTEGER NOT NULL, source TEXT NOT NULL,
     epoch REAL, ts TEXT, cwd TEXT, role TEXT, injected TEXT, tool TEXT, call_id TEXT,
     cwd_uncertain INTEGER, is_error INTEGER, uuid TEXT, copied INTEGER NOT NULL,
-    body TEXT NOT NULL, result TEXT
+    body TEXT NOT NULL, result TEXT, search TEXT
 );
 CREATE INDEX rows_by_file ON rows (file_id, source, id);
 CREATE INDEX rows_by_uuid ON rows (uuid, file_id);
-CREATE VIRTUAL TABLE rows_text USING fts5(body, result, content='', contentless_delete=1);
+CREATE VIEW rows_search AS SELECT id, coalesce(search, body) AS body, result FROM rows;
+CREATE VIRTUAL TABLE rows_text USING fts5(
+    body, result, content='rows_search', content_rowid='id'
+);
 """
 
 type Row = dict[str, Any]
@@ -114,10 +120,10 @@ def db_path() -> Path:
 
 
 def fts5_available() -> bool:
-    """Whether this Python's SQLite can build the search table (FTS5, SQLite 3.43 or newer)."""
+    """Whether this Python's SQLite can build the search table (FTS5)."""
     conn = sqlite3.connect(":memory:")
     try:
-        conn.execute("CREATE VIRTUAL TABLE t USING fts5(a, content='', contentless_delete=1)")
+        conn.execute("CREATE VIRTUAL TABLE t USING fts5(a)")
         return True
     except sqlite3.OperationalError:
         return False
@@ -140,7 +146,9 @@ def prepare(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA synchronous=NORMAL")
     if conn.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
         conn.execute("BEGIN IMMEDIATE")
-        for table in ("rows_text", "rows", "files"):
+        conn.execute("DROP TABLE IF EXISTS rows_text")
+        conn.execute("DROP VIEW IF EXISTS rows_search")
+        for table in ("rows", "files"):
             conn.execute(f"DROP TABLE IF EXISTS {table}")
         for statement in SCHEMA.split(";\n"):
             if statement.strip():
@@ -589,10 +597,11 @@ def replace_rows(
     delete_rows(conn, file_id)
     for row, search_text in rows:
         body, result = storable(row["body"]), storable(row.get("result"))
+        search = storable(search_text)
         row_id = conn.execute(
             "INSERT INTO rows (file_id, source, epoch, ts, cwd, role, injected, tool, call_id, "
-            "cwd_uncertain, is_error, uuid, copied, body, result) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "cwd_uncertain, is_error, uuid, copied, body, result, search) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 file_id,
                 row["source"],
@@ -609,18 +618,21 @@ def replace_rows(
                 int(row["copied"] or linked),
                 body,
                 result,
+                None if search == body else search,
             ),
         ).lastrowid
         conn.execute(
-            "INSERT INTO rows_text (rowid, body, result) VALUES (?, ?, ?)",
-            (row_id, storable(search_text), result),
+            "INSERT INTO rows_text (rowid, body, result) VALUES (?, ?, ?)", (row_id, search, result)
         )
     conn.execute("COMMIT")
 
 
 def delete_rows(conn: sqlite3.Connection, file_id: int) -> None:
+    # The search table forgets a row only when given the text it was indexed with.
     conn.execute(
-        "DELETE FROM rows_text WHERE rowid IN (SELECT id FROM rows WHERE file_id = ?)", (file_id,)
+        "INSERT INTO rows_text (rows_text, rowid, body, result) SELECT 'delete', id, body, result "
+        "FROM rows_search WHERE id IN (SELECT id FROM rows WHERE file_id = ?)",
+        (file_id,),
     )
     conn.execute("DELETE FROM rows WHERE file_id = ?", (file_id,))
 
