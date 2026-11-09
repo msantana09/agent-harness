@@ -46,12 +46,23 @@ flowchart TD
 
 ## Install
 
-```bash
-git clone https://github.com/msantana09/harness-skills
-cp -r harness-skills/skills/self-optimize ~/.claude/skills/
+As part of the agent-harness plugin, where it runs as `/agent-harness:self-optimize`. In Claude
+Code, run:
+
+```text
+/plugin marketplace add msantana09/agent-harness
+/plugin install agent-harness@agent-harness
 ```
 
-Needs Claude Code and Python 3.14, called as `python3.14`. No other dependencies.
+Or on its own, copied into your skills folder, where it runs as `/self-optimize`:
+
+```bash
+git clone https://github.com/msantana09/agent-harness
+cp -r agent-harness/skills/self-optimize ~/.claude/skills/
+```
+
+Needs Claude Code and Python 3.12 or newer, run as `python3`; tested on 3.14. No other
+dependencies.
 
 Reports, test cases and the ledger stay on your machine in `~/.claude/self-optimize/`, since they
 quote your messages.

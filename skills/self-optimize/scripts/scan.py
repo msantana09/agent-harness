@@ -1,11 +1,11 @@
-#!/usr/bin/env python3.14
+#!/usr/bin/env python3
 """Summarize recent Claude Code session transcripts: activity, interruptions, hook blocks,
 skill loads and spend.
 
 Reads the JSONL transcripts Claude Code keeps under <config dir>/projects and prints a markdown
 report. Standard library only; makes no model calls.
 
-    python3.14 scan.py [--days N | --since YYYY-MM-DD] [--until YYYY-MM-DD] [--root DIR ...]
+    python3 scan.py [--days N | --since YYYY-MM-DD] [--until YYYY-MM-DD] [--root DIR ...]
                        [--json PATH]
 
 Inputs: the transcripts under each `--root` (default $CLAUDE_CONFIG_DIR/projects, else
