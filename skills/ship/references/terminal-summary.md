@@ -9,10 +9,10 @@ original PR title.
 Example: `What this is: #<N> — the export now includes every row instead of stopping at
 10,000, so large reports download in full.`
 Then the status block, phone-glance budget (≤5 lines, `Done:` / `Found:` / `Flags:` /
-`Next:`, skipping empty slots): rounds run, accepted-vs-rejected counts, anything
-the user must know before merging. `Flags:` also names what this change touches that the
-green checks never exercised: a flow no test runs, an environment CI skips, a page nobody
-loaded. It also names what no reviewer read: every change pushed after the head the last
+`Next:`, skipping empty slots): rounds run, accepted-vs-rejected counts, the `Repo notes:` line
+from Step 1, anything the user must know before merging. `Flags:` also names what this change
+touches that the green checks never exercised: a flow no test runs, an environment CI skips, a
+page nobody loaded. It also names what no reviewer read: every change pushed after the head the last
 round reviewed (that round's fixes, a stacked parent's merge and its conflict
 resolutions, any later fix), as unreviewed. While one exists the summary never calls the
 PR reviewed, complete or safe to merge. Below the status block, a `Not requested:` line per
