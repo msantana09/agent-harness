@@ -15,7 +15,8 @@
 
 ### Verify Before Implementing (No Speculative Code)
 
-- Before adding a code path, function, or capability nobody asked for: grep the app source tree for callers to verify they exist (a requested capability's caller is the request)
+- Before adding a code path, function, or capability nobody asked for: grep the app source tree for
+  callers to verify they exist (a requested capability's caller is the request)
 - No callers = don't implement. Raise explicit error instead of handling gracefully.
 
 **Simplicity check**: overcomplication shows up as needless indirection or an abstraction

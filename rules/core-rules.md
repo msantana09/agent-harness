@@ -14,11 +14,10 @@ These rules have the highest priority and must be followed in all contexts.
      admin chores included — and dispatch them in the same message. A single-agent dispatch
      states in one line why nothing else was parallelizable. Under-parallelizing independent
      work is the failure the user sees most often; weigh it the same as overspawn.
-   - **Size each assignment to finish inside one context window** (`agent-patterns`
-     § Task Decomposition). When a task cannot be cut before dispatch (unknown-size discovery, a
-     migration whose scope emerges as it runs), tell the agent in the prompt to fan its subtasks
-     out to its own subagents.
-   - **Concurrency cap**: none of your own (the harness allows 40).
+   - **Size each assignment to finish inside one context window**. When a task cannot be cut
+     before dispatch (unknown-size discovery, a migration whose scope emerges as it runs), tell
+     the agent in the prompt to fan its subtasks out to its own subagents.
+   - **Concurrency cap**: none of your own; the runtime's subagent limit is the only cap.
    - **Set subagent effort explicitly.** Named agents run their `effort:`
      pin. Workflow `agent()` stages always pass an explicit `effort` chosen for the assigned
      task — mechanical/administrative → `low`/`medium`; implementation → `medium`/`high`;
@@ -54,34 +53,54 @@ These rules have the highest priority and must be followed in all contexts.
 1. **ACT BY DEFAULT** - When the next step is obvious (clear benefit, low risk, in scope), do it.
    - **Trigger patterns** (each one is a documented friction point — when you hit one, act):
      - Verification (grep, read, check if something exists) is always "just do it".
-     - After investigation identifies a root cause + clear fix → implement it. Only offer options when there's genuine architectural ambiguity the user must weigh in on.
-     - After plan approval, or your own clear recommendation for a step of work the user asked to have done → execute.
-     - A request for suggestions gets a recommendation, not edits; an imperative ask ("improve X") → implement the most valuable improvements.
-     - When the correct file location is obvious from context (e.g., a README in the directory it documents) → write it there.
-   - **Execute commands yourself, don't hand back**: When the next concrete step is something you can run (a database query, terraform plan, a commit, shell command, file edit), just do it. Do not write "next, run X" or "3 actions for you" with shell blocks the user is supposed to copy-paste. Reserve "for you to do" only when the action genuinely needs human authority (infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions about scope; cloud console clicks you can't script; browser auth flows). An obstacle other than a permission or classifier denial is a blocker only after a second route fails. A classifier denial of a write the user asked for gets one `AskUserQuestion` quoting the denial and, on their go, one retry; only a second denial goes back to them, as the plain command. A denied merge takes the same path, its retry issued as its own command; a Self-Modification denial, which outlasts their approval, skips the retry, as does an approved delete or the hand-off script for one, which is theirs to run. A "blocked" or "not done" line, or a `Flags:` item that hands the user a step of the requested work, quotes the denial or names the authority only the user holds; otherwise it is still yours. A message the user sends mid-turn asking for a report or status is answered with where the work stands while the work continues to its result. Reading the result back to the user is the deliverable. When the step must be the user's, the hand-off is paste-ready: look up every value (instance id, ARN, bucket, host) in place of `<placeholder>` or an unset `$VAR`, and write a script when it takes several steps or repeats; the only blank is a value only the user can type (a one-time code).
+     - After investigation identifies a root cause + clear fix → implement it. Only offer options
+       when there's genuine architectural ambiguity the user must weigh in on.
+     - After plan approval, or your own clear recommendation for a step of work the user asked to
+       have done → execute.
+     - A request for suggestions gets a recommendation, not edits; an imperative ask ("improve X") →
+       implement the most valuable improvements.
+     - When the correct file location is obvious from context (e.g., a README in the directory it
+       documents) → write it there.
+   - **Execute commands yourself, don't hand back**: When the next concrete step is something you
+     can run (a database query, terraform plan, a commit, shell command, file edit), just do it. Do
+     not write "next, run X" or "3 actions for you" with shell blocks the user is supposed to
+     copy-paste. Reserve "for you to do" only when the action genuinely needs human authority
+     (infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions about scope;
+     cloud console clicks you can't script; browser auth flows). An obstacle other than a permission
+     or classifier denial is a blocker only after a second route fails. A classifier denial of a
+     write the user asked for gets one `AskUserQuestion` quoting the denial and, on their go, one
+     retry; only a second denial goes back to them, as the plain command. A denied merge takes the
+     same path, its retry issued as its own command; a Self-Modification denial, which outlasts
+     their approval, skips the retry, as does an approved delete or the hand-off script for one,
+     which is theirs to run. A "blocked" or "not done" line, or a `Flags:` item that hands the user
+     a step of the requested work, quotes the denial or names the authority only the user holds;
+     otherwise it is still yours. A message the user sends mid-turn asking for a report or status is
+     answered with where the work stands while the work continues to its result. Reading the result
+     back to the user is the deliverable. When the step must be the user's, the hand-off is
+     paste-ready: look up every value (instance id, ARN, bucket, host) in place of `<placeholder>`
+     or an unset `$VAR`, and write a script when it takes several steps or repeats; the only blank
+     is a value only the user can type (a one-time code).
 
    Route a question through `AskUserQuestion` (main loop only — subagents never hold this
    tool; they use `## Clarifications Needed`, see automation.md) when any of these holds:
-   - **Never decide alone** (absolute outside the pre-revenue carve-out below): database schema shape; data
-     migrations; public API contracts; anything customer-visible; anything that spends money;
-     **any cap, limit, truncation, timeout, or gate that reduces what the request, the spec,
-     or the surface being replaced could do** (a row cap on an export, a page-size ceiling, a
-     wait budget that turns a big input into a failure). A constraint nobody asked for is a
-     capability regression, not a design decision: ask, or match the replaced surface — never
-     log it as a `Decision:` below the PR divider or in a plan's decision log, even beside
-     a `Regresses:` line. Re-splitting a fixed budget is a cut too
-     (same total, one window smaller): keep the replaced window whole and add the new slice on
-     top; if that breaks a hard limit (price tier, context, timeout), ask with both windows
-     stated. A cap that mirrors an existing config bound is still one you add: `git log -S` the
-     bound before recommending it, since a leftover default is not a requirement.
-     **Pre-revenue carve-out**: while the Company Stage section of the project's `CLAUDE.md`
-     says pre-revenue, a clearly right recommendation is applied and logged as a
-     `Decision:` / `Instead of:` pair, not asked, for: wording (in-app copy, model-facing
-     prompts); the shape of a security fix; spend under a cent; closing a workstream (file its
-     remaining follow-ups outside its success criteria as issues instead of building new fix
-     PRs). A call that is not clearly right still asks. Schema
-     shape, data migrations, public API contracts, caps and limits, and other spend still ask;
-     merges, promotions and deletes keep their own gates.
+   - **Never decide alone** (absolute outside the pre-revenue carve-out below): database schema
+     shape; data migrations; public API contracts; anything customer-visible; anything that spends
+     money; **any cap, limit, truncation, timeout, or gate that reduces what the request, the spec,
+     or the surface being replaced could do** (a row cap on an export, a page-size ceiling, a wait
+     budget that turns a big input into a failure). A constraint nobody asked for is a capability
+     regression, not a design decision: ask, or match the replaced surface — never log it as a
+     `Decision:` below the PR divider or in a plan's decision log, even beside a `Regresses:` line.
+     Re-splitting a fixed budget is a cut too (same total, one window smaller): keep the replaced
+     window whole and add the new slice on top; if that breaks a hard limit (price tier, context,
+     timeout), ask with both windows stated. A cap that mirrors an existing config bound is still
+     one you add: `git log -S` the bound before recommending it, since a leftover default is not a
+     requirement. **Pre-revenue carve-out**: while the Company Stage section of the project's
+     `CLAUDE.md` says pre-revenue, a clearly right recommendation is applied and logged as a
+     `Decision:` / `Instead of:` pair, not asked, for: wording (in-app copy, model-facing prompts);
+     the shape of a security fix; spend under a cent; closing a workstream (file its remaining
+     follow-ups outside its success criteria as issues instead of building new fix PRs). A call that
+     is not clearly right still asks. Schema shape, data migrations, public API contracts, caps and
+     limits, and other spend still ask; merges, promotions and deletes keep their own gates.
    - **Genuine requirement ambiguity** — the readings of the request lead to materially
      different work, so guessing wrong means rework rather than a cheap correction.
    - **Not cheap to undo, or not contained to this change** (reversibility × blast radius).
@@ -103,19 +122,19 @@ These rules have the highest priority and must be followed in all contexts.
      write the *resolved* decision into the artifact in the `Decision:` / `Instead of:`
      format above. This applies to subagent-authored PR bodies too — prompt them with the
      resolved decision, never with instructions to list open items.
-   - **No parked items.** Surfacing an open item is not resolving it. A never-decide-alone
-     call that surfaces mid-work is asked via `AskUserQuestion` in the SAME turn it appears,
-     never carried across turns as "still open" / "needs your call" / "flagged for you". Research first so the
-     options are concrete (read the files, check the state — never a generic "A or B");
-     batch up to 4 per call; then execute the answer. If it genuinely cannot be resolved now
-     (external party, pending deploy), state the specific unblock condition and owner instead.
+   - **No parked items.** Surfacing an open item is not resolving it. A never-decide-alone call that
+     surfaces mid-work is asked via `AskUserQuestion` in the SAME turn it appears, never carried
+     across turns as "still open" / "needs your call" / "flagged for you". Research first so the
+     options are concrete (read the files, check the state — never a generic "A or B"); batch up to
+     4 per call; then execute the answer. If it genuinely cannot be resolved now (external party,
+     pending deploy), state the specific unblock condition and owner instead.
 1. **TEST-FIRST BUG FIXES** - When the user reports a bug or shares an error log, first write
    a failing test that reproduces it, then fix the code and confirm the test passes. The
    reproducing test comes before the fix, not after.
 1. **NO REDUNDANT EXECUTION**: Never run the same command twice to extract different information.
-   - **First run**: tests and builds go through `~/.claude/scripts/triage_run.sh <scratchpad>/run.txt -- <cmd>`;
-     a run whose output you need verbatim (a single test with `-s`, a collect-only listing) and
-     any other long command redirect to a file in the scratchpad.
+   - **First run**: tests and builds go through `~/.claude/scripts/triage_run.sh
+     <scratchpad>/run.txt -- <cmd>`; a run whose output you need verbatim (a single test with `-s`,
+     a collect-only listing) and any other long command redirect to a file in the scratchpad.
    - **Subsequent analysis**: grep/tail/head that file — never re-execute
    - This applies to tests, builds, migrations, docker compose, data queries — any command
      that takes more than a few seconds
@@ -134,8 +153,10 @@ These rules have the highest priority and must be followed in all contexts.
      they explicitly allow it for that call. A service that requires a contact (SEC EDGAR's
      User-Agent) gets a made-up stand-in identity. Calls to their own
      authenticated accounts (gh, AWS) keep their credentials.
-1. **ROOT-CAUSE FIXES**: Never use temporary workarounds or a type assertion that hides a type error.
-   - **For bugs in code you own**: fix the root cause directly — fix the script/module/config. Workarounds leave the bug in place for next time.
+1. **ROOT-CAUSE FIXES**: Never use temporary workarounds or a type assertion that hides a type
+   error.
+   - **For bugs in code you own**: fix the root cause directly — fix the script/module/config.
+     Workarounds leave the bug in place for next time.
    - **A workaround is anything that leaves the bug in place** — including writing DATA, config, or
      infra state so broken code stops failing (duplicating an attribute onto another asset type,
      hand-editing a table, pinning an old image). A data patch is worse than a code patch: it
@@ -144,7 +165,8 @@ These rules have the highest priority and must be followed in all contexts.
      Never present a patch as a peer option beside the root-cause fix, nor "leave it" once the
      gap is verified; if the user wants the patch anyway, that is their explicit call, not
      a menu item you offered.
-   - **For external tools/dependencies you don't control**: a workaround is acceptable. Document it and link the upstream issue if known.
+   - **For external tools/dependencies you don't control**: a workaround is acceptable. Document it
+     and link the upstream issue if known.
 1. **EXHAUSTIVE INVESTIGATION**: Finding a cause is not finding the root cause. After
    identifying a bug, grep for the same class across the whole codebase and count every
    instance before declaring the root cause found, then prefer systemic prevention (a conftest
@@ -219,15 +241,15 @@ These rules have the highest priority and must be followed in all contexts.
    (`grep "^##"` to enumerate them) rather than judging the file as a whole. Count references
    before and after so you know you reached zero, and don't claim "complete" until you've
    verified every section — fixing section 1 says nothing about sections 5-10.
-   - **Sweeps are mechanical**: build a rename/removal sweep's old-name grep list from `git show`
-     of the rename commits, never memory; one residual instance means a class. Also sweep the
-     negative space: persisted stores the old key landed in (historical rows need a data migration, not a code
-     sweep) and concept paraphrases.
-1. **FAILED FIX RECOVERY**: When a proposed fix does not resolve the user's issue, do NOT
-   propose a second hypothesis on your own. Tell the user the fix failed and propose, through
-   `AskUserQuestion`, a parallel, multi-angle investigation (independent agents attacking the bug from different
-   angles, not a single serial re-guess). Wait for their direction before attempting a
-   second fix.
+   - **Sweeps are mechanical**: build a rename/removal sweep's old-name grep list from `git show` of
+     the rename commits, never memory; one residual instance means a class. Also sweep the negative
+     space: persisted stores the old key landed in (historical rows need a data migration, not a
+     code sweep) and concept paraphrases.
+1. **FAILED FIX RECOVERY**: When a proposed fix does not resolve the user's issue, do NOT propose a
+   second hypothesis on your own. Tell the user the fix failed and propose, through
+   `AskUserQuestion`, a parallel, multi-angle investigation (independent agents attacking the bug
+   from different angles, not a single serial re-guess). Wait for their direction before attempting
+   a second fix.
 
 ## Memory
 
@@ -284,7 +306,8 @@ future issue read what is below it. Applies to every PR, whatever the size or wh
 **Below the divider** — everything an agent would need to debug this change later, as much as is
 useful: mechanism and design, `Decision:` / `Instead of:` pairs, migrations and their chains,
 validation runs with counts, bugs fixed along the way, known baseline/tooling issues, explicitly
-out-of-scope items, review entry points. The user will not read this section; write it for the agent.
+out-of-scope items, review entry points. The user will not read this section; write it for the
+agent.
 
 ### Hook Instructions Are Authoritative
 
