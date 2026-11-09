@@ -1,7 +1,11 @@
-"""The transcripts scripts, loaded by file path under names of their own."""
+"""The transcripts scripts, loaded by file path under names of their own, and helpers that lay
+fixtures out as a transcript root and run read.py on it."""
 
 import importlib.util
+import os
+import shutil
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
 
@@ -9,7 +13,13 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parents[3] / "skills" / "transcripts" / "scripts"
 # Each script after the ones it imports.
-LOAD_ORDER = ("transcripts",)
+LOAD_ORDER = ("transcripts", "index", "read")
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+PROJECT = "-home-ada-demo"
+MODIFIED_AFTER_EVERY_RECORD = 4102444800  # 2100-01-01
+
+type Place = Callable[..., Path]
+type Run = Callable[..., tuple[int, str, str]]
 
 
 def load_scripts() -> dict[str, ModuleType]:
@@ -46,3 +56,51 @@ def scripts() -> dict[str, ModuleType]:
 @pytest.fixture(scope="session")
 def transcripts(scripts: dict[str, ModuleType]) -> ModuleType:
     return scripts["transcripts"]
+
+
+@pytest.fixture(scope="session")
+def index(scripts: dict[str, ModuleType]) -> ModuleType:
+    return scripts["index"]
+
+
+@pytest.fixture(scope="session")
+def read(scripts: dict[str, ModuleType]) -> ModuleType:
+    return scripts["read"]
+
+
+@pytest.fixture
+def root(tmp_path: Path) -> Path:
+    return tmp_path / "projects"
+
+
+@pytest.fixture
+def place(root: Path) -> Place:
+    """Copy a fixture into the transcript root: place("<session>", "<fixture>") -> its path.
+
+    A session holding a slash places a subagent or workflow file:
+    "<session>/subagents/<agent>". Every file is modified after all of its records, so its
+    modification time never keeps it out of a window the tests use.
+    """
+
+    def _place(session: str, fixture: str, project: str = PROJECT) -> Path:
+        destination = root / project / f"{session}.jsonl"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(FIXTURES / fixture, destination)
+        os.utime(destination, (MODIFIED_AFTER_EVERY_RECORD, MODIFIED_AFTER_EVERY_RECORD))
+        return destination
+
+    return _place
+
+
+@pytest.fixture
+def run(read: ModuleType, root: Path, capsys: pytest.CaptureFixture[str]) -> Run:
+    """run(<command>, <args>...) -> (exit code, stdout, stderr) of read.py over the root, with
+    a window that holds every fixture record."""
+
+    def _run(command: str, *args: str) -> tuple[int, str, str]:
+        window = [] if command == "index" or "--days" in args else ["--since", "2099-01-01"]
+        code = read.main([command, "--root", str(root), *window, *args])
+        captured = capsys.readouterr()
+        return code, captured.out, captured.err
+
+    return _run

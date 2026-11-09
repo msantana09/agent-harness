@@ -1,0 +1,3 @@
+{"type": "user", "uuid": "g-1", "timestamp": "2099-06-01T11:00:00.000Z", "cwd": "/home/ada/demo", "message": {"role": "user", "content": "Find the parser tests."}, "isSidechain": true}
+{"type": "assistant", "uuid": "g-2", "timestamp": "2099-06-01T11:00:05.000Z", "cwd": "/home/ada/demo", "message": {"id": "gm-1", "role": "assistant", "content": [{"type": "tool_use", "id": "c-9", "name": "Grep", "input": {"pattern": "def test_", "path": "tests"}}]}, "isSidechain": true}
+{"type": "user", "uuid": "g-3", "timestamp": "2099-06-01T11:00:06.000Z", "cwd": "/home/ada/demo", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "c-9", "content": "tests/parser_test.py:1", "is_error": false}]}}

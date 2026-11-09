@@ -1,0 +1,4 @@
+{"type": "user", "uuid": "t-1", "timestamp": "2099-06-01T13:00:00.000Z", "cwd": "/home/ada/demo", "message": {"role": "user", "content": "Add a test for the lexer."}}
+{"type": "assistant", "uuid": "t-2", "timestamp": "2099-06-01T13:01:00.000Z", "cwd": "/home/ada/demo", "message": {"id": "tm-1", "role": "assistant", "content": [{"type": "text", "text": "I put the test in src/lexer_test.py."}]}}
+{"type": "user", "uuid": "t-3", "timestamp": "2099-06-01T13:02:00.000Z", "cwd": "/home/ada/demo", "message": {"role": "user", "content": "No, tests go in tests/, not src/."}}
+{"type": "assistant", "uuid": "t-4", "timestamp": "2099-06-01T13:03:00.000Z", "cwd": "/home/ada/demo", "message": {"id": "tm-2", "role": "assistant", "content": [{"type": "text", "text": "Moving it to tests/lexer_test.py."}]}}

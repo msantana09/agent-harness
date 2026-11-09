@@ -123,6 +123,11 @@ def typed_words(text: str) -> str:
     return re.sub(r" {2,}", " ", PASTE_MARKER.sub("", SIDE_AGENT_NOTE.sub("", text))).strip()
 
 
+def side_agent_notes(text: str) -> str:
+    """Only the side agent's notes in `text`, each without the blank lines around it."""
+    return "\n\n".join(note.group().strip() for note in SIDE_AGENT_NOTE.finditer(text))
+
+
 def queued_prompt_as_user_record(record: Record) -> Record:
     """`record`, unless it holds a prompt a person sent during a running turn.
 
@@ -649,10 +654,13 @@ def day_argument(value: str) -> str:
     raise argparse.ArgumentTypeError(f"{value!r} is not a YYYY-MM-DD date")
 
 
-def add_window_arguments(parser: argparse.ArgumentParser) -> None:
+def add_window_arguments(parser: argparse.ArgumentParser, days: int = 30) -> None:
     span = parser.add_mutually_exclusive_group()
     span.add_argument(
-        "--days", type=positive_days, default=30, help="look back this many days (default 30)"
+        "--days",
+        type=positive_days,
+        default=days,
+        help=f"look back this many days (default {days})",
     )
     span.add_argument(
         "--since",
