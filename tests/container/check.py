@@ -16,9 +16,14 @@ even when the config folder sits under another allowed root; outside it, the fol
 run from, the index cache, the working folder, /tmp and the system folders). A file of the
 author's own layout under the config folder (a `memory/` file) or any other folder fails it.
 Paths are found by PATH: a word starting with /, ~ or $HOME, not preceded by a word character, a
-colon, a slash or a glob character (so `and/or`, URLs and `*/x.md` are not paths). The run found
-every file it read: a Read call that came back with no such file fails it, unless the file is in
-self-optimize's folder, where a first run finds no ledger.
+colon, a slash, a glob character or a quote joined on with + (so `and/or`, URLs, `*/x.md` and
+`dst + '/x.md'` are not paths). The run found every file it named: a Read call that came back
+with no such file fails it, and so does a path a tool call names in the plugin's folder or the
+config folder that does not exist once the run
+ends, however it was opened (a shell `cat ... 2>/dev/null` reports nothing). Absence is expected,
+so not a failure, in self-optimize's folder (a first run finds no ledger), under `projects/` (a
+project may have no memory yet), at a CONFIG_PARTS location itself, which a skill may probe, and
+for a path holding a glob or a variable, which names no single file.
 
 Exit codes: 0 every check passes; 1 a check fails; 2 invalid arguments or no transcript for the
 session.
@@ -33,7 +38,8 @@ from typing import Any
 
 HOME = Path("/home/dev")
 PATH = re.compile(
-    r"(?<![\w.:/$}*?\]-])((?:~|\$HOME|\$\{HOME\})(?=/|$)[^\s'\"`;|&<>(),]*|/[\w.@+-][^\s'\"`;|&<>(),]*)"
+    r"(?<![\w.:/$}*?\]-])(?<!\+')(?<!\+\")(?<!\+ ')(?<!\+ \")"
+    r"((?:~|\$HOME|\$\{HOME\})(?=/|$)[^\s'\"`;|&<>(),]*|/[\w.@+-][^\s'\"`;|&<>(),]*)"
 )
 SYSTEM = ("/tmp", "/usr", "/bin", "/dev/null", "/proc/self")
 # What Claude Code keeps or loads in its config folder that a skill may read or write: the
@@ -50,6 +56,8 @@ CONFIG_PARTS = (
     "commands",
 )
 MISSING = ("does not exist", "no such file")
+# Characters a shell expands, so a path holding one names no single file.
+EXPANDED = set("*?[{$")
 
 
 def plugin_roots(run_output: Path) -> list[Path]:
@@ -124,6 +132,29 @@ def missing_reads(config_dir: Path, transcripts: list[Path]) -> list[str]:
     return list(missing)
 
 
+def absent(config_dir: Path, plugins: list[Path], transcripts: list[Path]) -> list[str]:
+    """The paths tool calls named in the plugins' folders or the config folder that do not exist,
+    outside the places where absence is expected."""
+    expected = [config_dir / "projects", config_dir / "self-optimize"]
+    probed = {config_dir / part for part in CONFIG_PARTS}
+    found: dict[str, None] = {}
+    for transcript in transcripts:
+        for _, tool_input in tool_calls(transcript):
+            for text in strings(tool_input):
+                for word in PATH.findall(text):
+                    path = resolve(word.rstrip(".:"))
+                    in_config = config_dir in path.parents and path not in probed
+                    in_plugin = any(root in path.parents for root in plugins)
+                    if (
+                        (in_config or in_plugin)
+                        and not EXPANDED & set(str(path))
+                        and not any(root == path or root in path.parents for root in expected)
+                        and not path.exists()
+                    ):
+                        found[word] = None
+    return list(found)
+
+
 def resolve(word: str) -> Path:
     for prefix in ("${HOME}", "$HOME", "~"):
         if word.startswith(prefix):
@@ -156,15 +187,17 @@ def main(argv: list[str]) -> int:
         return 2
     transcripts = mains + list((config_dir / "projects").glob(f"*/{session}/subagents/*.jsonl"))
     evals = [d for d in (config_dir / "self-optimize").glob("*-evals") if any(d.iterdir())]
-    stray = outside(config_dir, plugin_roots(run_output), transcripts)
-    missing = missing_reads(config_dir, transcripts)
+    plugins = plugin_roots(run_output)
+    stray = outside(config_dir, plugins, transcripts)
+    missing = list(dict.fromkeys(missing_reads(config_dir, transcripts)))
+    missing += [word for word in absent(config_dir, plugins, transcripts) if word not in missing]
     print(f"reached step 7: {'yes, ' + evals[0].name if evals else 'no (no eval suite written)'}")
     print(f"paths outside the install: {len(stray)} in {len(transcripts)} transcripts")
     for tool, word in stray:
         print(f"  {tool}: {word}")
-    print(f"files read that do not exist: {len(missing)}")
+    print(f"files named that do not exist: {len(missing)}")
     for file in missing:
-        print(f"  Read: {file}")
+        print(f"  {file}")
     return 0 if evals and not stray and not missing else 1
 
 

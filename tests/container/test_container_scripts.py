@@ -8,13 +8,18 @@ import check  # noqa: E402
 import fixtures  # noqa: E402
 
 SESSION = "run-1"
-PLUGIN = "/home/dev/agent-harness"
+
+
+def plugin_of(config: Path) -> Path:
+    """The folder the run's plugin is installed in, beside its config folder."""
+    return config.parent / "agent-harness"
 
 
 def run_with(config: Path, *commands: str, evals: bool = True, reads: dict | None = None) -> str:
     """A run's output naming the plugin's folder, its transcript whose Bash calls are *commands* and
     whose Read calls are *reads* (file to whether it was found), and an eval suite when *evals*.
     Returns the run output's path."""
+    (plugin_of(config) / "skills" / "self-optimize" / "references").mkdir(parents=True)
     folder = config / "projects" / "-home-dev-shop"
     folder.mkdir(parents=True)
     blocks = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
@@ -40,7 +45,8 @@ def run_with(config: Path, *commands: str, evals: bool = True, reads: dict | Non
     if evals:
         (config / "self-optimize" / "2099-01-01-evals").mkdir(parents=True)
         (config / "self-optimize" / "2099-01-01-evals" / "cases.md").write_text("x")
-    init = {"type": "system", "subtype": "init", "plugins": [{"name": "a", "path": PLUGIN}]}
+    plugin = {"name": "a", "path": str(plugin_of(config))}
+    init = {"type": "system", "subtype": "init", "plugins": [plugin]}
     output = config.parent / "run.jsonl"
     output.write_text(
         json.dumps({"type": "system", "subtype": "hook"}) + "\n" + json.dumps(init) + "\n"
@@ -52,9 +58,11 @@ def test_a_run_inside_the_install_that_wrote_its_evals_passes(tmp_path, capsys) 
     config = tmp_path / ".claude"
     output = run_with(
         config,
-        f"python3 {config}/plugins/cache/a/scan.py --until 2099-01-01 2>/dev/null",
-        f"cd {PLUGIN}/skills/self-optimize && ls references/ {config}/rules",
+        f"cd {plugin_of(config)}/skills/self-optimize && ls references/ {config}/rules",
+        f"cat {config}/self-optimize/ledger.md 2>/dev/null || echo first run",
+        f"ls {config}/CLAUDE.md {config}/settings.json {config}/projects/*/memory/*.md",
         "ls ~/.cache/agent-harness/transcripts https://example.com/a/b and/or */x.md [ab]/y",
+        "python3 -c 'p = dst+\"/prompt.md\"' && python3 -c \"q = dst + '/x.md'\"",
     )
     assert check.main([str(config), SESSION, output]) == 0
     assert "reached step 7: yes" in capsys.readouterr().out
@@ -82,13 +90,25 @@ def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
     assert f"Bash: {config}/memory/feedback_tests.md" in capsys.readouterr().out
 
 
+def test_a_path_named_in_the_config_folder_or_the_plugin_that_does_not_exist_fails_the_run(
+    tmp_path, capsys
+):
+    config = tmp_path / ".claude"
+    missing = f"{plugin_of(config)}/skills/review/references/missing.md"
+    output = run_with(config, f"cat {config}/rules/core-rules.md 2>/dev/null; cat {missing}")
+    assert check.main([str(config), SESSION, output]) == 1
+    out = capsys.readouterr().out
+    assert f"  {config}/rules/core-rules.md\n" in out
+    assert f"  {missing}\n" in out
+
+
 def test_a_read_that_finds_no_file_fails_the_run_except_a_first_runs_ledger(tmp_path, capsys):
     config = tmp_path / ".claude"
     ledger, memory = config / "self-optimize" / "ledger.md", config / "projects" / "p" / "memory.md"
     output = run_with(config, reads={str(ledger): False, str(memory): False})
     assert check.main([str(config), SESSION, output]) == 1
     out = capsys.readouterr().out
-    assert f"Read: {memory}" in out
+    assert f"  {memory}\n" in out
     assert str(ledger) not in out
 
 
