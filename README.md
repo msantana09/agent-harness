@@ -8,6 +8,12 @@ instructions improve from what happens in real sessions.
 
 | Skill | What it does |
 |---|---|
+| [ship](skills/ship/SKILL.md) | Takes a committed branch through its pull request: opens the draft, has Codex review it within a round budget, fixes the findings it accepts, and hands the merge to you. |
+| [inspect-pr](skills/inspect-pr/SKILL.md) | A read-only, evidence-backed review of a pull request, findings first. It is the framework the Codex reviewer follows for ship. |
+| [codex](skills/codex/SKILL.md) | Hands work to OpenAI Codex through codex-jobs: a second opinion on a plan or bug, a pull request review, or a bounded code change in its own worktree. |
+| [external-feedback](skills/external-feedback/SKILL.md) | Checks each suggestion from a reviewer or another AI against the code before accepting, rejecting or filing it. |
+| [commit](skills/commit/SKILL.md) | Commits exactly the files the agent changed, through the repo's pre-commit hooks, with a message that describes the diff. |
+| [command-output-patterns](skills/command-output-patterns/SKILL.md) | Saves a long command's output to a file once, then filters the file instead of running the command again. |
 | [self-optimize](docs/self-optimize.md) | Finds where you corrected the agent in your own Claude Code sessions, then proposes and tests the instruction change that would have prevented it. |
 | [transcripts](skills/transcripts/SKILL.md) | Lets the agent read past Claude Code sessions as plain text: search what was typed, list tool calls and results, and show the context around one message. |
 
@@ -52,12 +58,23 @@ ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
 ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
 ```
 
+The review skills (ship, inspect-pr, codex, external-feedback, commit, command-output-patterns)
+load each other and run `scripts/` by path, so install them this way. When Codex reviews for ship
+it loads inspect-pr from its own skills folder; link it there too:
+
+```bash
+mkdir -p ~/.agents/skills
+ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
+```
+
 ## Requirements
 
 - [Claude Code](https://code.claude.com).
 - Python 3.14 or newer, run as `python3`; tested on 3.14 and 3.15. The scripts use only the
   standard library, so there is nothing to install. The `python3` that ships with macOS is 3.9,
   too old for them.
+- For the review skills: the [Codex CLI](https://developers.openai.com/codex/cli), signed in,
+  and the GitHub CLI `gh`, signed in.
 
 ## License
 
