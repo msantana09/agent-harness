@@ -171,3 +171,32 @@ def test_shebangs_and_command_lines_name_python3() -> None:
             if found.group(1) != "python3":
                 wrong.append(f"{where(path, text, found.start())}: {found.group(0)}")
     assert wrong == []
+
+
+def hook_commands() -> list[str]:
+    """Every command in the root settings.json, which holds the `hooks` key and nothing else."""
+    settings = json.loads((ROOT / "settings.json").read_text())
+    assert list(settings) == ["hooks"]
+    return [
+        hook["command"]
+        for groups in settings["hooks"].values()
+        for group in groups
+        for hook in group["hooks"]
+    ]
+
+
+def test_every_hook_is_registered_and_every_command_names_a_hook_here() -> None:
+    # A command runs the hook from where the README installs it, ~/.claude/hooks/.
+    installed = re.compile(r'^python3 "\$HOME/\.claude/(hooks/[\w/]+/main\.py)"$')
+    named = []
+    for command in hook_commands():
+        found = installed.fullmatch(command)
+        assert found, command
+        assert (ROOT / found.group(1)).is_file(), command
+        named.append(found.group(1))
+    hooks = sorted(
+        str(path.relative_to(ROOT))
+        for path in (ROOT / "hooks").glob("*/*/main.py")
+        if path.parent.parent.name != "lib_shared"
+    )
+    assert sorted(named) == hooks
