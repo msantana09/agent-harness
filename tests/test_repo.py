@@ -12,12 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTENT = ("docs", "hooks", "rules", "scripts", "skills", "tests")
 SKILLS = ROOT / "skills"
 
-SKILL_CALL = re.compile(r'Skill\("([\w:-]+)"\)')
+SKILL_CALL = re.compile(r'Skill\("(?:agent-harness:)?([\w-]+)"\)')
 # A slash command stands alone: after a line start, space, backtick or parenthesis, and before
-# the end of a word that is not part of a longer path.
-SLASH_COMMAND = re.compile(r"(?:^|(?<=[\s`(]))/([a-z][a-z0-9-]*)(?=$|[\s`).,;:])", re.M)
+# the end of a word that is not part of a longer path. Installed as a plugin, a skill's command
+# takes the plugin's name as a prefix.
+SLASH_COMMAND = re.compile(
+    r"(?:^|(?<=[\s`(]))/(?:agent-harness:)?([a-z][a-z0-9-]*)(?=$|[\s`).,;:])", re.M
+)
+CLAUDE_CODE_COMMANDS = {"plugin"}
 SECTION_CITATION = re.compile(r"([\w./<>-]+\.md)`? § ([^\n`*]+)")
-SKILL_PATH = re.compile(r"(?:<skill dir>/)?\b((?:scripts|references)/[\w./-]*\w\.\w+)")
+SKILL_PATH = re.compile(r"(?:\$\{CLAUDE_SKILL_DIR\}/)?\b((?:scripts|references)/[\w./-]*\w\.\w+)")
 REPO_PATH = re.compile(r"(?<![\w./-])((?:docs|hooks|rules|scripts|skills)/[\w./-]*\w\.\w+)")
 PYTHON_COMMAND = re.compile(r"\b(python[\d.]*)\s+(?:-m\s+\w+|\S+\.py)\b")
 SHEBANG = "#!/usr/bin/env python3.14"
@@ -55,6 +59,8 @@ def test_every_skill_and_slash_command_named_is_a_skill_here() -> None:
     for path in files(".md"):
         text = path.read_text()
         for found in [*SKILL_CALL.finditer(text), *SLASH_COMMAND.finditer(text)]:
+            if found.re is SLASH_COMMAND and found.group(1) in CLAUDE_CODE_COMMANDS:
+                continue
             if not (SKILLS / found.group(1) / "SKILL.md").is_file():
                 missing.append(f"{where(path, text, found.start())}: {found.group(0).strip()}")
     assert missing == []

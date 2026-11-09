@@ -46,6 +46,16 @@ flowchart TD
 
 ## Install
 
+As part of the agent-harness plugin, where it runs as `/agent-harness:self-optimize`. In Claude
+Code, run:
+
+```text
+/plugin marketplace add msantana09/agent-harness
+/plugin install agent-harness@agent-harness
+```
+
+Or on its own, copied into your skills folder, where it runs as `/self-optimize`:
+
 ```bash
 git clone https://github.com/msantana09/agent-harness
 cp -r agent-harness/skills/self-optimize ~/.claude/skills/

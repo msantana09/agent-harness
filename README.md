@@ -14,7 +14,19 @@ More will be added as I clean them up.
 
 ## Install
 
-Each skill is a folder. Copy the ones you want into your Claude Code skills folder:
+As a Claude Code plugin, which installs every skill here. In Claude Code, run:
+
+```text
+/plugin marketplace add msantana09/agent-harness
+/plugin install agent-harness@agent-harness
+```
+
+Skills installed this way take the plugin's name as a prefix, as in `/agent-harness:self-optimize`.
+To update later, run `claude plugin marketplace update agent-harness`, then
+`claude plugin update agent-harness@agent-harness`.
+
+Or copy single skills. Each skill is a folder; copy the ones you want into your Claude Code skills
+folder:
 
 ```bash
 git clone https://github.com/msantana09/agent-harness

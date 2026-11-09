@@ -10,8 +10,7 @@ the evidence. One run produces one proposal: the changes to the user's instructi
 would prevent one pattern, with the quotes that justify them, an eval that compares the old and
 new text, and a way to check later whether they worked.
 
-The scripts are in this skill's `scripts/` folder; `<skill dir>` below is the base directory
-printed when the skill loads. Reports, eval suites and the ledger go in
+The scripts are in this skill's `scripts/` folder. Reports, eval suites and the ledger go in
 `~/.claude/self-optimize/`, outside any public repository, because they quote the user's messages.
 
 ## Ground rules
@@ -27,7 +26,7 @@ printed when the skill loads. Reports, eval suites and the ledger go in
 ## 1. Scan (free)
 
 ```bash
-python3.14 <skill dir>/scripts/scan.py --since <start date> --until <yesterday>
+python3.14 ${CLAUDE_SKILL_DIR}/scripts/scan.py --since <start date> --until <yesterday>
 ```
 
 Every run stops at yesterday, since today's sessions are still going. Start the day after the
@@ -54,7 +53,7 @@ outputs apart: rates differ by machine, so a later count compares a machine only
 ## 2. Find the corrections
 
 ```bash
-python3.14 <skill dir>/scripts/corrections.py --since <same date> --until <yesterday>
+python3.14 ${CLAUDE_SKILL_DIR}/scripts/corrections.py --since <same date> --until <yesterday>
 ```
 
 A small model reads the user's typed messages and flags the ones that correct the agent or state
