@@ -1,8 +1,9 @@
 # Step 6 - post-merge steps and wrap-up
 
-**Repo notes' post-merge steps**: once either cleanup block's `ls-remote` prints nothing
-(merged on GitHub or on the user's instruction; for a stack, after the top PR's), run them.
-Their results go under `Done:` / `Flags:` with the cleanup's.
+**Repo notes' post-merge steps**: once either cleanup block exits 0 and its `ls-remote`
+prints nothing (merged on GitHub or on the user's instruction; for a stack, after the top
+PR's), run them. A block that stopped on a failed removal or sync is not done: fix that
+cause and re-run the block. Their results go under `Done:` / `Flags:` with the cleanup's.
 
 `Done:` in the wrap-up cites the empty `ls-remote` line, not `gh`'s output.
 

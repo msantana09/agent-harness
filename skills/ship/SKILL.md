@@ -154,7 +154,8 @@ Prompt, anchors and detector ask: [references/review-prompt.md](references/revie
 
 A diff of 300 or more files takes `--timeout 3600`. **While the round runs**, run Step 3's
 checks against the same head and edit nothing; on the completion notification, read the review
-and check the tree is clean: [references/during-the-round.md](references/during-the-round.md).
+and check the tree is clean and still on the head recorded at launch:
+[references/during-the-round.md](references/during-the-round.md).
 
 **Effort**, the **Opus reviewer** (`--reviewer opus`) and **Codex out of credits**
 (`FAILURE: usage limit`): [references/reviewers.md](references/reviewers.md).

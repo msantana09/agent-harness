@@ -11,7 +11,7 @@ a `general-purpose` agent (model `opus`, effort `high`; the repo notes may name 
 role) directly with the same prompt, prefixed with
 `Load Skill("inspect-pr") first and follow it exactly, including its Multi-Round Mode.`
 Nothing else in the loop changes: same rounds, same triage, same round blocks (titled
-`### Opus review round <N>`), same post-round `git status --short` check (the agent holds
+`### Opus review round <N>`), same post-round clean-tree and head check (the agent holds
 Write and Bash). No `codex-jobs review` runs, so no `attestation.json` exists: where the repo
 notes gate the hand-off on one, record the waiver they name.
 
