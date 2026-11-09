@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,25 @@ def finished_run(env, repo, branch, *extra):
     assert run_in(env, repo, "--branch", branch, *extra)[0] == 0
     (job,) = [job for job in env.jobs() if job["branch"] == branch]
     return job
+
+
+def server_still_stopping(env, job):
+    """Put `job` in the moment after its turn ends: its runner, still alive, is stopping the
+    app-server. One process that exits after 2 s stands in for both. The real runner's own stop is
+    awaited first, so its stamp cannot land on top."""
+    deadline = time.monotonic() + 15
+    while records.load_job(env.root, job["job_id"])["appserver_stopped_at"] is None:
+        assert time.monotonic() < deadline, f"job {job['job_id']} never stopped its app-server"
+        time.sleep(0.05)
+    server = subprocess.Popen(["sleep", "2"], start_new_session=True)
+    threading.Thread(target=server.wait, daemon=True).start()
+    records.update_job(
+        env.root,
+        job["job_id"],
+        runner_pid=server.pid,
+        pgid=server.pid,
+        appserver_stopped_at=None,
+    )
 
 
 def fork(env, repo, source, *extra, answer=ANSWER):
@@ -287,15 +307,23 @@ def test_resume_of_a_run_job_is_refused_while_it_is_still_running(env, repo):
 
 def test_resume_right_after_a_run_finishes_waits_for_its_app_server_to_stop(env, repo):
     parent = finished_run(env, repo, "codex/resume-settling")
-    # The runner marks the job finished just before it stops the app-server: stand in a group that
-    # exits shortly.
-    server = subprocess.Popen(["sleep", "0.5"], start_new_session=True)
-    threading.Thread(target=server.wait, daemon=True).start()
-    records.update_job(env.root, parent["job_id"], pgid=server.pid, appserver_stopped_at=None)
+    server_still_stopping(env, parent)
     code, lines = resume(env, repo, parent["job_id"])
     assert code == 0, lines
     (resumed,) = [job for job in env.jobs() if job["parent_job_id"] == parent["job_id"]]
     assert worktrees.find_lease(env.root, resumed["job_id"])[1]["worktree"] == parent["worktree"]
+
+
+def test_a_run_on_the_worktree_of_a_run_that_just_finished_waits_for_its_app_server_to_stop(
+    env, repo
+):
+    parent = finished_run(env, repo, "codex/run-settling")
+    server_still_stopping(env, parent)
+    env.fake.set_script({"turn": {"final_answer": TASK}})
+    code, lines = run_in(env, repo, "--worktree", parent["worktree"])
+    assert code == 0, lines
+    (taker,) = [job for job in env.jobs() if job["job_id"] != parent["job_id"]]
+    assert worktrees.find_lease(env.root, taker["job_id"])[1]["worktree"] == parent["worktree"]
 
 
 def test_resume_of_a_run_job_is_refused_after_release_or_removal(env, repo):
