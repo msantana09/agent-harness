@@ -47,8 +47,8 @@ flowchart TD
 ## Install
 
 ```bash
-git clone https://github.com/msantana09/harness-skills
-cp -r harness-skills/skills/self-optimize ~/.claude/skills/
+git clone https://github.com/msantana09/agent-harness
+cp -r agent-harness/skills/self-optimize ~/.claude/skills/
 ```
 
 Needs Claude Code and Python 3.14, called as `python3.14`. No other dependencies.
