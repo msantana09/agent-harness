@@ -21,8 +21,13 @@ SLASH_COMMAND = re.compile(
 )
 CLAUDE_CODE_COMMANDS = {"plugin"}
 SECTION_CITATION = re.compile(r"([\w./<>-]+\.md)`? § ([^\n`*]+)")
-SKILL_PATH = re.compile(r"(?:\$\{CLAUDE_SKILL_DIR\}/)?\b((?:scripts|references)/[\w./-]*\w\.\w+)")
+SKILL_PATH = re.compile(
+    r"(?:\$\{CLAUDE_SKILL_DIR\}/|(?<![\w./-]))((?:scripts|references)/[\w./-]*\w\.\w+)"
+)
 REPO_PATH = re.compile(r"(?<![\w./-])((?:docs|hooks|rules|scripts|skills)/[\w./-]*\w\.\w+)")
+# The README links the repo's rules, scripts and skills into ~/.claude, so a path there names a
+# file in the repo.
+INSTALLED_PATH = re.compile(r"~/\.claude/((?:rules|scripts|skills)/[\w./-]*\w)")
 PYTHON_COMMAND = re.compile(r"\b(python[\d.]*)\s+(?:-m\s+\w+|\S+\.py)\b")
 SHEBANG = "#!/usr/bin/env python3"
 DESCRIPTION_LIMIT = 1024
@@ -92,6 +97,9 @@ def test_every_script_and_reference_path_named_resolves() -> None:
         for found in pattern.finditer(text):
             if not (base / found.group(1)).is_file():
                 missing.append(f"{where(path, text, found.start())}: {found.group(1)}")
+        for found in INSTALLED_PATH.finditer(text):
+            if not (ROOT / found.group(1)).is_file():
+                missing.append(f"{where(path, text, found.start())}: {found.group(0)}")
     assert missing == []
 
 
