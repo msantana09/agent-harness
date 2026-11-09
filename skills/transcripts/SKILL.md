@@ -57,5 +57,5 @@ once per folder when the user runs more than one Claude Code login. A forked or 
 repeats the records it came from; each repeated row prints once, under the session that wrote
 it, unless `--session` names the copy.
 
-The index lives in `<config dir>/transcripts/index.db`, readable only by the user, since it holds
-whole transcripts. Deleting it loses nothing.
+The index lives in `~/.cache/agent-harness/transcripts/index.db` (under `$XDG_CACHE_HOME` when
+set), readable only by the user, since it holds whole transcripts. Deleting it loses nothing.

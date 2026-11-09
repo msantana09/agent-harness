@@ -5,10 +5,10 @@ transcript file, plus full-text search over them.
     with closing(index.connect(index.db_path())) as conn:
         index.read_snapshot(conn, index.db_path(), paths)
 
-Inputs: the transcript files a query names. Output: the database at <config dir>/transcripts/
-index.db, beside the transcript folders and never inside them; it holds full transcript text, so
-its folder is private to the user (0700) and so is the file (0600). It prints nothing to stdout;
-a reset after corruption says so on stderr.
+Inputs: the transcript files a query names. Output: the database at
+`$XDG_CACHE_HOME/agent-harness/transcripts/index.db` (`~/.cache` when the variable is unset); it
+holds full transcript text, so its folder is private to the user (0700) and so is the file (0600).
+It prints nothing to stdout; a reset after corruption says so on stderr.
 
 How the index stays right:
 
@@ -95,7 +95,9 @@ CD = re.compile(
 
 
 def db_path() -> Path:
-    return transcripts.config_dir() / "transcripts" / "index.db"
+    """The index in the user's cache folder: `$XDG_CACHE_HOME`, which defaults to `~/.cache`."""
+    cache = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(cache) / "agent-harness" / "transcripts" / "index.db"
 
 
 def fts5_available() -> bool:
