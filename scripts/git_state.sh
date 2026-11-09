@@ -22,6 +22,7 @@ if [[ -n "$base" ]]; then
   git -C "$dir" rev-parse --verify --quiet "$base^{commit}" >/dev/null || { echo "unknown base-ref: $base" >&2; exit 1; }
   drift="$drift behind_base=$(git -C "$dir" rev-list --count "HEAD..$base")"
 fi
-main_root=$(git -C "$dir" worktree list --porcelain | head -1 | sed 's/^worktree //')
+# sed reads the whole listing: a reader that quits after line one would SIGPIPE git under pipefail.
+main_root=$(git -C "$dir" worktree list --porcelain | sed -n '1s/^worktree //p')
 kind="main-tree"; [[ "$main_root" != "$root" ]] && kind="worktree"
 echo "branch=$branch head=$head $drift dirty=$dirty $kind=$root"
