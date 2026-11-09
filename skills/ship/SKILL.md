@@ -29,7 +29,7 @@ from the `nameWithOwner` Step 1 prints. A repo with a notes file has steps the g
 (its tests, its pre-hand-off checks, its post-merge steps); when that file exists, read it in
 full at Step 1 and apply it wherever a step says **repo notes**. A note overrides the generic
 line it names. Step 1 says which in the turn, `Repo notes: <path>` or
-`Repo notes: none (<path> not found)`, and Step 5's status block repeats that line, so a run
+`Repo notes: none (<path> not found)`, and the hand-off summary repeats that line, so a run
 without notes is never silent.
 
 A repo without one runs the generic loop as written: its tests come from its `CLAUDE.md`, and it
@@ -68,7 +68,7 @@ has no pre-hand-off checks beyond Step 5's.
   more finding; chasing a clean round is not quality, it is spend.
 - **Reviewer suggestions are not scope.** `Missed Opportunities` and any "also add X"
   inside a finding are never built or filed by `/ship`: log them as declined in the round
-  block, and name each one declined as "not requested" in the terminal summary (Step 5), so
+  block, and name each one declined as "not requested" in the hand-off summary (Step 5), so
   the user decides on it. Only accepted findings get fixes, and only a verified bug outside the
   PR is filed.
 - **Root-cause a gate failure before editing.** A red check in Step 3 is diagnosed to its
@@ -198,8 +198,8 @@ The round table and the round block: [references/round-budget.md](references/rou
    Step 3 does not block: name its issue under `Flags:`. Any other red goes back through
    Step 3's fix and push, with no new review round.
 1. `gh pr ready <N>` - flip the draft to ready for review. No permission needed.
-1. Terminal summary: the `What this is:` recap, the status block and the `Not requested:`
-   lines, as [references/terminal-summary.md](references/terminal-summary.md) lays them out.
+1. Hand-off summary: the `What this is:` recap, the status block and the `Not requested:`
+   lines, as [references/hand-off-summary.md](references/hand-off-summary.md) lays them out.
 1. Send a `PushNotification`: the PR number, the `What this is:` recap's first line, that
    review finished after N rounds (and, when the summary's `Flags:` names unreviewed changes,
    that they are unreviewed), and that it is waiting on their merge. Keep it short - it

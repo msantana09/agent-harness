@@ -1,6 +1,6 @@
-# Step 5 - terminal summary
+# Step 5 - hand-off summary
 
-Terminal summary. It opens with a **`What this is:`** recap: PR number plus 1-2 lines
+Hand-off summary. It opens with a **`What this is:`** recap: PR number plus 1-2 lines
 in plain terms, written for someone switching in from other work cold. Say what now
 works or changed for a user or operator, and why it matters. Name no files, functions,
 or review mechanics, and give it no background. Write it against the final pushed head,
