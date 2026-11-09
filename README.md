@@ -11,6 +11,10 @@ instructions improve from what happens in real sessions.
 | [self-optimize](docs/self-optimize.md) | Finds where you corrected the agent in your own Claude Code sessions, then proposes and tests the instruction change that would have prevented it. |
 | [transcripts](skills/transcripts/SKILL.md) | Lets the agent read past Claude Code sessions as plain text: search what was typed, list tool calls and results, and show the context around one message. |
 
+`scripts/` holds the shared scripts skills call: `scripts/codex/codex-jobs` runs Codex review,
+consult and run jobs as a CLI or an MCP server, and `scripts/triage_run.sh` runs a long command
+and prints a short digest of what failed.
+
 More will be added as I clean them up.
 
 ## Install
