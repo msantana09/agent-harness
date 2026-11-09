@@ -161,8 +161,8 @@ the job returned any) and `result.json`. `codex-jobs result <id>` prints `result
 `output_dir` (where the deliverable is), `ran`, `task_succeeded`, `model_used`, `effort_used`,
 `usage` (token counts, the account's limits read before and after the turn, and
 `rate_limit_reached_type` when the job failed on a usage limit), `recovery`.
-`task_succeeded: false` (the model answered `blocked` or `failed`) prints `FAILURE:` in the
-blocking form; the answer file still exists.
+`task_succeeded: false` (the model answered `blocked` or `failed`, or a review's head moved while
+it ran) prints `FAILURE:` in the blocking form; the answer file still exists.
 
 | Outcome | Action |
 |---------|--------|
