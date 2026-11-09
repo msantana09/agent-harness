@@ -488,6 +488,7 @@ def _start_job(ctx: _Context, args: argparse.Namespace, parser: argparse.Argumen
             if resumes_run:
                 tree = worktrees.resume_worktree(ctx.root, job_id, _server_settled(ctx, parent))
             elif caller_worktree:
+                _settle_holder(ctx, caller_worktree)
                 tree = worktrees.use_worktree(ctx.root, job_id, caller_worktree)
             else:
                 tree = worktrees.create_worktree(ctx.root, job_id, project, args.branch)
@@ -712,6 +713,14 @@ def _server_settled(ctx: _Context, job: dict[str, Any]) -> dict[str, Any]:
         time.sleep(POLL_SECONDS)
         job = records.load_job(ctx.root, job["job_id"])
     return job
+
+
+def _settle_holder(ctx: _Context, worktree: Path) -> None:
+    """Give the app-server of a finished job still holding `worktree` time to stop, so a claim
+    made right after that job ends is not refused while its runner shuts the server down."""
+    holder = worktrees.lease_holder(ctx.root, worktree)
+    if holder is not None:
+        _server_settled(ctx, records.load_job(ctx.root, holder))
 
 
 def _cmd_release(ctx: _Context, args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
