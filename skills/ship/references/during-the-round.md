@@ -19,7 +19,9 @@ read the review in `<output-dir>/review.md` (the full response contract; `findin
 it lists the same findings, Blocker written `critical`; `codex-jobs result <id>` prints
 `result.json`). A `FAILURE:` line names its cause and `codex-jobs status <id>` shows the job's
 `error` - diagnose it, don't silently retry. Then `git -C <worktree> status --short` must be
-empty: the review sandbox is read-only, so a non-empty tree is an edit by the user or another
-session while the review ran, and it invalidates the round. Never `checkout -- .` or
-`clean -fd`. Report the dirty paths and stop the round; once their owner has committed or
-discarded them, re-run the round on a clean tree.
+empty, and `git -C <worktree> rev-parse HEAD` must print the head recorded at launch (run it
+before the launch command, for every reviewer). The review sandbox is read-only, so a
+non-empty tree or a moved head is a change by the user or another session while the review
+ran, and it invalidates the round. Never `checkout -- .` or `clean -fd`. Report the dirty
+paths or the new commits and stop the round; once their owner has committed or discarded
+them, re-run the round on a clean tree.

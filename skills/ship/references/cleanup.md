@@ -34,11 +34,11 @@ main tree itself (Step 1) it is `git switch <base>`. `<sync>` is
 notes' merge method, else `--squash`.
 
 ```bash
-cd <main tree>
+cd <main tree> || exit 1
 [ "$(gh pr view <branch> --json state --jq .state)" = MERGED ] || { echo "PR <N> not merged"; exit 1; }
-<remove worktree>
+<remove worktree> || { echo "worktree removal failed"; exit 1; }
 [ "$(git branch --show-current)" = <base> ] || { echo "main tree not on <base>"; exit 1; }
-<sync>
+<sync> || { echo "sync failed"; exit 1; }
 git branch -D <branch> 2>/dev/null || true               # a squash merge leaves it "not fully merged"; -d refuses
 git push origin --delete <branch> 2>/dev/null || true    # GitHub may have deleted it already
 git ls-remote --heads origin <branch>                    # must print nothing; this line is the completion check
