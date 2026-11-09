@@ -102,7 +102,8 @@ Goal: a pushed feature branch with an open draft PR against `<base>`, and a clea
      (`git branch --show-current`) is checked in the next item.
    - **PR number argument** (the one case where `/ship` may be invoked from the main
      tree): resolve the branch with
-     `gh pr view $ARGUMENTS --json headRefName,baseRefName,isDraft,state`, then find its
+     `gh pr view <N> --json headRefName,baseRefName,isDraft,state`, `<N>` being the PR
+     number alone, without `--reviewer`, then find its
      tree in `git worktree list`. No tree for that branch → report and stop; never guess a
      worktree path.
 1. Name the repo and its base, from inside `<worktree>`:

@@ -24,9 +24,10 @@ paths in scope; the message comes from the session's work and the staged diff.
    mtimes or commits before touching the tree.
 2. **Scope is exactly the files you changed.** Name every in-scope path: modified files and new
    untracked (`??`) ones, which `git diff --stat` leaves out. Stage by name, never `git add -A` or
-   `git add .`, which sweep in a sibling agent's half-done files and stray untracked files. Leave
-   deleted paths out of `git add`: `git rm` already staged them, and a missing path aborts the
-   whole `git add`. An in-scope file that also carries older edits with no live writer is
+   `git add .`, which sweep in a sibling agent's half-done files and stray untracked files. A
+   deletion `git status --short` shows as ` D` is staged by name like any other path; one it
+   shows as `D ` (`git rm` already staged it) stays out of `git add`, because a path gone from
+   both the index and the tree aborts the whole `git add`. An in-scope file that also carries older edits with no live writer is
    committed whole, the message covering both; use `git add -p` only when the user asks or the
    other edits are another author's unrelated work.
 3. **Pre-commit**, in a repo with a `.pre-commit-config.yaml`: run

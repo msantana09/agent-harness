@@ -17,7 +17,8 @@ Blocker / High / Medium / Low.
 SESSION CONTEXT: <what the PR sets out to do, in two or three lines — the intent the
 diff should be judged against, plus any constraint that shaped it (scope boundary,
 deliberate trade-off). Round <N> of this PR: prior rounds' ACCEPT/REJECT/FILE logs are in the
-PR body under "### Codex review round" — apply inspect-pr § Multi-Round Mode.>
+PR body under "### Codex review round", "### Opus review round" or "### Fable review round"
+— apply inspect-pr § Multi-Round Mode.>
 
 ANCHOR FILES:
 <the changed files, from `git diff --name-only origin/<base>...HEAD`, plus the one or two
