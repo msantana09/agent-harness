@@ -10,7 +10,9 @@ the evidence. One run produces one proposal: the changes to the user's instructi
 would prevent one pattern, with the quotes that justify them, an eval that compares the old and
 new text, and a way to check later whether they worked.
 
-The scripts are in this skill's `scripts/` folder. Reports, eval suites and the ledger go in
+The scripts are in this skill's `scripts/` folder and read transcripts through the transcripts
+skill installed beside it. Read past sessions with that skill (`Skill("transcripts")`), not by
+opening or parsing the `.jsonl` files. Reports, eval suites and the ledger go in
 `~/.claude/self-optimize/`, outside any public repository, because they quote the user's messages.
 
 ## Ground rules
@@ -42,7 +44,8 @@ skills that never loaded, and spend by model. Each hook block is named
 `<event>: <start of the hook's message>`, with quoted parts, paths and numbers masked. It shows
 the session it hit most and, when they differ, the quoted parts it blocked on (the pattern, file
 or command), so one pattern of a hook can be counted alone. Read it for where
-friction clusters: a session with many interrupts or hook blocks is worth opening. A skill that
+friction clusters: a session with many interrupts or hook blocks is worth reading (the
+transcripts skill's `lead-up` and `around` commands). A skill that
 never loads is a candidate to fix or delete only after a 30-day scan (`--days 30`) agrees, since
 some skills run monthly. A count is a lead, not a finding.
 
