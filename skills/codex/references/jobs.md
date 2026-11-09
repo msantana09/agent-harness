@@ -39,9 +39,12 @@ holds:
 | `result.json` | As in `consult` (`../SKILL.md` § 4. Wait for the Result); `review_approved` is `true` when the verdict is `approve`, `false` when it needs attention, null unless the review completed |
 
 A review the model answers `blocked` or `failed`, one missing the headings, one whose findings
-the validator rejects, or one whose head or diff moved while it ran (`head moved during review`:
-relaunch on the new head) prints `FAILURE:` (exit 1) and keeps its files; its `result.json` says
-`task_succeeded: false`. A review outside a git repo,
+the validator rejects, or one whose repository changed while it ran prints `FAILURE:` (exit 1)
+and keeps its files; its `result.json` says `task_succeeded: false`. A changed repository is a
+head or diff that moved (`head moved during review`: a commit, or a fetch that moved the base), a
+native review's tracked files edited mid-run (`tracked files changed during review`), or a
+repository that could no longer be read when the review ended; relaunch once the repository is
+settled. A review outside a git repo,
 in one with no commit yet, or in one without `origin/HEAD`, runs and is never attested `ok`
 (`git remote set-head origin --auto` sets the base). Read `review.md` for the full review and
 `findings.md` for the list.

@@ -483,7 +483,8 @@ def finalize(
     true once a turn id is recorded, null for `outcome_unknown` after a `turn/start` whose
     acceptance was never recorded, and false otherwise. An interrupted turn that a runner had
     journaled a `timeout` for is timed out, whichever runner or recovery route reads its end.
-    A review whose attestation finds the head or diff moved did not succeed, whatever it found.
+    A review whose attestation is stale (head, diff or a native review's tree changed while it ran,
+    or the repository unreadable at the end) did not succeed, whatever it found.
     """
     root, job_id = job_dir.parent, job_dir.name
     job = records.load_job(root, job_id)
@@ -520,10 +521,8 @@ def finalize(
     else:
         task_succeeded = None if state == records.OUTCOME_UNKNOWN else False
         failure = error or state
-    if reviewing:
-        # A review of a head that has since moved describes a state the branch no longer has.
-        if attestation.write(job_dir, job, failure)["exit_status"] == attestation.HEAD_MOVED:
-            task_succeeded, review_approved = False, None
+    if reviewing and attestation.stale(attestation.write(job_dir, job, failure)["exit_status"]):
+        task_succeeded, review_approved = False, None
     if job["turn_id"] is not None:
         ran: bool | None = True
     elif state == records.OUTCOME_UNKNOWN and unconfirmed_dispatch(job_dir) is not None:
