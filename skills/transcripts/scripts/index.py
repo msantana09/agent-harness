@@ -83,6 +83,12 @@ KEYWORDS = {"!", "{", "}", "do", "then", "else", "elif", "if", "while", "until"}
 WRAPPERS = {"builtin", "command", "exec", "nohup", "time", "env", "sudo"}
 ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
 OPERATOR_CHARS = ";&|()\n"
+# Stands in for an operator character the shell reads as data (quoted or escaped); a private-use
+# character, so it never matches a command name.
+LITERAL_OPERATOR = ""
+# A redirection word: an optional file descriptor, then >, >>, <, <>, &>, &>>, >&, <& or >|, then
+# its target when written in the same word (`2>/dev/null`, `2>&1`).
+REDIRECTION = re.compile(r"\d*(?:&>>?|>>?|<>|<|>&|<&|>\|)")
 # A heredoc operator and its delimiter word, quoted or not (`<<<`, a here-string, is not one).
 HEREDOC = re.compile(r"<<(?!<)-?\s*(['\"]?)([\w.-]+)\1")
 # The fallback for a command the parser cannot read (a substitution, unbalanced quotes): a cd,
@@ -264,7 +270,9 @@ def runnable_text(command: str) -> tuple[str, bool]:
     also start one at a # inside a word. A heredoc body is data for the command that reads it,
     from the line after its `<<` outside quotes through the delimiter line. A substitution is
     `$(` or a backtick outside single quotes, or `<(` or `>(` outside any quotes, none of them
-    escaped: it runs commands its words do not show.
+    escaped: it runs commands its words do not show. A `;`, `&`, `|`, parenthesis or newline inside
+    quotes or escaped is data, not an operator: it becomes LITERAL_OPERATOR, so no word of the
+    split reads as a separator.
     """
     out: list[str] = []
     quote = None
@@ -278,7 +286,13 @@ def runnable_text(command: str) -> tuple[str, bool]:
         if quote is None and pair == "<<" and command[i - 1 : i] != "<":
             heredoc = HEREDOC.match(command, i)
         if char == "\\" and quote != "'":
-            out.append(pair)
+            escaped = command[i + 1 : i + 2]
+            if quote is None and escaped == "\n":
+                pass  # a line continuation
+            elif escaped and escaped in OPERATOR_CHARS:
+                out.append(LITERAL_OPERATOR)
+            else:
+                out.append(pair)
             i += 2
             continue
         if quote == "'":
@@ -312,7 +326,7 @@ def runnable_text(command: str) -> tuple[str, bool]:
             delimiters = []
             out.append("\n")
             continue
-        out.append(char)
+        out.append(LITERAL_OPERATOR if quote and char in OPERATOR_CHARS else char)
         i += 1
     return "".join(out), substitutes
 
@@ -332,19 +346,38 @@ def simple_commands(command: str) -> list[list[str]] | None:
     except ValueError:
         return None
     commands: list[list[str]] = [[]]
-    for token in tokens:
-        if token and set(token) <= set(OPERATOR_CHARS):
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        words = commands[-1]
+        after = tokens[i + 1] if i + 1 < len(tokens) else ""
+        # The splitter cuts a redirection at its & or |: rejoin `2>` `&` `1`, `&` `>log`, `>` `|`.
+        if token in ("&", "|") and words and words[-1].endswith((">", "<")):
+            words[-1] += token + (after if token == "&" else "")
+            i += 2 if token == "&" else 1
+        elif token == "&" and after.startswith(">"):
+            words.append(token + after)
+            i += 2
+        elif set(token) <= set(OPERATOR_CHARS):
             commands.append([])
+            i += 1
         else:
-            commands[-1].append(token)
+            words.append(token)
+            i += 1
     return [words for words in commands if words]
 
 
 def command_name(words: list[str]) -> str | None:
-    """The name of the command `words` run, past keywords, assignments and wrappers."""
+    """The name of the command `words` run, past keywords, assignments, redirections and
+    wrappers."""
     i = 0
     while i < len(words):
         word = words[i]
+        redirection = REDIRECTION.match(word)
+        if redirection:
+            # The target is the next word when the operator stands alone (`2> /dev/null`).
+            i += 2 if redirection.end() == len(word) else 1
+            continue
         if word in KEYWORDS or ASSIGNMENT.match(word):
             i += 1
         elif word in WRAPPERS or word == "timeout":

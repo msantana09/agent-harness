@@ -190,6 +190,16 @@ def test_each_row_carries_its_cwd_and_a_call_after_a_sibling_cd_is_uncertain(
         ("cat > run.sh <<'EOF'\ncd /srv\nEOF\nls", False),
         ("python3 - <<PY\nimport os\nPY\ncd x", True),
         ("echo \\`cd x\\`", False),
+        ("2>/dev/null cd /tmp", True),
+        ("FOO=1 2>&1 cd /x", True),
+        (">log cd x && ls", True),
+        ("make 2>&1 | tee log; cd out", True),
+        ("echo ';' cd /tmp", False),
+        ('echo "&&" cd /tmp', False),
+        ("find . -name x -exec rm {} \\; cd y", False),
+        ("G='Read(a/**)'; (cd sub && ls)", True),
+        ("ls ~/Library/Application\\ Support/x; cd /p", True),
+        ('s=\'for f in $(cd "$d" && ls); do :; done\'; echo "$s"', False),
     ],
 )
 def test_a_command_moves_the_directory_only_when_the_shell_runs_a_cd(
