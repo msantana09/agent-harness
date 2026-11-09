@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["completed", "blocked", "failed"]
+    },
+    "review": {
+      "type": "string"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["approve", "needs-attention"]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "line_start": {
+            "type": "integer"
+          },
+          "line_end": {
+            "type": "integer"
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["correctness", "security", "performance", "architecture", "tests", "docs", "style", "ux", "tech-debt"]
+          }
+        },
+        "required": ["severity", "title", "body", "recommendation", "file", "line_start", "line_end", "confidence", "category"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["status", "review", "verdict", "summary", "findings"],
+  "additionalProperties": false
+}

@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "blocked",
+        "failed"
+      ]
+    },
+    "answer": {
+      "type": "string"
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "status",
+    "answer",
+    "open_questions"
+  ],
+  "additionalProperties": false
+}
