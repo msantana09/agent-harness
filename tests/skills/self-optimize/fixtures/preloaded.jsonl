@@ -1,0 +1,2 @@
+{"type":"user","uuid":"p-01","timestamp":"2099-06-12T12:00:00.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Review the release notes"}}
+{"type":"user","uuid":"p-02","isMeta":true,"timestamp":"2099-06-12T12:00:01.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"<command-message>style-guide</command-message>\n<command-name>style-guide</command-name>\n<skill-format>true</skill-format>\nWrite in short sentences."}}

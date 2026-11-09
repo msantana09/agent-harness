@@ -1,0 +1,3 @@
+{"type":"user","uuid":"q-01","timestamp":"2099-06-11T12:00:00.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Build the docs site"}}
+{"type":"attachment","uuid":"q-02","timestamp":"2099-06-11T12:00:10.000Z","cwd":"/home/ada/demo","attachment":{"type":"queued_command","prompt":"Also fix the broken links","origin":{"kind":"human"},"humanTurn":true}}
+{"type":"attachment","uuid":"q-03","timestamp":"2099-06-11T12:00:20.000Z","cwd":"/home/ada/demo","attachment":{"type":"queued_command","prompt":"Background task finished: link check","origin":{"kind":"task-notification"}}}

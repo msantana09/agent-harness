@@ -1,0 +1,4 @@
+{"type":"user","uuid":"s-1","forkedFrom":{"sessionId":"source","messageUuid":"s-3"},"timestamp":"2099-06-01T12:00:00.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"First question about the parser"}}
+{"type":"assistant","uuid":"s-2","forkedFrom":{"sessionId":"source","messageUuid":"s-3"},"timestamp":"2099-06-01T12:00:05.000Z","cwd":"/home/ada/demo","message":{"role":"assistant","content":[{"type":"text","text":"The parser reads one token at a time."}]}}
+{"type":"user","uuid":"s-3","forkedFrom":{"sessionId":"source","messageUuid":"s-3"},"timestamp":"2099-06-01T12:00:10.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Second question about the lexer"}}
+{"type":"user","uuid":"c-1","timestamp":"2099-06-01T12:00:20.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"Third question, asked only in the fork"}}

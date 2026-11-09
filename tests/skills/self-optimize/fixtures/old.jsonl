@@ -1,0 +1,2 @@
+{"type":"user","uuid":"o-01","timestamp":"2001-01-01T12:00:00.000Z","cwd":"/home/ada/demo","message":{"role":"user","content":"An old question from long ago"}}
+{"type":"assistant","uuid":"o-02","requestId":"req-old","timestamp":"2001-01-01T12:00:05.000Z","cwd":"/home/ada/demo","message":{"id":"msg-old","model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"text","text":"An old answer."}],"usage":{"input_tokens":500,"output_tokens":50}}}
