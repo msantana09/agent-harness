@@ -36,9 +36,9 @@ cp -r agent-harness/skills/self-optimize ~/.claude/skills/
 ## Requirements
 
 - [Claude Code](https://code.claude.com).
-- Python 3.12 or newer, run as `python3`. Everything here is tested only on 3.14. The scripts use
-  only the standard library, so there is nothing to install. The `python3` that ships with macOS
-  is 3.9, too old for them.
+- Python 3.14 or newer, run as `python3`; tested on 3.14 and 3.15. The scripts use only the
+  standard library, so there is nothing to install. The `python3` that ships with macOS is 3.9,
+  too old for them.
 
 ## License
 
