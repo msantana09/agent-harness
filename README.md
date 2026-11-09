@@ -14,6 +14,7 @@ instructions improve from what happens in real sessions.
 | [external-feedback](skills/external-feedback/SKILL.md) | Checks each suggestion from a reviewer or another AI against the code before accepting, rejecting or filing it. |
 | [commit](skills/commit/SKILL.md) | Commits exactly the files the agent changed, through the repo's pre-commit hooks, with a message that describes the diff. |
 | [command-output-patterns](skills/command-output-patterns/SKILL.md) | Saves a long command's output to a file once, then filters the file instead of running the command again. |
+| [default-stack](skills/default-stack/SKILL.md) | The languages, frameworks, database and test tools a new project starts from, so the agent does not pick a different stack for every build. |
 | [self-optimize](docs/self-optimize.md) | Finds where you corrected the agent in your own Claude Code sessions, then proposes and tests the instruction change that would have prevented it. |
 | [transcripts](skills/transcripts/SKILL.md) | Lets the agent read past Claude Code sessions as plain text: search what was typed, list tool calls and results, and show the context around one message. |
 
