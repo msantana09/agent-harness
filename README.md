@@ -82,11 +82,12 @@ ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
 
 The plugin installs no hooks. Copy them into `~/.claude/hooks/`, then merge the `hooks` key of the
 repo's `settings.json` into your `~/.claude/settings.json`; each command there runs a hook's
-`main.py` from that folder with `python3`:
+`main.py` from that folder with `python3`. With no settings file of your own yet, copy the repo's:
 
 ```bash
 mkdir -p ~/.claude/hooks
 cp -R agent-harness/hooks/. ~/.claude/hooks/
+cp agent-harness/settings.json ~/.claude/settings.json
 ```
 
 ## Requirements

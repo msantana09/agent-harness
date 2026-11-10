@@ -55,6 +55,8 @@ CONFIG_PARTS = (
     "agents",
     "commands",
 )
+# The config folder parts a plugin run may use: Claude Code's own and self-optimize's folder.
+PLUGIN_PARTS = (*CONFIG_PARTS, "self-optimize")
 MISSING = ("does not exist", "no such file")
 # Characters a shell expands, so a path holding one names no single file.
 EXPANDED = set("*?[{$")
@@ -73,13 +75,15 @@ def plugin_roots(run_output: Path) -> list[Path]:
     return []
 
 
-def allowed(config_dir: Path, plugins: list[Path], path: Path) -> bool:
+def allowed(
+    config_dir: Path, plugins: list[Path], path: Path, parts: tuple[str, ...] = PLUGIN_PARTS
+) -> bool:
     """Whether *path* is the config folder or lies under an allowed root. A path inside the config
-    folder is judged by CONFIG_PARTS alone, wherever the config folder itself sits."""
+    folder is judged by *parts* alone, wherever the config folder itself sits."""
     if path == config_dir:
         return True
     if config_dir in path.parents:
-        roots = [config_dir / part for part in (*CONFIG_PARTS, "self-optimize")]
+        roots = [config_dir / part for part in parts]
     else:
         roots = [*plugins, HOME / ".cache" / "agent-harness", HOME / "shop", *map(Path, SYSTEM)]
     return any(path == root or root in path.parents for root in roots)
@@ -163,7 +167,10 @@ def resolve(word: str) -> Path:
 
 
 def outside(
-    config_dir: Path, plugins: list[Path], transcripts: list[Path]
+    config_dir: Path,
+    plugins: list[Path],
+    transcripts: list[Path],
+    parts: tuple[str, ...] = PLUGIN_PARTS,
 ) -> list[tuple[str, str]]:
     """(tool, path) for each path a tool call used outside the allowed roots, each pair once."""
     found: dict[tuple[str, str], None] = {}
@@ -171,7 +178,7 @@ def outside(
         for tool, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
                 for word in PATH.findall(text):
-                    if not allowed(config_dir, plugins, resolve(word.rstrip(".:"))):
+                    if not allowed(config_dir, plugins, resolve(word.rstrip(".:")), parts):
                         found[(tool, word)] = None
     return list(found)
 
