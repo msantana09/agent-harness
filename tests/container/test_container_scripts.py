@@ -209,14 +209,45 @@ def test_the_stop_flag_passes_only_when_set_kept_then_removed(tmp_path) -> None:
     assert check_clone.stop_flag(tmp_path, "s1")[0] == check_clone.FAILED
 
 
-def test_a_commit_passes_only_as_one_typed_commit_on_a_clean_tree(tmp_path) -> None:
-    (tmp_path / "git_status.txt").write_text("")
-    (tmp_path / "git_log.txt").write_text("fix(shipping): raise the fee\nfeat: add the fee\n")
-    assert check_clone.committed(tmp_path) == (check_clone.PASSED, "")
-    (tmp_path / "git_log.txt").write_text("feat: add the fee\n")
-    assert check_clone.committed(tmp_path)[0] == check_clone.FAILED
-    (tmp_path / "git_log.txt").write_text("raise the fee\nfeat: add the fee\n")
-    assert check_clone.committed(tmp_path)[0] == check_clone.FAILED
+def test_a_commit_passes_only_as_one_typed_commit_on_a_clean_tree_with_the_skill_loaded(
+    tmp_path,
+) -> None:
+    config, out = tmp_path / ".claude", tmp_path / "out"
+    transcript = config / "projects" / "-home-dev-shop" / "s1.jsonl"
+    transcript.parent.mkdir(parents=True)
+    out.mkdir()
+    (out / "commit.jsonl").write_text(json.dumps({"type": "system", "session_id": "s1"}) + "\n")
+    transcript.write_text(f"{check_clone.SKILL_LOADED}{config}/skills/commit\n")
+    (out / "git_status.txt").write_text("")
+    (out / "git_log.txt").write_text("fix(shipping): raise the fee\nfeat: add the fee\n")
+    assert check_clone.committed(config, out) == (check_clone.PASSED, "")
+    (out / "git_log.txt").write_text("feat: add the fee\n")
+    assert check_clone.committed(config, out)[0] == check_clone.FAILED
+    (out / "git_log.txt").write_text("raise the fee\nfeat: add the fee\n")
+    assert check_clone.committed(config, out)[0] == check_clone.FAILED
+    (out / "git_log.txt").write_text("fix(shipping): raise the fee\nfeat: add the fee\n")
+    transcript.write_text("/commit\n")
+    verdict, why = check_clone.committed(config, out)
+    assert verdict == check_clone.FAILED
+    assert "skills/commit" in why
+
+
+def test_a_script_passes_only_when_its_call_came_back_with_the_line_it_prints(tmp_path) -> None:
+    command = "if [ -x ~/.claude/scripts/triage_run.sh ]; then ~/.claude/scripts/triage_run.sh"
+    call = {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": command}}
+    printed = result("FAILED (exit 1, 14 lines) full output: /tmp/run.txt", is_error=False)
+    ran = check_clone.ran_script(
+        probe(tmp_path, call, printed), "triage_run.sh", check_clone.TRIAGE_LINE
+    )
+    assert ran == (check_clone.PASSED, "")
+    absent = result("triage_run.sh: No such file or directory")
+    for blocks in ((call, absent), (call,), ()):
+        verdict, _ = check_clone.ran_script(
+            probe(tmp_path, *blocks), "triage_run.sh", check_clone.TRIAGE_LINE
+        )
+        assert verdict == check_clone.FAILED
+    state = result("branch=main head=2de12a8 no-upstream dirty=1 main-tree=/x", is_error=False)
+    assert check_clone.STATE_LINE.search(state["content"])
 
 
 def test_the_installed_hook_commands_judge_a_payload(tmp_path, monkeypatch) -> None:

@@ -44,6 +44,9 @@ is the signal to ask.
 - Any cap, limit, truncation or timeout that reduces what the request, or the thing being
   replaced, could do. A constraint nobody asked for is a regression, not a design choice.
 
+One exception: in a project whose `CLAUDE.md` says it is pre-revenue, a clearly right call on
+wording, on the shape of a security fix or on spend under a cent is made and logged, not asked.
+
 A question goes through the AskUserQuestion tool in the turn it comes up, after the agent has read
 enough to make the options concrete. It is never left in a pull request body or a report as an
 open item.
