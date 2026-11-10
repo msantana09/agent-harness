@@ -107,6 +107,22 @@ def test_multiedit_denies_the_offending_edit_by_position(monkeypatch, capsys):
     assert "edit 2 of 2" in reason
 
 
+@pytest.mark.parametrize("name", ["notes.md", "page.mdx", "README.MD", "docs/a.b.Mdx"])
+def test_allows_a_trailing_space_in_a_markdown_file_which_the_tool_keeps(name, monkeypatch, capsys):
+    hard_break = {**edit("line one", "line one  "), "file_path": f"/tmp/{name}"}
+    assert run_hook("Edit", hard_break, monkeypatch, capsys) is None
+    several = {"file_path": f"/tmp/{name}", "edits": [{"old_string": "c", "new_string": "d "}]}
+    assert run_hook("MultiEdit", several, monkeypatch, capsys) is None
+
+
+@pytest.mark.parametrize(
+    "name", ["notes.md.txt", "md", "page.mdx.py", "notes.markdown", "notes.md\n", 7]
+)
+def test_denies_a_trailing_space_in_a_file_that_only_resembles_markdown(name, monkeypatch, capsys):
+    path = f"/tmp/{name}" if isinstance(name, str) else name
+    assert_denied(run_hook("Edit", {**edit("a", "b "), "file_path": path}, monkeypatch, capsys))
+
+
 def test_multiedit_allows_clean_edits(monkeypatch, capsys):
     out = run_hook(
         "MultiEdit",
