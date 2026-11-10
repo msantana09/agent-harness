@@ -75,13 +75,15 @@ Count is only a tiebreaker.
 | Work shape | Tier | Mechanism |
 |------------|------|-----------|
 | A few independent one-shot tasks, no cross-checking needed | **1 — Inline fan-out** | `Agent(...)` ×N in one message; read each summarized `<result>` as it lands |
-| Fan-out-then-verify · loops · unknown-size discovery · multi-phase · migrations · audits | **2 — Dynamic Workflow** *(standing authorization — launch and announce)* | `Workflow` script — `pipeline`/`parallel`/`agent(schema)`/`budget`/`workflow()`. The script holds the loop and results, so they never touch your context |
+| Fan-out-then-verify · loops · unknown-size discovery · multi-phase · migrations · audits | **2 — Dynamic Workflow** *(on the user's standing authorization — launch and announce)* | `Workflow` script — `pipeline`/`parallel`/`agent(schema)`/`budget`/`workflow()`. The script holds the loop and results, so they never touch your context |
 | State must survive across sessions/compaction | **3 — Durable-file fallback** | Manual loop + `agents.md` + file-first output (see Tier 3 below). Long-running coordinated peers → agent teams (gated) |
 
 See `references/harness-api.md` for each mechanism's exact API, limits, and gating.
 
-Workflow standing authorization and its launch/announce obligations: read
-`rules/automation.md` § Orchestrator Mode — it binds here. The lone-spawn rule and per-stage
+The Workflow tool runs only on the user's opt-in. The standing authorization, the user's
+written opt-in for their own sessions, and its launch/announce obligations are in
+`rules/automation.md` § Orchestrator Mode — it binds here; without that paragraph, ask before
+each launch. The lone-spawn rule and per-stage
 effort selection live in `rules/core-rules.md` § Orchestration & Execution Rules (item EXECUTE
 DIRECTLY, DELEGATE WHEN IT PAYS).
 

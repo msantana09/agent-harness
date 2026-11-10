@@ -30,7 +30,8 @@ context accumulation, with all state in files so the work survives compaction.
 
 ## Dynamic Workflows (Tier 2 — the default for Tier-2-shaped work)
 
-`Workflow` runs under a standing authorization (`rules/automation.md` § Orchestrator Mode);
+`Workflow` runs under the user's standing authorization, their written opt-in
+(`rules/automation.md` § Orchestrator Mode);
 prefer it over the manual machinery in the rest of this file whenever state need not outlive
 the session. A Workflow script *is* the orchestrator loop — it holds
 phases, the worklist, and intermediate results in script variables, so **none of it lands in your
