@@ -166,8 +166,6 @@ cloud_architect_weights = {
 }
 ```
 
-Bespoke set — supersedes the generic Architecture Review "Cloud Architect" variation.
-
 ### Infrastructure Auditor
 
 ```python
