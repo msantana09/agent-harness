@@ -33,8 +33,10 @@ flowchart TD
 
 1. **Scan** counts sessions, interrupted turns, hook blocks, skills that never load and spend.
    It reads files only and costs nothing.
-2. **Flag corrections**: a small model reads the messages you typed and flags the ones that
-   correct the agent or state a preference. Each one is quoted exactly from the transcript. The
+2. **Flag corrections**: a small model reads the messages you typed, each with up to the last 400
+   characters of the agent's reply, question or rejected command that came before it, and flags
+   the ones that correct the agent or state a preference. Each one is quoted exactly from the
+   transcript. The
    script says roughly what this costs as it starts; a week of heavy use is about $0.15 at list
    price.
 3. **Re-count** each change applied on an earlier run, per session, against the count from
@@ -71,6 +73,7 @@ quote your messages.
 ## Limits
 
 - It reads Claude Code transcripts only.
-- Flagging corrections sends your typed messages to a Claude model.
+- Flagging corrections sends your typed messages to a Claude model, each with up to the last 400
+  characters of the agent's reply, question or rejected command that came before it.
 - "Worked" means the correction came up less often afterward. It does not prove the change was
   the reason.
