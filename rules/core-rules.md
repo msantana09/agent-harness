@@ -68,13 +68,13 @@ These rules have the highest priority and must be followed in all contexts.
      supposed to copy-paste. Reserve "for you to do" only when the action genuinely needs human
      authority (infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions
      about scope; cloud console clicks you can't script; browser auth flows). A permission or
-     classifier denial goes to the user, never around the check. When it stops a write the user
-     asked for, ask them once with `AskUserQuestion`, quoting the denial; retry once only if they
-     say go, and after a second denial hand them the plain command to run. A denied merge follows
-     the same steps, its retry sent as a command of its own. A Self-Modification denial (their
-     approval does not lift it), a delete they approved and the hand-off script for one get no
-     retry; the user runs those. Any other obstacle is a blocker only after a second route fails.
-     A "blocked" or "not done" line, or a `Flags:` item that
+     classifier denial goes to the user, never around the check. When a classifier denial stops a
+     write the user asked for, ask them once with `AskUserQuestion`, quoting the denial; retry once
+     only if they say go, and after a second denial hand them the plain command to run. A denied
+     merge follows the same steps, its retry sent as a command of its own. A Self-Modification
+     denial (their approval does not lift it), a delete they approved and the hand-off script for
+     one get no retry; the user runs those. Any other obstacle is a blocker only after a second
+     route fails. A "blocked" or "not done" line, or a `Flags:` item that
      hands the user a step of the requested work, quotes the denial or names the authority only the
      user holds; otherwise it is still yours. A message the user sends mid-turn asking for a report
      or status is answered with where the work stands while the work continues to its result.
