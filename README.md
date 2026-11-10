@@ -1,8 +1,8 @@
 # agent-harness
 
-The skills, hooks, rules and scripts I use every day to build software with coding agents, cleaned
-up to share. They cover how a change is made, reviewed and checked, and how the agent's
-instructions improve from what happens in real sessions.
+The skills, hooks, rules and scripts I use every day to build software with Claude Code, with Codex
+as the second reviewer, cleaned up to share. They cover how a change is made, reviewed and checked,
+and how the agent's instructions improve from what happens in real sessions.
 
 ## Positions
 
