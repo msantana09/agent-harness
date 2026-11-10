@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Runs in the container built with the install from a clone (clone_install.sh): copies the saved
 # login into the config folder, makes a small git repo with one failing test and an uncommitted
-# change, runs one session per probe without asking for permissions, then checks the run
+# change, runs one session per probe without asking for permissions, the last of them
+# /self-optimize on invented sessions, then checks the run
 # (check_clone.py says what each probe is for and what passes). Everything the run leaves is
 # copied to /out, and the login goes back to /login: Claude Code renews it during a run, and the
 # saved copy stops working once a newer one exists. Exits with check_clone.py's code, or 3 when
@@ -46,7 +47,7 @@ sed -i 's/399/499/' shipping.py test_shipping.py
 probe() {
   local name=$1
   shift
-  timeout "${GATE_TIMEOUT:-900}" claude -p "$@" --permission-mode bypassPermissions \
+  timeout "${limit:-900}" claude -p "$@" --permission-mode bypassPermissions \
     --output-format stream-json --verbose > "/out/$name.jsonl" 2> "/out/$name.err"
   echo "$name: claude exited $?" >> /out/run.err
 }
@@ -81,7 +82,11 @@ git status --short > /out/git_status.txt
 probe tests "Run this project's test suite (python3 -m unittest) and tell me which test fails. \
 Then tell me which branch this repo is on and how many files are uncommitted. Change no files."
 
+python3 "$here/fixtures.py" "$CLAUDE_CONFIG_DIR"
+limit=3600 probe selfoptimize "/self-optimize"
+
 cp -R "$CLAUDE_CONFIG_DIR/projects" /out/projects
+[[ -d $CLAUDE_CONFIG_DIR/self-optimize ]] && cp -R "$CLAUDE_CONFIG_DIR/self-optimize" /out/
 cp "$CLAUDE_CONFIG_DIR/settings.json" /out/settings.json
 cp "$CLAUDE_CONFIG_DIR/.credentials.json" /login/.credentials.json
 python3 "$here/check_clone.py" "$CLAUDE_CONFIG_DIR" /out

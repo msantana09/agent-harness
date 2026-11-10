@@ -44,6 +44,10 @@ is the signal to ask.
 - Any cap, limit, truncation or timeout that reduces what the request, or the thing being
   replaced, could do. A constraint nobody asked for is a regression, not a design choice.
 
+One exception: in a project whose `CLAUDE.md` says it is pre-revenue, a clearly right call on
+wording, on the shape of a security fix, on spend under a cent or on closing a workstream is made
+and logged, not asked.
+
 A question goes through the AskUserQuestion tool in the turn it comes up, after the agent has read
 enough to make the options concrete. It is never left in a pull request body or a report as an
 open item.
@@ -62,5 +66,5 @@ before says so above its divider, under `Regresses:`, where the person merging r
 
 ## What enforces it
 
-Two checks run when the agent ends its turn ([hooks](hooks.md)): a reply that asks its question in
+One hook runs when the agent ends its turn ([hooks](hooks.md)): a reply that asks its question in
 prose, or offers a step it could have taken, is sent back.
