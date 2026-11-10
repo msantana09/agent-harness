@@ -2,9 +2,9 @@
 """Deny an Edit or MultiEdit whose new_string ends in a space or tab.
 
 The Edit tool drops trailing spaces and tabs from new_string in any file but Markdown (`.md`,
-`.mdx`), so a replacement whose boundary is a space silently deletes it: `new_string="identifier: "` is written as `identifier:`, and
-the next token fuses on. A `replace_all` that rewrites a prefix ending in a space corrupts every
-match.
+`.mdx`), so a replacement whose boundary is a space silently deletes it:
+`new_string="identifier: "` is written as `identifier:`, and the next token fuses on. A
+`replace_all` that rewrites a prefix ending in a space corrupts every match.
 
 Usage: PreToolUse hook, matcher `Edit|MultiEdit`; Claude Code passes the call as JSON on stdin.
 Input: `tool_name` and `tool_input`; for MultiEdit `tool_input.edits` is a list of edits.
