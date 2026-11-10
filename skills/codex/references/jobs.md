@@ -86,10 +86,11 @@ MCP `codex_review` tool takes `native` and `target`.
 
 ## Network and GitHub Access
 
-Every job, read-only reviews and consults included, runs with network access and with `GH_TOKEN`
-set to a GitHub token: the one `gh auth token -u <owner>` gives for the owner of the repo's
-github.com origin, or whatever `CODEX_JOBS_GH_TOKEN_COMMAND` prints when that variable is set (that
-command can also withhold the token or refuse the repo). The read-only sandbox blocks file writes,
+Every job, read-only reviews and consults included, runs with network access, and with `GH_TOKEN`
+set when a token is found: the one `gh auth token -u <owner>` gives for the owner of the repo's
+github.com origin (none without such an origin, `gh` or a sign-in to that account), or whatever
+`CODEX_JOBS_GH_TOKEN_COMMAND` prints when that variable is set (that command can also withhold the
+token or refuse the repo). The read-only sandbox blocks file writes,
 not network calls, so only the prompt keeps a job from pushing or writing through the GitHub API.
 Of the caller's other environment variables, a job gets only HOME, PATH, USER, LOGNAME, TMPDIR,
 LANG, TERM and SHELL.
