@@ -286,3 +286,34 @@ def test_a_session_that_ended_in_an_error_result_did_not_end_normally(tmp_path) 
     verdict, why = check_clone.ended(tmp_path)
     assert verdict == check_clone.FAILED
     assert "stash: Failed to authenticate" in why
+
+
+def test_self_optimize_passes_only_with_a_written_eval_suite(tmp_path) -> None:
+    assert check_clone.self_optimized(tmp_path)[0] == check_clone.FAILED
+    suite = tmp_path / "self-optimize" / "2026-01-05-evals"
+    suite.mkdir(parents=True)
+    assert check_clone.self_optimized(tmp_path)[0] == check_clone.FAILED
+    (suite / "case.md").write_text("case\n")
+    assert check_clone.self_optimized(tmp_path) == (check_clone.PASSED, "")
+
+
+def test_the_path_check_reads_the_probe_sessions_and_not_the_invented_ones(tmp_path) -> None:
+    config, out = tmp_path / ".claude", tmp_path / "out"
+    folder = config / "projects" / "-home-dev-shop"
+    folder.mkdir(parents=True)
+    out.mkdir()
+    for name in check_clone.SESSIONS:
+        (out / f"{name}.jsonl").write_text(json.dumps({"session_id": "probe"}) + "\n")
+
+    def transcript(session: str, command: str) -> None:
+        call = {"type": "tool_use", "name": "Bash", "input": {"command": command}}
+        record = {"type": "assistant", "message": {"content": [call]}}
+        (folder / f"{session}.jsonl").write_text(json.dumps(record) + "\n")
+
+    transcript("probe", "ls /home/dev/shop")
+    transcript("invented", "cat /Users/someone/notes")
+    assert check_clone.paths(config, out) == (check_clone.PASSED, "")
+    transcript("probe", "cat /Users/someone/notes")
+    verdict, why = check_clone.paths(config, out)
+    assert verdict == check_clone.FAILED
+    assert "/Users/someone/notes" in why

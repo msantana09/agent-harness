@@ -16,8 +16,8 @@ instructions improve from what happens in real sessions.
 - A change touches only what the request needs and removes what it replaces.
   [engineering](rules/engineering.md#surgical-changes)
 - Every edit happens in a worktree, and a person merges. [core-rules](rules/core-rules.md#worktrees)
-- A pull request is reviewed by a second model, for two rounds unless a serious finding calls for
-  another, and each finding is checked against the code before it is accepted.
+- A pull request is reviewed by a second model, again only after a finding of medium severity or
+  worse, and each finding is checked against the code before it is accepted.
   [ship](skills/ship/SKILL.md), [external-feedback](skills/external-feedback/SKILL.md)
 - A reviewer's suggestion is a recommendation, not scope.
   [communication](rules/communication.md#surface--scope-in)
@@ -57,15 +57,16 @@ ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
 ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
 ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
 cp -R agent-harness/hooks/. ~/.claude/hooks/
-cp agent-harness/settings.json ~/.claude/settings.json
+[ -e ~/.claude/settings.json ] || cp agent-harness/settings.json ~/.claude/settings.json
 ```
 
-The last line is for a machine with no `~/.claude/settings.json` yet; with one, merge the `hooks`
-key of the repo's file into it. The `~/.agents/skills` link is for Codex, which loads inspect-pr
+The last line copies the settings only when you have no `~/.claude/settings.json`; when you do,
+merge the `hooks` key of the repo's file into yours. The `~/.agents/skills` link is for Codex, which loads inspect-pr
 from there when it reviews for ship. To update, pull the clone and copy the hooks again.
 
 To try the skills alone, install them as a Claude Code plugin. It carries no rules, hooks or
-scripts, and its skills take a prefix, as in `/agent-harness:self-optimize`:
+scripts, so codex, ship, command-output-patterns and agent-patterns, which run the scripts, need
+the install above. Its skills take a prefix, as in `/agent-harness:self-optimize`:
 
 ```text
 /plugin marketplace add msantana09/agent-harness
