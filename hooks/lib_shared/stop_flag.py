@@ -6,8 +6,6 @@ workflow stage uses to hand back its result, until the next human prompt removes
 only: stop_gate imports this on every tool call in every session.
 """
 
-from __future__ import annotations
-
 import json
 import re
 from pathlib import Path
