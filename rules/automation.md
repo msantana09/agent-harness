@@ -55,8 +55,10 @@ must survive compaction → files the agents read and update, since context does
 `Workflow` is main-loop-only. The tiers in full, the durable-file fallback included:
 `Skill("agent-patterns")` § Choosing an Orchestration Tier.
 
-Standing authorization: launch a Workflow directly when the shape fits; announce a one-line scale
-note; pick per-stage effort per core-rules EXECUTE DIRECTLY.
+Standing authorization: this paragraph is the user's own opt-in to the Workflow tool, in writing,
+for their sessions. Launch a Workflow directly when the shape fits; announce a one-line scale
+note; pick per-stage effort per core-rules EXECUTE DIRECTLY. Deleting this paragraph means each
+run needs the user's opt-in first.
 
 Locating code across 10+ files goes to Explore; reading them in full goes to general-purpose.
 
