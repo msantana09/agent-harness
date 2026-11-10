@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$HOME/.claude/hooks/pre_tool_use/stop_gate/main.py\"",
+            "command": "f=\"$HOME/.claude/hooks/pre_tool_use/stop_gate/main.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
             "timeout": 2
           }
         ]
@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$HOME/.claude/hooks/user_prompt_submit/stop_flag/main.py\"",
+            "command": "f=\"$HOME/.claude/hooks/user_prompt_submit/stop_flag/main.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
             "timeout": 2
           }
         ]

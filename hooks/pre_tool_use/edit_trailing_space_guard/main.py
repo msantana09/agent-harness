@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Deny an Edit or MultiEdit whose new_string ends in a space or tab.
 
-The Edit tool drops trailing spaces and tabs from new_string, so a replacement whose boundary
-is a space silently deletes it: `new_string="identifier: "` is written as `identifier:`, and
+The Edit tool drops trailing spaces and tabs from new_string in any file but Markdown (`.md`,
+`.mdx`), so a replacement whose boundary is a space silently deletes it: `new_string="identifier: "` is written as `identifier:`, and
 the next token fuses on. A `replace_all` that rewrites a prefix ending in a space corrupts every
 match.
 
