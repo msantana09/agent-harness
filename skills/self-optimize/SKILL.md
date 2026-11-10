@@ -106,7 +106,10 @@ groups are close, show the top three with their quotes and let the user choose.
 ## 6. Diagnose
 
 Find the instruction that governs the behavior: the user's `CLAUDE.md` files, rules, skills, hook
-messages and saved memories. Read the whole file, not a search hit. Then answer three questions:
+messages and saved memories. Read the whole file, not a search hit. Diagnose from the sessions
+whose corrections step 2 flagged for this target, and leave unread any other session where the
+same thing happened and the user let it pass: step 7 writes its cases from those, and a session
+read here cannot judge the changes. Then answer three questions:
 
 - What does the current text say, exactly?
 - Why does it fail here? Missing, ambiguous, contradicted by another file, or buried?
@@ -124,8 +127,9 @@ How to write the cases and run them, including replaying a changed script or hoo
 
 - **Held-out cases.** The cases that judge the changes are never written from the sessions that
   produced them. Give a fresh subagent one sentence naming the behavior under test and the ids of
-  the sessions the diagnosis used, as ones to skip. It never sees the changes. It finds real
-  instances in other sessions and writes the cases from them.
+  the sessions step 6 read, as ones to skip: the ones whose corrections it quotes, not every
+  session in the window. It never sees the changes. It finds real instances in other sessions
+  and writes the cases from them.
 - **Recommend applying only when the edited text scores higher** on those cases. A tie means the
   suite cannot tell them apart: say so, and let the user decide on the evidence alone.
 - When no case can set up the behavior (it only appears late in a long session, or after a tool
