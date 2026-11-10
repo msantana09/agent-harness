@@ -67,7 +67,7 @@ SESSIONS: list[tuple[int, str, str, str, str]] = [
     ),
     (
         7,
-        "Make the shipping fee 4.99 in shipping.py.",
+        "Make the shipping fee 4.99 in shipping.py; tests/test_shipping.py checks it.",
         "pytest",
         "Changed SHIPPING_FEE to 4.99 and ran the tests: 912 passed in 4m 05s.",
         "Thanks.",
@@ -88,7 +88,7 @@ SESSIONS: list[tuple[int, str, str, str, str]] = [
     ),
     (
         3,
-        "Add a docstring to discount() in pricing.py.",
+        "Add a docstring to discount() in pricing.py. Its tests are in tests/test_pricing.py.",
         "make test",
         "Added the docstring and ran make test: all 912 tests pass.",
         "Good.",
