@@ -3,14 +3,10 @@
 # settings yet. Run from the folder that holds the clone, as the README says.
 set -euo pipefail
 
-mkdir -p ~/.claude/rules ~/.claude/skills ~/.claude/scripts
+mkdir -p ~/.claude/rules ~/.claude/skills ~/.claude/scripts ~/.claude/hooks ~/.agents/skills
 ln -s "$PWD"/agent-harness/rules/*.md ~/.claude/rules/
 ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
 ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
-
-mkdir -p ~/.agents/skills
 ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
-
-mkdir -p ~/.claude/hooks
 cp -R agent-harness/hooks/. ~/.claude/hooks/
 cp agent-harness/settings.json ~/.claude/settings.json

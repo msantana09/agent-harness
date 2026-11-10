@@ -4,100 +4,106 @@ The skills, hooks, rules and scripts I use every day to build software with codi
 up to share. They cover how a change is made, reviewed and checked, and how the agent's
 instructions improve from what happens in real sessions.
 
-## What's here
+## Positions
 
-| Skill | What it does |
-|---|---|
-| [ship](skills/ship/SKILL.md) | Takes a committed branch through its pull request: opens the draft, has Codex review it within a round budget, fixes the findings it accepts, and hands the merge to you. |
-| [inspect-pr](skills/inspect-pr/SKILL.md) | A read-only, evidence-backed review of a pull request, findings first. It is the framework the Codex reviewer follows for ship. |
-| [codex](skills/codex/SKILL.md) | Hands work to OpenAI Codex through codex-jobs: a second opinion on a plan or bug, a pull request review, or a bounded code change in its own worktree. |
-| [external-feedback](skills/external-feedback/SKILL.md) | Checks each suggestion from a reviewer or another AI against the code before accepting, rejecting or filing it. |
-| [commit](skills/commit/SKILL.md) | Commits exactly the files the agent changed, through the repo's pre-commit hooks, with a message that describes the diff. |
-| [command-output-patterns](skills/command-output-patterns/SKILL.md) | Saves a long command's output to a file once, then filters the file instead of running the command again. |
-| [default-stack](skills/default-stack/SKILL.md) | The languages, frameworks, database and test tools a new project starts from, so the agent does not pick a different stack for every build. |
-| [self-optimize](docs/self-optimize.md) | Finds where you corrected the agent in your own Claude Code sessions, then proposes and tests the instruction change that would have prevented it. |
-| [agent-patterns](skills/agent-patterns/SKILL.md) | How the agent coordinates subagents: picks inline fan-out, a Workflow or a file-backed loop by the shape of the work, writes briefs, sizes each assignment to one context window, and scores confidence. |
-| [transcripts](skills/transcripts/SKILL.md) | Lets the agent read past Claude Code sessions as plain text: search what was typed, list tool calls and results, and show the context around one message. |
+- The agent takes an obvious next step and asks only what is the user's to decide: a schema, a
+  public contract, spend, a limit that takes something away.
+  [core-rules](rules/core-rules.md), [decide or ask](docs/decide-or-ask.md)
+- A fix is done when it is seen working where the user meets it, not when the code changed.
+  [core-rules](rules/core-rules.md)
+- A bug gets a failing test first, then a fix at its cause, and one instance starts a search for
+  the rest. [core-rules](rules/core-rules.md)
+- A change touches only what the request needs and removes what it replaces.
+  [engineering](rules/engineering.md#surgical-changes)
+- Every edit happens in a worktree, and a person merges. [core-rules](rules/core-rules.md#worktrees)
+- Every pull request is reviewed by a second model for two rounds at most, and each finding is
+  checked against the code before it is accepted. [ship](skills/ship/SKILL.md),
+  [external-feedback](skills/external-feedback/SKILL.md)
+- A reviewer's suggestion is a recommendation, not scope.
+  [communication](rules/communication.md#surface--scope-in)
+- A reply fits one phone screen, outcome first. [communication](rules/communication.md)
+- Instructions change on evidence: corrections in real sessions, counted before and after.
+  [self-optimize](docs/self-optimize.md)
 
-`rules/` holds the instructions every session follows: when to act and when to ask, how to verify
-and review, and how to report back.
+## What is here
 
-`scripts/` holds the shared scripts skills and rules call: `scripts/codex/codex-jobs` runs Codex
-review, consult and run jobs as a CLI or an MCP server, `scripts/triage_run.sh` runs a long
-command and prints a short digest of what failed, and `scripts/git_state.sh` prints a repo's
-branch, drift and dirty count on one line.
-
-`hooks/` holds Claude Code hooks that check the agent as it works. Before a write, `emoji_guard`
-refuses emoji in docs and asks before writing them into code, and `edit_trailing_space_guard`
-refuses an edit whose replacement ends in a space or tab, which the Edit tool drops outside
-Markdown files. Before a Bash command, `bare_git_stash_guard` refuses a bare `git stash`, `pop`,
-`apply` or `save`, which can take or reapply another session's changes. When the agent ends its
-turn, `prose_question_blocker` sends back a reply that asks the user a question in prose instead of
-through AskUserQuestion, offers a step instead of taking it, or announces work it never started, and
-`peer_reply_guard` sends back a session that answered another session's task in its own chat instead
-of with SendMessage. When the user types a bare "stop", `stop_flag` marks the session and
-`stop_gate` refuses its tool calls until the user's next prompt.
-
-More will be added as I clean them up.
+- `rules/`: the four files every session loads: [core-rules](rules/core-rules.md),
+  [engineering](rules/engineering.md), [communication](rules/communication.md) and
+  [automation](rules/automation.md).
+- `skills/`: procedures the agent loads when a task calls for one. The review set is
+  [ship](skills/ship/SKILL.md), [inspect-pr](skills/inspect-pr/SKILL.md),
+  [codex](skills/codex/SKILL.md), [external-feedback](skills/external-feedback/SKILL.md),
+  [commit](skills/commit/SKILL.md) and
+  [command-output-patterns](skills/command-output-patterns/SKILL.md); beside it,
+  [default-stack](skills/default-stack/SKILL.md), [agent-patterns](skills/agent-patterns/SKILL.md),
+  [self-optimize](skills/self-optimize/SKILL.md) and [transcripts](skills/transcripts/SKILL.md).
+- `hooks/`: seven checks Claude Code runs on the agent's tool calls and replies
+  ([hooks](docs/hooks.md)).
+- `scripts/`: what the rules and skills run by path: `codex-jobs` for Codex reviews and tasks,
+  `triage_run.sh` for a long command's failures, `git_state.sh` for a repo's state on one line.
+- `tests/`: the tests, and a release check that installs the repo on a clean machine in a
+  container and runs it there.
 
 ## Install
 
-As a Claude Code plugin, which installs every skill here. In Claude Code, run:
+Clone, then link into `~/.claude`, where Claude Code loads rules and skills and where the rules
+name the scripts:
+
+```bash
+git clone https://github.com/msantana09/agent-harness
+mkdir -p ~/.claude/rules ~/.claude/skills ~/.claude/scripts ~/.claude/hooks ~/.agents/skills
+ln -s "$PWD"/agent-harness/rules/*.md ~/.claude/rules/
+ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
+ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
+ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
+cp -R agent-harness/hooks/. ~/.claude/hooks/
+cp agent-harness/settings.json ~/.claude/settings.json
+```
+
+The last line is for a machine with no `~/.claude/settings.json` yet; with one, merge the `hooks`
+key of the repo's file into it. The `~/.agents/skills` link is for Codex, which loads inspect-pr
+from there when it reviews for ship. To update, pull the clone and copy the hooks again.
+
+To try the skills alone, install them as a Claude Code plugin. It carries no rules, hooks or
+scripts, and its skills take a prefix, as in `/agent-harness:self-optimize`:
 
 ```text
 /plugin marketplace add msantana09/agent-harness
 /plugin install agent-harness@agent-harness
 ```
 
-Skills installed this way take the plugin's name as a prefix, as in `/agent-harness:self-optimize`.
-To update later, run `claude plugin marketplace update agent-harness`, then
-`claude plugin update agent-harness@agent-harness`.
-
-Or copy single skills. Each skill is a folder; copy the ones you want into your Claude Code skills
-folder. self-optimize reads sessions through transcripts, so it needs both:
-
-```bash
-git clone https://github.com/msantana09/agent-harness
-cp -r agent-harness/skills/self-optimize agent-harness/skills/transcripts ~/.claude/skills/
-```
-
-A plugin cannot install rules. Link them from the clone, with the skills and scripts they name by
-path; Claude Code loads every file in `~/.claude/rules/` at the start of each session:
-
-```bash
-mkdir -p ~/.claude/rules ~/.claude/skills ~/.claude/scripts
-ln -s "$PWD"/agent-harness/rules/*.md ~/.claude/rules/
-ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
-ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
-```
-
-The review skills (ship, inspect-pr, codex, external-feedback, commit, command-output-patterns)
-load each other and run `scripts/` by path, so install them this way. When Codex reviews for ship
-it loads inspect-pr from its own skills folder; link it there too:
-
-```bash
-mkdir -p ~/.agents/skills
-ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
-```
-
-The plugin installs no hooks. Copy them into `~/.claude/hooks/`, then merge the `hooks` key of the
-repo's `settings.json` into your `~/.claude/settings.json`; each command there runs a hook's
-`main.py` from that folder with `python3`. With no settings file of your own yet, copy the repo's:
-
-```bash
-mkdir -p ~/.claude/hooks
-cp -R agent-harness/hooks/. ~/.claude/hooks/
-cp agent-harness/settings.json ~/.claude/settings.json
-```
-
 ## Requirements
 
-- [Claude Code](https://code.claude.com).
-- Python 3.14 or newer, run as `python3`; tested on 3.14 and 3.15. The scripts use only the
-  standard library, so there is nothing to install. The `python3` that ships with macOS is 3.9,
-  too old for them.
-- For the review skills: the [Codex CLI](https://developers.openai.com/codex/cli), signed in,
-  and the GitHub CLI `gh`, signed in.
+[Claude Code](https://code.claude.com); Python 3.14 or newer as `python3` (standard library only;
+the one macOS ships is too old); for the review set, the
+[Codex CLI](https://developers.openai.com/codex/cli) and the GitHub CLI `gh`, both signed in.
+
+## How a change ships
+
+Read it left to right: the agent does every step but the merge.
+
+```mermaid
+flowchart LR
+    branch["commit on a<br/>worktree branch"] --> draft["ship opens<br/>a draft PR"]
+    draft --> review["Codex reviews it<br/>with inspect-pr"]
+    draft --> ci["CI and the<br/>branch's tests"]
+    review --> triage["each finding checked<br/>against the code"]
+    ci --> triage
+    triage --> fix["accepted findings<br/>fixed and pushed"]
+    fix --> ready["PR marked ready,<br/>review trail in its body"]
+    ready --> merge["the user merges"]
+    merge --> cleanup["worktree and<br/>branch removed"]
+```
+
+## Read next
+
+- [What the agent decides alone and what it asks](docs/decide-or-ask.md)
+- [The hooks](docs/hooks.md)
+- [self-optimize](docs/self-optimize.md)
+
+## Contributing
+
+Issues are welcome. The repo records how I work, so it does not take pull requests.
 
 ## License
 
