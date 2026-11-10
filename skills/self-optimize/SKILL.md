@@ -127,9 +127,9 @@ How to write the cases and run them, including replaying a changed script or hoo
 
 - **Held-out cases.** The cases that judge the changes are never written from the sessions that
   produced them. Give a fresh subagent one sentence naming the behavior under test and the ids of
-  the sessions step 6 read, as ones to skip: the ones whose corrections it quotes, not every
-  session in the window. It never sees the changes. It finds real instances in other sessions
-  and writes the cases from them.
+  every session read on the way to the changes, in any step, as ones to skip: the ones the
+  changes were written from, not every session in the window. It never sees the changes. It
+  finds real instances in other sessions and writes the cases from them.
 - **Recommend applying only when the edited text scores higher** on those cases. A tie means the
   suite cannot tell them apart: say so, and let the user decide on the evidence alone.
 - When no case can set up the behavior (it only appears late in a long session, or after a tool
