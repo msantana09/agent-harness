@@ -65,10 +65,8 @@ orchestrator↔subagent communication is the native mode:
   `## Clarifications Needed`). Confirmation for risky or destructive actions still applies.
   ```
 
-## Don't delegate single-response work
-
-Delegation threshold: read `rules/core-rules.md` § Orchestration & Execution Rules (item EXECUTE
-DIRECTLY, DELEGATE WHEN IT PAYS) — it binds here.
+**Don't delegate single-response work.** Delegation threshold: read `rules/core-rules.md`
+§ Orchestration & Execution Rules (item EXECUTE DIRECTLY, DELEGATE WHEN IT PAYS) — it binds here.
 
 ## Choosing an Orchestration Tier
 
@@ -113,13 +111,13 @@ generic spawn. Custom agents run their pin; `fork` ignores `model`.
 
 ## Confidence Scoring
 
-## Core Formula
+**Core Formula.**
 
 ```python
 confidence = sum(factors[k] * weights[k] for k in factors)  # 0.0-1.0
 ```
 
-## Thresholds
+**Thresholds.**
 
 | Confidence | Action |
 |------------|--------|
@@ -138,20 +136,15 @@ Factor weights by role, Backend and Frontend summaries included:
 
 ## Coordination Patterns
 
-## Standard Output Format
+**Standard Output Format.** Every agent ends with a `## Recommended Next Steps` block — the one
+template lives in `references/coordination-patterns.md` § Standard Output Format.
 
-Every agent ends with a `## Recommended Next Steps` block — the one template lives in
-`references/coordination-patterns.md` § Standard Output Format.
+**Parallel vs Sequential.** Parallel for independent reviews and analyses; sequential while one
+agent's output is the next one's input:
+`references/coordination-patterns.md` § Parallel vs Sequential Execution.
 
-## Parallel vs Sequential
-
-Parallel for independent reviews and analyses; sequential while one agent's output is the next
-one's input: `references/coordination-patterns.md` § Parallel vs Sequential Execution.
-
-## Agent Resumption
-
-Continue a prior agent with **`SendMessage`** (by agent id or name) — its context is preserved,
-`Explore` included. A new `Agent` call always starts fresh.
+**Agent Resumption.** Continue a prior agent with **`SendMessage`** (by agent id or name) — its
+context is preserved, `Explore` included. A new `Agent` call always starts fresh.
 
 Continue-vs-spawn-fresh table and handoff templates:
 `references/coordination-patterns.md` § Agent Resumption Patterns.
@@ -180,7 +173,7 @@ spawn agents with a file-first output contract, and drive a manual loop. This tr
 durability — the work can be recovered after compaction by re-reading the files. Folder layout,
 registry, loop and recovery: `references/orchestrator-protocol.md`.
 
-## When this tier applies
+**When this tier applies.**
 
 | Situation | Tier |
 |-----------|------|
@@ -188,10 +181,9 @@ registry, loop and recovery: `references/orchestrator-protocol.md`.
 | State must survive across sessions / compaction | **Tier 3** (durable files) |
 | Simple fix, few files | Neither — just edit / Tier 1 |
 
-## File-First Output Protocol
-
-In this tier every agent prompt carries the Output Requirements template, and the deliverable
-file is what survives compaction: `references/orchestrator-protocol.md` § Agent Prompt Template.
+**File-First Output Protocol.** In this tier every agent prompt carries the Output Requirements
+template, and the deliverable file is what survives compaction:
+`references/orchestrator-protocol.md` § Agent Output Protocol (File-First).
 
 ## Task Decomposition
 

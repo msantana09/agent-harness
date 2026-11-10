@@ -9,7 +9,6 @@
 ## Contents
 
 - [Core Calculation Methodology](#core-calculation-methodology)
-  - [Universal Formula](#universal-formula)
 - [Domain Factors (Summary)](#domain-factors-summary)
 - [Architecture Review Factors](#architecture-review-factors)
 - [Specialist Domain Factors](#specialist-domain-factors)
@@ -23,13 +22,11 @@ Factor definitions and scoring rubrics, as factor sets by role.
 
 ## Core Calculation Methodology
 
-## Universal Formula
-
-A confidence score is the weighted sum of factor scores: `confidence = sum(factor[k] * weight[k]
-for k in factors)`, where each factor is scored 0.0-1.0 (1.0=excellent, 0.8=good, 0.6=adequate,
-0.4=poor, 0.2=critical) and weights are per-domain (see the factor sets below). The weights for a
-given domain must sum to 1.0 — verify with `sum(weights.values()) == 1.0` before using a new or
-edited set.
+**Universal Formula.** A confidence score is the weighted sum of factor scores: `confidence =
+sum(factor[k] * weight[k] for k in factors)`, where each factor is scored 0.0-1.0 (1.0=excellent,
+0.8=good, 0.6=adequate, 0.4=poor, 0.2=critical) and weights are per-domain (see the factor sets
+below). The weights for a given domain must sum to 1.0 — verify with `sum(weights.values()) == 1.0`
+before using a new or edited set.
 
 **Evidence Types**:
 
@@ -84,7 +81,7 @@ Specialist Domain Factors — which supersedes this generic set for that domain.
 
 ## Specialist Domain Factors
 
-## DevOps Engineer
+### DevOps Engineer
 
 ```python
 devops_factors = {
@@ -104,7 +101,7 @@ devops_weights = {
 }
 ```
 
-## Systems Debugger
+### Systems Debugger
 
 ```python
 debug_factors = {
@@ -124,7 +121,7 @@ debug_weights = {
 }
 ```
 
-## Data Engineer
+### Data Engineer
 
 ```python
 data_engineer_factors = {
@@ -149,7 +146,7 @@ data_engineer_weights = {
 - Idempotency: Pipelines safe to re-run without side effects
 - Dead letter queues: Failed records captured for investigation
 
-## Cloud Architect
+### Cloud Architect
 
 ```python
 cloud_architect_factors = {
@@ -171,7 +168,7 @@ cloud_architect_weights = {
 
 Bespoke set — supersedes the generic Architecture Review "Cloud Architect" variation.
 
-## Infrastructure Auditor
+### Infrastructure Auditor
 
 ```python
 infrastructure_auditor_factors = {

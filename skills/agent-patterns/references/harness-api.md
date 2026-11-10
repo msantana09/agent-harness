@@ -1,6 +1,7 @@
 # Harness API — single source of truth
 
-Written against Claude Code 2.1.322; a fact observed on an earlier build names that build.
+Facts that name a build were observed on that build; the rest were checked on earlier builds
+and not re-run.
 
 This file is the **one place** that names the harness's orchestration tools, their parameters,
 deprecations, and gated features. Everything else (skills, hooks, rules) should state capabilities
@@ -86,7 +87,9 @@ they never touch the main context. Use for fan-out-then-verify, loops, unknown-s
 multi-phase work, migrations, and audits.
 
 - **Standing authorization.** Launch Tier-2-shaped work directly and announce a one-line scale
-  note. `rules/automation.md` § Orchestrator Mode is the authority on the grant's terms.
+  note. The built-in tool text (as of 2.1.296) says "ONLY call this tool when the user has
+  explicitly opted in..."; the grant is that opt-in, given in advance. `rules/automation.md`
+  § Orchestrator Mode is the authority on the grant's terms.
 - **Script header:** every script begins with `export const meta = { name, description, phases? }`
   as a pure literal (no variables, calls, or interpolation); `name` and `description` are
   required, `phases` optional. Plain JavaScript, not TypeScript.
@@ -100,12 +103,13 @@ multi-phase work, migrations, and audits.
   omitting it"; `rules/core-rules.md` says "assign a tier deliberately" — the rule wins, the
   skill text is the harness default, not this policy.
 - **`schema`** forces a validated structured return — no file/parse dance needed.
-- **A stage's model resolves in this order** (observed on build 2.1.318): `opts.model`, then the
-  `agentType` file's `model:` pin, then `CLAUDE_CODE_WORKFLOW_SUBAGENT_MODEL` or
-  `CLAUDE_CODE_SUBAGENT_MODEL`, then the main-loop model. Sonnet-pinned `agentType` stages
-  resolved to Sonnet under an Opus main loop; stages with no `agentType` resolved to the env
-  default (Opus). Earlier builds ignored the pin. Verify the first spawned agent's `*.meta.json`
-  in the workflow transcript dir before assuming a pin held.
+- **A stage's model resolves in this order** (observed on build 2.1.318, 147 stages):
+  `opts.model`, then the `agentType` file's `model:` pin, then
+  `CLAUDE_CODE_WORKFLOW_SUBAGENT_MODEL` or `CLAUDE_CODE_SUBAGENT_MODEL`, then the main-loop model.
+  Sonnet-pinned `agentType` stages resolved to Sonnet under an Opus main loop; stages with no
+  `agentType` resolved to the env default (Opus). Earlier builds ignored the pin (an `architect`
+  call, pinned `opus`, ran on Fable). Verify the first spawned agent's `*.meta.json` in the
+  workflow transcript dir before assuming a pin held.
 - **`resumeFromRunId` replays only the longest unchanged prefix** of `agent()` calls in journal
   order. Parallel lanes journal in finish order, not launch order, so after a partial failure a
   resume can re-run already-finished lanes live and regress a sibling's file. Do NOT resume a
@@ -117,8 +121,8 @@ multi-phase work, migrations, and audits.
 - **Launch from the turn whose user message requested the work.** The harness relays the latest
   user message to every subagent as the request that triggered the run, and discounts consent
   quoted in the prompt (computed task text counts as script output). Launched in the same turn as
-  an unrelated request, stages stop with `## Clarifications Needed` instead of working. Launch
-  from the requesting turn, or have the user restate the request first.
+  an unrelated request, 3 of 5 stages stopped with `## Clarifications Needed` instead of working.
+  Launch from the requesting turn, or have the user restate the request first.
 - **Limits:** concurrency capped at `min(16, cores−2)`; 1000-agent lifetime cap per run; ≤4096
   items per `parallel`/`pipeline` call. Resumable within a session.
 - **Hook visibility:** a `Workflow` is a **single** main-session tool call. Its internal `agent()`
@@ -133,7 +137,7 @@ multi-phase work, migrations, and audits.
 |------|-----------|
 | Recurring / self-paced task | Claude Code's loop command; `ScheduleWakeup` (dynamic pacing) |
 | Scheduled (cron) runs | `CronCreate` / `CronList` / `CronDelete` |
-| Wait on an external condition without polling | One event (a merge, a deploy): an `until` loop as a Bash call with `run_in_background=True`; its completion notification is the event. A stream of events: `Monitor`, with every `sleep` under 10s |
+| Wait on an external condition without polling | One event (a merge, a deploy): an `until` loop as a Bash call with `run_in_background=True`; its completion notification is the event. A stream of events: `Monitor`, with every `sleep` under 10s — Claude Code runs a Monitor command through the Bash hooks with no background flag, so a hook that blocks long sleeps blocks it too |
 | Abandon a running background task | `TaskStop` (general primitive — **ungated**; loads via `ToolSearch` in a plain session, and is the cancel primitive named by the `Monitor` tool doc) |
 | Work until a completion condition is met | Claude Code's goal command (a small/Haiku model evaluates the condition each turn) |
 | Isolated workspace for parallel sessions/edits | `EnterWorktree` / `ExitWorktree`; `isolation:"worktree"` on `Agent` |
@@ -182,13 +186,14 @@ transcript path is also stale practice — read the `<result>` summary instead (
 - Also `agent_id`, `agent_type`, `effort`.
 - Hook `additionalContext` goes to the subagent itself, never the parent, and makes it take
   another turn (the hooks docs: it "continues the conversation"). Observed on 2.1.304: a
-  detector returning it on every `## Clarifications Needed` stop loops the subagent through
-  extra turns, and no parent transcript receives it. A message meant for the caller cannot come
-  from a SubagentStop hook.
+  detector returning it on every `## Clarifications Needed` stop looped 9 Workflow agents in 2
+  sessions (up to 15 extra turns each), and no parent transcript received it. A message meant for
+  the caller cannot come from a SubagentStop hook.
 
 Hook text cap, observed on 2.1.296: each hook's injected text is capped at 10,000 chars **per
-hook**. Over it, the model sees a 2KB preview plus a saved-file path instead. Several hooks'
-outputs merge into one attachment with no merged cap. Large injections get a hook of their own.
+hook**. Over it, the model sees a 2KB preview plus a saved-file path instead (a 15.3KB
+SessionStart context collapsed that way). Several hooks' outputs merge into one attachment with
+no merged cap (two 7k outputs arrived intact). Large injections get a hook of their own.
 
 `Stop` hook stdin (JSON), observed on Claude Code 2.1.295:
 
