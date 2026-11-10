@@ -27,7 +27,8 @@ branch, drift and dirty count on one line.
 
 `hooks/` holds Claude Code hooks that check the agent as it works. Before a write, `emoji_guard`
 refuses emoji in docs and asks before writing them into code, and `edit_trailing_space_guard`
-refuses an edit whose replacement ends in a space or tab, which the Edit tool would drop. When the
+refuses an edit whose replacement ends in a space or tab, which the Edit tool drops outside
+Markdown files. When the
 agent ends its turn, `prose_question_blocker` sends back a reply that asks the user a question in
 prose instead of through AskUserQuestion, offers a step instead of taking it, or announces work it
 never started, and `peer_reply_guard` sends back a session that answered another session's task
