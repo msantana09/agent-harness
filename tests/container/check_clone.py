@@ -262,11 +262,16 @@ def self_optimized(config_dir: Path) -> Verdict:
 def paths(config_dir: Path, out: Path) -> Verdict:
     """check.py's path checks over the probe sessions and the subagents they started (the
     invented sessions self-optimize reads are input, not part of the run)."""
-    sessions = dict.fromkeys(session_of(out / f"{name}.jsonl") for name in SESSIONS)
-    transcripts = []
-    for session in filter(None, sessions):
-        transcripts += (config_dir / "projects").glob(f"*/{session}.jsonl")
+    sessions = {name: session_of(out / f"{name}.jsonl") for name in SESSIONS}
+    transcripts, unread = [], []
+    for session in dict.fromkeys(sessions.values()):
+        mains = list((config_dir / "projects").glob(f"*/{session}.jsonl")) if session else []
+        if not mains:
+            unread += [name for name in SESSIONS if sessions[name] == session]
+        transcripts += mains
         transcripts += (config_dir / "projects").glob(f"*/{session}/subagents/*.jsonl")
+    if unread:
+        return FAILED, f"no transcript for {unread}"
     roots = [CLONE, check.HOME / ".agents"]
     stray = [
         f"{tool}: {word}"
@@ -274,8 +279,6 @@ def paths(config_dir: Path, out: Path) -> Verdict:
     ]
     missing = list(dict.fromkeys(check.missing_reads(config_dir, transcripts)))
     missing += [w for w in check.absent(config_dir, roots, transcripts) if w not in missing]
-    if not transcripts:
-        return FAILED, "no transcripts"
     if stray or missing:
         return FAILED, f"outside the install: {stray}; named and absent: {missing}"
     return PASSED, ""

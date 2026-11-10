@@ -317,3 +317,6 @@ def test_the_path_check_reads_the_probe_sessions_and_not_the_invented_ones(tmp_p
     verdict, why = check_clone.paths(config, out)
     assert verdict == check_clone.FAILED
     assert "/Users/someone/notes" in why
+    (out / "selfoptimize.jsonl").write_text(json.dumps({"session_id": "unsaved"}) + "\n")
+    verdict, why = check_clone.paths(config, out)
+    assert (verdict, why) == (check_clone.FAILED, "no transcript for ['selfoptimize']")
