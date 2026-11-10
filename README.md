@@ -16,9 +16,9 @@ instructions improve from what happens in real sessions.
 - A change touches only what the request needs and removes what it replaces.
   [engineering](rules/engineering.md#surgical-changes)
 - Every edit happens in a worktree, and a person merges. [core-rules](rules/core-rules.md#worktrees)
-- Every pull request is reviewed by a second model for two rounds at most, and each finding is
-  checked against the code before it is accepted. [ship](skills/ship/SKILL.md),
-  [external-feedback](skills/external-feedback/SKILL.md)
+- A pull request is reviewed by a second model, for two rounds unless a serious finding calls for
+  another, and each finding is checked against the code before it is accepted.
+  [ship](skills/ship/SKILL.md), [external-feedback](skills/external-feedback/SKILL.md)
 - A reviewer's suggestion is a recommendation, not scope.
   [communication](rules/communication.md#surface--scope-in)
 - A reply fits one phone screen, outcome first. [communication](rules/communication.md)
