@@ -46,9 +46,10 @@ PATH = re.compile(
 # Bash command the same characters can end a redirect, so only other tools' text skips it, and a
 # path closed by a tag (<file>/a/b</file>) is the tag's content, not a stand-in's.
 PLACEHOLDER = re.compile(r"<[\w-]+>$")
-# The script sed is given: its slashes separate patterns and name no path. After -f the quoted
-# word is a script file, which is a path.
-SED_SCRIPT = re.compile(r"""(\bsed\b(?:\s+-(?!\w*f\b)\w+)*\s+)('[^']*'|"[^"]*")""")
+# One name at the disk root that is not there is text, not a path: the end of a sed pattern
+# (/p), a closing tag (</p>), the file after a stand-in (<case>/prompt.md). A path from another
+# machine has a folder in it and is still judged.
+ROOT = Path("/")
 SYSTEM = ("/tmp", "/usr", "/bin", "/dev/null", "/proc/self")
 # What Claude Code keeps or loads in its config folder that a skill may read or write: the
 # installed plugins, the transcripts (with each project's memory), the user's own instructions,
@@ -185,14 +186,15 @@ def outside(
     for transcript in transcripts:
         for tool, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
-                if tool == "Bash":
-                    text = SED_SCRIPT.sub(r"\1", text)
                 for match in PATH.finditer(text):
                     word = match.group(1)
                     tagged = text.startswith("</", match.end())
                     if tool != "Bash" and not tagged and PLACEHOLDER.search(text, 0, match.start()):
                         continue
-                    if not allowed(config_dir, plugins, resolve(word.rstrip(".:")), parts):
+                    path = resolve(word.rstrip(".:"))
+                    if path.parent == ROOT and not path.exists():
+                        continue
+                    if not allowed(config_dir, plugins, path, parts):
                         found[(tool, word)] = None
     return list(found)
 
