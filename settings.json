@@ -2,6 +2,16 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/pre_tool_use/stop_gate/main.py\"",
+            "timeout": 2
+          }
+        ]
+      },
+      {
         "matcher": "Edit|MultiEdit",
         "hooks": [
           {
@@ -36,6 +46,17 @@
             "type": "command",
             "command": "python3 \"$HOME/.claude/hooks/stop/peer_reply_guard/main.py\"",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/user_prompt_submit/stop_flag/main.py\"",
+            "timeout": 2
           }
         ]
       }

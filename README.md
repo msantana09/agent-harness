@@ -31,7 +31,8 @@ refuses an edit whose replacement ends in a space or tab, which the Edit tool wo
 agent ends its turn, `prose_question_blocker` sends back a reply that asks the user a question in
 prose instead of through AskUserQuestion, offers a step instead of taking it, or announces work it
 never started, and `peer_reply_guard` sends back a session that answered another session's task
-in its own chat instead of with SendMessage.
+in its own chat instead of with SendMessage. When the user types a bare "stop", `stop_flag` marks
+the session and `stop_gate` refuses its tool calls until the user's next prompt.
 
 More will be added as I clean them up.
 
