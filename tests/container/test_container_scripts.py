@@ -88,6 +88,18 @@ def test_a_path_outside_the_install_fails_the_run(tmp_path, capsys) -> None:
     assert "Bash: /home/dev/notes.md" in out
 
 
+def test_a_path_under_a_stand_in_name_is_outside_only_in_a_bash_command(tmp_path) -> None:
+    config = tmp_path / ".claude"
+    transcript = tmp_path / "session.jsonl"
+    calls = [
+        {"type": "tool_use", "name": "Agent", "input": {"prompt": "write <case-name>/prompt.md"}},
+        {"type": "tool_use", "name": "Bash", "input": {"command": "sort <names>/home/dev/x"}},
+    ]
+    record = {"type": "assistant", "message": {"content": calls}}
+    transcript.write_text(json.dumps(record) + "\n")
+    assert check.outside(config, [], [transcript]) == [("Bash", "/home/dev/x")]
+
+
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
     tmp_path, capsys, monkeypatch
 ):

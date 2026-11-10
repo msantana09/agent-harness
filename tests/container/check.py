@@ -42,6 +42,9 @@ PATH = re.compile(
     r"(?<![\w.:/$}*?\]-])(?<!\+')(?<!\+\")(?<!\+ ')(?<!\+ \")"
     r"((?:~|\$HOME|\$\{HOME\})(?=/|$)[^\s'\"`;|&<>(),]*|/[\w.@+-][^\s'\"`;|&<>(),]*)"
 )
+# A stand-in such as <case-name> in prose: what follows it is the rest of a relative path. In a
+# Bash command the same characters can end a redirect, so only other tools' text skips it.
+PLACEHOLDER = re.compile(r"<[\w-]+>$")
 SYSTEM = ("/tmp", "/usr", "/bin", "/dev/null", "/proc/self")
 # What Claude Code keeps or loads in its config folder that a skill may read or write: the
 # installed plugins, the transcripts (with each project's memory), the user's own instructions,
@@ -178,7 +181,10 @@ def outside(
     for transcript in transcripts:
         for tool, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
-                for word in PATH.findall(text):
+                for match in PATH.finditer(text):
+                    word = match.group(1)
+                    if tool != "Bash" and PLACEHOLDER.search(text, 0, match.start()):
+                        continue
                     if not allowed(config_dir, plugins, resolve(word.rstrip(".:")), parts):
                         found[(tool, word)] = None
     return list(found)
