@@ -84,6 +84,16 @@ MCP `codex_review` tool takes `native` and `target`.
 - `codex-jobs release <id>` removes a finished job's service-created worktree (it refuses one with
   uncommitted edits) or drops the lease on yours.
 
+## Network and GitHub Access
+
+Every job, read-only reviews and consults included, runs with network access and with `GH_TOKEN`
+set to a GitHub token: the one `gh auth token -u <owner>` gives for the owner of the repo's
+github.com origin, or whatever `CODEX_JOBS_GH_TOKEN_COMMAND` prints when that variable is set (that
+command can also withhold the token or refuse the repo). The read-only sandbox blocks file writes,
+not network calls, so only the prompt keeps a job from pushing or writing through the GitHub API.
+Of the caller's other environment variables, a job gets only HOME, PATH, USER, LOGNAME, TMPDIR,
+LANG, TERM and SHELL.
+
 ## Usage Rules
 
 - Admission is the service's job: at most `max_concurrent_jobs` (4) jobs run at once on this Mac
