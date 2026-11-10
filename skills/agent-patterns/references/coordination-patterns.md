@@ -141,14 +141,15 @@ most code changes owns it: its implementer goes first and hands the next one a s
 | Situation | Detection | Action |
 |-----------|-----------|--------|
 | Specialist returns confidence < 0.5 | Confidence field in output | Escalate to architect or human |
-| Platform error (`[Tool result missing...]`, `internal error`, tool use rejected) | Error text in Agent result | Log error. Retry once. If retry fails, do the work directly or report blocker. |
+| Platform error (`[Tool result missing...]`, `internal error`, a dropped connection) | Error text in Agent result | Log error. Retry once. If retry fails, do the work directly or report blocker. |
+| Permission or policy denial (the user or a hook rejected the call) | Denial text in Agent result | Neither retry it nor route around it on your own: follow `rules/core-rules.md` ACT BY DEFAULT on denials. |
 | Agent returns empty/malformed output | Missing expected files or status markers | Treat as failure. Retry once with simplified prompt. |
 | Agent appears hung | User reports it, or its completion notification never arrives | Stop it with `TaskStop`. Do the work directly if feasible, otherwise retry once with a smaller assignment or escalate. |
 | Conflicting recommendations | Multiple agents disagree | Surface both with tradeoffs |
 | Specialist unavailable | Agent type not found | Use general-purpose with domain prompt from agent definition |
 
-**Platform Error Recovery Protocol.** When ANY `Agent()` call returns an error (platform error, tool
-rejection, empty result):
+**Platform Error Recovery Protocol.** When an `Agent()` call returns a platform error or an empty
+result (a permission or policy denial is not one: it takes the denial row above):
 
 1. **Log it** — record the error in the session's working artifact (review log, plan doc, etc.)
 2. **Assess scope** — can you do this work directly? Research/exploration often can be done inline.
@@ -232,11 +233,12 @@ Agent:
   prompt: "Investigate flaky test in test_invoice_service.py"
 # Note the agent's id/name from the launch response, plus its investigation report
 
-## After applying fix - continue the same agent
+## After the investigation - continue the same agent
 SendMessage:
   to: "<agent id or name>"
-  prompt: "Verify the fix I applied to the race condition"
+  prompt: "Implement the lock you proposed for the race condition"
 # Agent remembers: original symptoms, files examined, root cause
+# The orchestrator then runs the flaky test itself to verify the fix
 ```
 
 **The 2-3-task ceiling applies across resumptions, not just within one dispatch.**
@@ -256,14 +258,15 @@ Agent:
   subagent_type: general-purpose
   model: opus
   prompt: |
-    Verify fix for race condition.
+    Fix the race condition in InvoiceService.update().
 
     ## Previous Investigation Summary
     - Root cause: Missing lock in InvoiceService.update()
     - File: app/billing/invoice_service.py:145
-    - Fix applied: Added asyncio.Lock() around DB operations
+    - Proposed fix: asyncio.Lock() around the DB operations
 
-    Confirm the fix resolves the original flaky test.
+    Implement the fix and report the files changed.
+# The orchestrator then runs the flaky test itself to verify the fix
 ```
 
 **Context Consumption Heuristics.**
