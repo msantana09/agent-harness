@@ -13,7 +13,8 @@ The run stayed inside the install: every absolute or home-relative path in a too
 is the config folder itself or lies under an allowed root (allowed: inside the config folder,
 only what Claude Code itself keeps or loads there (CONFIG_PARTS) plus self-optimize's own folder,
 even when the config folder sits under another allowed root; outside it, the folders the plugins
-run from, the index cache, the working folder, /tmp and the system folders). A file of the
+run from, the index cache, the working folder, /tmp, the system folders and the home folder
+itself, which a `cd ~` names). A file of the
 author's own layout under the config folder (a `memory/` file) or any other folder fails it.
 Paths are found by PATH: a word starting with /, ~ or $HOME, not preceded by a word character, a
 colon, a slash, a glob character or a quote joined on with + (so `and/or`, URLs, `*/x.md` and
@@ -41,6 +42,13 @@ PATH = re.compile(
     r"(?<![\w.:/$}*?\]-])(?<!\+')(?<!\+\")(?<!\+ ')(?<!\+ \")"
     r"((?:~|\$HOME|\$\{HOME\})(?=/|$)[^\s'\"`;|&<>(),]*|/[\w.@+-][^\s'\"`;|&<>(),]*)"
 )
+# A stand-in such as <case-name> in prose: what follows it is the rest of a relative path. In a
+# Bash command the same characters can end a redirect, so only other tools' text skips it, and a
+# path closed by a tag (<file>/a/b</file>) is the tag's content, not a stand-in's.
+PLACEHOLDER = re.compile(r"<[\w-]+>$")
+# The script sed is given: its slashes separate patterns and name no path. After -f the quoted
+# word is a script file, which is a path.
+SED_SCRIPT = re.compile(r"""(\bsed\b(?:\s+-(?!\w*f\b)\w+)*\s+)('[^']*'|"[^"]*")""")
 SYSTEM = ("/tmp", "/usr", "/bin", "/dev/null", "/proc/self")
 # What Claude Code keeps or loads in its config folder that a skill may read or write: the
 # installed plugins, the transcripts (with each project's memory), the user's own instructions,
@@ -78,9 +86,9 @@ def plugin_roots(run_output: Path) -> list[Path]:
 def allowed(
     config_dir: Path, plugins: list[Path], path: Path, parts: tuple[str, ...] = PLUGIN_PARTS
 ) -> bool:
-    """Whether *path* is the config folder or lies under an allowed root. A path inside the config
-    folder is judged by *parts* alone, wherever the config folder itself sits."""
-    if path == config_dir:
+    """Whether *path* is the config folder, the home folder or lies under an allowed root. A path
+    inside the config folder is judged by *parts* alone, wherever the config folder itself sits."""
+    if path in (config_dir, HOME):
         return True
     if config_dir in path.parents:
         roots = [config_dir / part for part in parts]
@@ -177,7 +185,13 @@ def outside(
     for transcript in transcripts:
         for tool, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
-                for word in PATH.findall(text):
+                if tool == "Bash":
+                    text = SED_SCRIPT.sub(r"\1", text)
+                for match in PATH.finditer(text):
+                    word = match.group(1)
+                    tagged = text.startswith("</", match.end())
+                    if tool != "Bash" and not tagged and PLACEHOLDER.search(text, 0, match.start()):
+                        continue
                     if not allowed(config_dir, plugins, resolve(word.rstrip(".:")), parts):
                         found[(tool, word)] = None
     return list(found)

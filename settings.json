@@ -39,12 +39,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$HOME/.claude/hooks/stop/prose_question_blocker/main.py\"",
+            "command": "f=\"$HOME/.claude/hooks/stop/prose_question_blocker/main.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 \"$HOME/.claude/hooks/stop/peer_reply_guard/main.py\"",
+            "command": "f=\"$HOME/.claude/hooks/stop/peer_reply_guard/main.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
             "timeout": 5
           }
         ]

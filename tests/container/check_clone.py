@@ -23,10 +23,13 @@ Checks:
 - edit_trailing_space_guard, peer_reply_guard: no session can be made to trip them (the model
   drops a trailing space before it calls Edit, and Claude Code drops a typed message from another
   session), so the command the installed settings.json registers is run on a payload.
-- commit: `/commit` on a dirty scratch repo left one new commit with a typed subject and a clean
-  tree, so a linked skill loads by name and works.
+- commit: `/commit` put the linked skill's text into the session, and the dirty scratch repo was
+  left with one new commit with a typed subject and a clean tree.
 - rules and scripts: asked to run the tests and report the repo's state, the session ran
-  `triage_run.sh` and `git_state.sh`, which only the linked rules name.
+  `triage_run.sh` and `git_state.sh`, which only the linked rules name, and each printed its own
+  line.
+- self-optimize: `/self-optimize` on invented sessions wrote an eval suite, so a linked skill
+  that runs a sibling skill's scripts works.
 - every session ended normally, used no path outside the install and named no file in it that
   does not exist (check.py's path checks, with the clone and the linked folders allowed).
 
@@ -50,7 +53,7 @@ Verdict = tuple[str, str]
 
 CLONE = check.HOME / "agent-harness"
 # What the install from a clone adds to the config folder, and what its hooks keep there.
-CLONE_PARTS = (*check.CONFIG_PARTS, "hooks", "scripts", "state")
+CLONE_PARTS = (*check.CONFIG_PARTS, "hooks", "scripts", "state", "self-optimize")
 EMOJI_REASON = "this write puts emoji in a doc or text file"
 STOP_REASON = "The user typed stop. Make no tool calls."
 PROSE_FEEDBACK = "Prose question detected in assistant turn"
@@ -59,7 +62,19 @@ PEER_REASON = "no SendMessage was sent"
 SUBJECT = re.compile(
     r"(feat|fix|docs|style|refactor|test|chore|perf|build|ci|revert)(\([^)]+\))?: "
 )
-SESSIONS = ("emoji", "prose", "stop1", "stop2", "stop3", "commit", "tests")
+SKILL_LOADED = "Base directory for this skill: "
+TRIAGE_LINE = re.compile(r"\(exit \d+, \d+ lines\) full output: ")
+STATE_LINE = re.compile(r"branch=\S+ head=\S+ ")
+SESSIONS = (
+    "emoji",
+    "prose",
+    "stop1",
+    "stop2",
+    "stop3",
+    "commit",
+    "tests",
+    "selfoptimize",
+)
 
 
 def refused(
@@ -175,8 +190,14 @@ def peer_reply(config_dir: Path) -> Verdict:
     return FAILED, f"an unanswered task gave `{said[0]}`, an answered one `{said[1]}`"
 
 
-def committed(out: Path) -> Verdict:
-    """Whether the scratch repo holds one commit past its first, typed, on a clean tree."""
+def committed(config_dir: Path, out: Path) -> Verdict:
+    """Whether the commit session was given the linked skill's text and the scratch repo holds
+    one commit past its first, typed, on a clean tree."""
+    loaded = f"{SKILL_LOADED}{config_dir / 'skills' / 'commit'}"
+    session = session_of(out / "commit.jsonl")
+    transcripts = list((config_dir / "projects").glob(f"*/{session}.jsonl"))
+    if not any(loaded in t.read_text(errors="replace") for t in transcripts):
+        return FAILED, f"the session's transcript does not hold `{loaded}`"
     subjects = (out / "git_log.txt").read_text().splitlines()
     dirty = (out / "git_status.txt").read_text().strip()
     if len(subjects) == 2 and SUBJECT.match(subjects[0]) and not dirty:
@@ -184,13 +205,31 @@ def committed(out: Path) -> Verdict:
     return FAILED, f"commits, newest first: {subjects}; uncommitted: {dirty!r}"
 
 
-def named(output: Path, script: str) -> Verdict:
-    """Whether a Bash call of the session ran *script*."""
+def session_of(output: Path) -> str:
+    """The session id a probe's output names, or "" when it names none."""
+    for line in output.read_text(errors="replace").splitlines():
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(record, dict) and record.get("session_id"):
+            return str(record["session_id"])
+    return ""
+
+
+def ran_script(output: Path, script: str, line: re.Pattern[str]) -> Verdict:
+    """Whether a Bash call naming *script* came back with the *line* that script prints."""
+    asked: dict[str, None] = {}
     for block in check.blocks(output):
         if block.get("type") == "tool_use" and block.get("name") == "Bash":
             if script in str((block.get("input") or {}).get("command")):
+                asked[str(block.get("id"))] = None
+        elif block.get("type") == "tool_result" and str(block.get("tool_use_id")) in asked:
+            if line.search(" ".join(check.strings(block.get("content")))):
                 return PASSED, ""
-    return FAILED, f"no Bash call ran {script}"
+    if not asked:
+        return FAILED, f"no Bash call named {script}"
+    return FAILED, f"no Bash call naming {script} came back with the line it prints"
 
 
 def ended(out: Path) -> Verdict:
@@ -211,9 +250,25 @@ def ended(out: Path) -> Verdict:
     return (FAILED, f"{bad}") if bad else (PASSED, "")
 
 
-def paths(config_dir: Path) -> Verdict:
-    transcripts = list((config_dir / "projects").glob("*/*.jsonl"))
-    transcripts += list((config_dir / "projects").glob("*/*/subagents/*.jsonl"))
+def self_optimized(config_dir: Path) -> Verdict:
+    """Whether the run left a non-empty eval suite in self-optimize's folder."""
+    suites = [d for d in (config_dir / "self-optimize").glob("*-evals") if any(d.iterdir())]
+    return (PASSED, "") if suites else (FAILED, "no eval suite written")
+
+
+def paths(config_dir: Path, out: Path) -> Verdict:
+    """check.py's path checks over the probe sessions and the subagents they started (the
+    invented sessions self-optimize reads are input, not part of the run)."""
+    sessions = {name: session_of(out / f"{name}.jsonl") for name in SESSIONS}
+    transcripts, unread = [], []
+    for session in dict.fromkeys(sessions.values()):
+        mains = list((config_dir / "projects").glob(f"*/{session}.jsonl")) if session else []
+        if not mains:
+            unread += [name for name in SESSIONS if sessions[name] == session]
+        transcripts += mains
+        transcripts += (config_dir / "projects").glob(f"*/{session}/subagents/*.jsonl")
+    if unread:
+        return FAILED, f"no transcript for {unread}"
     roots = [CLONE, check.HOME / ".agents"]
     stray = [
         f"{tool}: {word}"
@@ -221,8 +276,6 @@ def paths(config_dir: Path) -> Verdict:
     ]
     missing = list(dict.fromkeys(check.missing_reads(config_dir, transcripts)))
     missing += [w for w in check.absent(config_dir, roots, transcripts) if w not in missing]
-    if not transcripts:
-        return FAILED, "no transcripts"
     if stray or missing:
         return FAILED, f"outside the install: {stray}; named and absent: {missing}"
     return PASSED, ""
@@ -241,11 +294,15 @@ def checks(config_dir: Path, out: Path) -> list[tuple[str, Verdict]]:
         ("a tool call after the next prompt", ran(out / "stop3.jsonl", "Bash")),
         ("edit_trailing_space_guard", trailing_space(config_dir)),
         ("peer_reply_guard", peer_reply(config_dir)),
-        ("commit", committed(out)),
-        ("rules: triage_run.sh", named(out / "tests.jsonl", "triage_run.sh")),
-        ("rules: git_state.sh", named(out / "tests.jsonl", "git_state.sh")),
+        ("commit", committed(config_dir, out)),
+        (
+            "rules: triage_run.sh",
+            ran_script(out / "tests.jsonl", "triage_run.sh", TRIAGE_LINE),
+        ),
+        ("rules: git_state.sh", ran_script(out / "tests.jsonl", "git_state.sh", STATE_LINE)),
+        ("self-optimize", self_optimized(config_dir)),
         ("every session ended normally", ended(out)),
-        ("paths", paths(config_dir)),
+        ("paths", paths(config_dir, out)),
     ]
 
 

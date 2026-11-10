@@ -67,6 +67,7 @@ def test_a_run_inside_the_install_that_wrote_its_evals_passes(tmp_path, capsys) 
         f"ls {config}/CLAUDE.md {config}/settings.json {config}/projects/*/memory/*.md",
         "ls ~/.cache/agent-harness/transcripts https://example.com/a/b and/or */x.md [ab]/y",
         "python3 -c 'p = dst+\"/prompt.md\"' && python3 -c \"q = dst + '/x.md'\"",
+        "cd /home/dev && cd ~ && ls",
     )
     assert check.main([str(config), SESSION, output]) == 0
     assert "reached step 7: yes" in capsys.readouterr().out
@@ -75,12 +76,47 @@ def test_a_run_inside_the_install_that_wrote_its_evals_passes(tmp_path, capsys) 
 def test_a_path_outside_the_install_fails_the_run(tmp_path, capsys) -> None:
     config = tmp_path / ".claude"
     output = run_with(
-        config, "python3 /home/dev/agent-harness-copy/x.py", "cat /Users/someone/notes"
+        config,
+        "python3 /home/dev/agent-harness-copy/x.py",
+        "cat /Users/someone/notes",
+        "cat /home/dev/notes.md",
     )
     assert check.main([str(config), SESSION, output]) == 1
     out = capsys.readouterr().out
     assert "Bash: /home/dev/agent-harness-copy/x.py" in out
     assert "Bash: /Users/someone/notes" in out
+    assert "Bash: /home/dev/notes.md" in out
+
+
+def test_a_path_under_a_stand_in_name_is_outside_only_in_a_bash_command(tmp_path) -> None:
+    config = tmp_path / ".claude"
+    transcript = tmp_path / "session.jsonl"
+    calls = [
+        {"type": "tool_use", "name": "Agent", "input": {"prompt": "write <case-name>/prompt.md"}},
+        {"type": "tool_use", "name": "Agent", "input": {"prompt": "<tmp>/home/dev/y</tmp>"}},
+        {"type": "tool_use", "name": "Bash", "input": {"command": "sort <names>/home/dev/x"}},
+    ]
+    record = {"type": "assistant", "message": {"content": calls}}
+    transcript.write_text(json.dumps(record) + "\n")
+    found = check.outside(config, [], [transcript])
+    assert found == [("Agent", "/home/dev/y"), ("Bash", "/home/dev/x")]
+
+
+def test_the_script_sed_is_given_names_no_path_and_the_file_it_reads_does(tmp_path) -> None:
+    config = tmp_path / ".claude"
+    transcript = tmp_path / "session.jsonl"
+    commands = [
+        "sed -i 's/Three (a)/Two (b)/' /home/dev/report.md",
+        "sed -n '/^# Review/,/^## /p' /home/dev/notes.md",
+        "sed -n -f '/home/dev/edit.sed' shop.md",
+    ]
+    calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
+    record = {"type": "assistant", "message": {"content": calls}}
+    transcript.write_text(json.dumps(record) + "\n")
+    found = check.outside(config, [], [transcript])
+    assert found == [
+        ("Bash", f"/home/dev/{name}") for name in ("report.md", "notes.md", "edit.sed")
+    ]
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
@@ -215,14 +251,45 @@ def test_the_stop_flag_passes_only_when_set_kept_then_removed(tmp_path) -> None:
     assert check_clone.stop_flag(tmp_path, "s1")[0] == check_clone.FAILED
 
 
-def test_a_commit_passes_only_as_one_typed_commit_on_a_clean_tree(tmp_path) -> None:
-    (tmp_path / "git_status.txt").write_text("")
-    (tmp_path / "git_log.txt").write_text("fix(shipping): raise the fee\nfeat: add the fee\n")
-    assert check_clone.committed(tmp_path) == (check_clone.PASSED, "")
-    (tmp_path / "git_log.txt").write_text("feat: add the fee\n")
-    assert check_clone.committed(tmp_path)[0] == check_clone.FAILED
-    (tmp_path / "git_log.txt").write_text("raise the fee\nfeat: add the fee\n")
-    assert check_clone.committed(tmp_path)[0] == check_clone.FAILED
+def test_a_commit_passes_only_as_one_typed_commit_on_a_clean_tree_with_the_skill_loaded(
+    tmp_path,
+) -> None:
+    config, out = tmp_path / ".claude", tmp_path / "out"
+    transcript = config / "projects" / "-home-dev-shop" / "s1.jsonl"
+    transcript.parent.mkdir(parents=True)
+    out.mkdir()
+    (out / "commit.jsonl").write_text(json.dumps({"type": "system", "session_id": "s1"}) + "\n")
+    transcript.write_text(f"{check_clone.SKILL_LOADED}{config}/skills/commit\n")
+    (out / "git_status.txt").write_text("")
+    (out / "git_log.txt").write_text("fix(shipping): raise the fee\nfeat: add the fee\n")
+    assert check_clone.committed(config, out) == (check_clone.PASSED, "")
+    (out / "git_log.txt").write_text("feat: add the fee\n")
+    assert check_clone.committed(config, out)[0] == check_clone.FAILED
+    (out / "git_log.txt").write_text("raise the fee\nfeat: add the fee\n")
+    assert check_clone.committed(config, out)[0] == check_clone.FAILED
+    (out / "git_log.txt").write_text("fix(shipping): raise the fee\nfeat: add the fee\n")
+    transcript.write_text("/commit\n")
+    verdict, why = check_clone.committed(config, out)
+    assert verdict == check_clone.FAILED
+    assert "skills/commit" in why
+
+
+def test_a_script_passes_only_when_its_call_came_back_with_the_line_it_prints(tmp_path) -> None:
+    command = "if [ -x ~/.claude/scripts/triage_run.sh ]; then ~/.claude/scripts/triage_run.sh"
+    call = {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": command}}
+    printed = result("FAILED (exit 1, 14 lines) full output: /tmp/run.txt", is_error=False)
+    ran = check_clone.ran_script(
+        probe(tmp_path, call, printed), "triage_run.sh", check_clone.TRIAGE_LINE
+    )
+    assert ran == (check_clone.PASSED, "")
+    absent = result("triage_run.sh: No such file or directory")
+    for blocks in ((call, absent), (call,), ()):
+        verdict, _ = check_clone.ran_script(
+            probe(tmp_path, *blocks), "triage_run.sh", check_clone.TRIAGE_LINE
+        )
+        assert verdict == check_clone.FAILED
+    state = result("branch=main head=2de12a8 no-upstream dirty=1 main-tree=/x", is_error=False)
+    assert check_clone.STATE_LINE.search(state["content"])
 
 
 def test_the_installed_hook_commands_judge_a_payload(tmp_path, monkeypatch) -> None:
@@ -256,3 +323,37 @@ def test_a_session_that_ended_in_an_error_result_did_not_end_normally(tmp_path) 
     verdict, why = check_clone.ended(tmp_path)
     assert verdict == check_clone.FAILED
     assert "emoji: Failed to authenticate" in why
+
+
+def test_self_optimize_passes_only_with_a_written_eval_suite(tmp_path) -> None:
+    assert check_clone.self_optimized(tmp_path)[0] == check_clone.FAILED
+    suite = tmp_path / "self-optimize" / "2026-01-05-evals"
+    suite.mkdir(parents=True)
+    assert check_clone.self_optimized(tmp_path)[0] == check_clone.FAILED
+    (suite / "case.md").write_text("case\n")
+    assert check_clone.self_optimized(tmp_path) == (check_clone.PASSED, "")
+
+
+def test_the_path_check_reads_the_probe_sessions_and_not_the_invented_ones(tmp_path) -> None:
+    config, out = tmp_path / ".claude", tmp_path / "out"
+    folder = config / "projects" / "-home-dev-shop"
+    folder.mkdir(parents=True)
+    out.mkdir()
+    for name in check_clone.SESSIONS:
+        (out / f"{name}.jsonl").write_text(json.dumps({"session_id": "probe"}) + "\n")
+
+    def transcript(session: str, command: str) -> None:
+        call = {"type": "tool_use", "name": "Bash", "input": {"command": command}}
+        record = {"type": "assistant", "message": {"content": [call]}}
+        (folder / f"{session}.jsonl").write_text(json.dumps(record) + "\n")
+
+    transcript("probe", "ls /home/dev/shop")
+    transcript("invented", "cat /Users/someone/notes")
+    assert check_clone.paths(config, out) == (check_clone.PASSED, "")
+    transcript("probe", "cat /Users/someone/notes")
+    verdict, why = check_clone.paths(config, out)
+    assert verdict == check_clone.FAILED
+    assert "/Users/someone/notes" in why
+    (out / "selfoptimize.jsonl").write_text(json.dumps({"session_id": "unsaved"}) + "\n")
+    verdict, why = check_clone.paths(config, out)
+    assert (verdict, why) == (check_clone.FAILED, "no transcript for ['selfoptimize']")

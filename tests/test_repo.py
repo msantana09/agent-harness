@@ -191,16 +191,18 @@ def registrations() -> list[tuple[str, dict[str, Any]]]:
 
 # A command runs the hook from where the README installs it, ~/.claude/hooks/. A fail-open hook's
 # command exits 0 when the file is missing: Python exits 2 on a file it cannot open, and Claude
-# Code reads exit 2 from a PreToolUse or UserPromptSubmit hook as a block.
+# Code reads exit 2 from a PreToolUse, UserPromptSubmit or Stop hook as a block.
 LAUNCH = re.compile(r'python3 "\$HOME/\.claude/(hooks/(\w+)/\w+/main\.py)"')
 GUARDED_LAUNCH = re.compile(
     r'f="\$HOME/\.claude/(hooks/(\w+)/\w+/main\.py)"; \[ -f "\$f" \] \|\| exit 0; python3 "\$f"'
 )
-# These run before every tool call or prompt, so a broken one must never lock a session. Every
-# other PreToolUse hook is a guard that blocks the call when it cannot run.
+# These run before every tool call, prompt or reply, so a broken one must never lock a session.
+# Every other PreToolUse hook is a guard that blocks the call when it cannot run.
 FAIL_OPEN_HOOKS = {
     "hooks/pre_tool_use/stop_gate/main.py",
     "hooks/user_prompt_submit/stop_flag/main.py",
+    "hooks/stop/prose_question_blocker/main.py",
+    "hooks/stop/peer_reply_guard/main.py",
 }
 
 
