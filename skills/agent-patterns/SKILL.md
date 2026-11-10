@@ -1,11 +1,11 @@
 ---
 name: agent-patterns
-description: Use before spawning subagents or launching a Workflow, and when coordinating multi-agent work, sizing an agent's assignment, writing a brief, or scoring confidence. Covers choosing an orchestration tier, agent selection, briefs and file-first output, task decomposition, phase contracts and confidence scoring.
+description: Use before spawning subagents or launching a Workflow, and when coordinating multi-agent work, sizing an agent's assignment, or writing a brief. Covers choosing an orchestration tier, agent selection, briefs and file-first output, task decomposition and phase contracts.
 ---
 
 # Agent Patterns
 
-Unified patterns for agent selection, confidence-based coordination, and multi-agent orchestration.
+Unified patterns for agent selection, coordination, and multi-agent orchestration.
 
 ## Quick Reference
 
@@ -13,7 +13,6 @@ Unified patterns for agent selection, confidence-based coordination, and multi-a
 |-------|----------------|
 | **Tool names, limits, deprecations, gated features** | `references/harness-api.md` |
 | Per-tier `effort:` pins | `references/harness-api.md` § Effort tier defaults (per agent tier, either main loop) |
-| Confidence scoring by role | `references/confidence-factors.md` |
 | Handoffs, briefs and coordination | `references/coordination-patterns.md` |
 | Fresh-context reviews | `references/coordination-patterns.md` § Fresh-Context Reviews |
 | Phase-contract template (multi-phase handoffs, GO/NO-GO gates) | `references/orchestration-examples.md` |
@@ -76,13 +75,15 @@ Count is only a tiebreaker.
 | Work shape | Tier | Mechanism |
 |------------|------|-----------|
 | A few independent one-shot tasks, no cross-checking needed | **1 — Inline fan-out** | `Agent(...)` ×N in one message; read each summarized `<result>` as it lands |
-| Fan-out-then-verify · loops · unknown-size discovery · multi-phase · migrations · audits | **2 — Dynamic Workflow** *(standing authorization — launch and announce)* | `Workflow` script — `pipeline`/`parallel`/`agent(schema)`/`budget`/`workflow()`. The script holds the loop and results, so they never touch your context |
+| Fan-out-then-verify · loops · unknown-size discovery · multi-phase · migrations · audits | **2 — Dynamic Workflow** *(on the user's standing authorization — launch and announce)* | `Workflow` script — `pipeline`/`parallel`/`agent(schema)`/`budget`/`workflow()`. The script holds the loop and results, so they never touch your context |
 | State must survive across sessions/compaction | **3 — Durable-file fallback** | Manual loop + `agents.md` + file-first output (see Tier 3 below). Long-running coordinated peers → agent teams (gated) |
 
 See `references/harness-api.md` for each mechanism's exact API, limits, and gating.
 
-Workflow standing authorization and its launch/announce obligations: read
-`rules/automation.md` § Orchestrator Mode — it binds here. The lone-spawn rule and per-stage
+The Workflow tool runs only on the user's opt-in. The standing authorization, the user's
+written opt-in for their own sessions, and its launch/announce obligations are in
+`rules/automation.md` § Orchestrator Mode — it binds here; without that paragraph, ask before
+each launch. The lone-spawn rule and per-stage
 effort selection live in `rules/core-rules.md` § Orchestration & Execution Rules (item EXECUTE
 DIRECTLY, DELEGATE WHEN IT PAYS).
 
@@ -109,30 +110,12 @@ expertise. If you're writing detailed instructions, there's probably a specialis
 `model:` pin; `rules/core-rules.md` § Orchestration & Execution Rules requires a tier on every
 generic spawn. Custom agents run their pin; `fork` ignores `model`.
 
-## Confidence Scoring
+## Confidence
 
-**Core Formula.**
-
-```python
-confidence = sum(factors[k] * weights[k] for k in factors)  # 0.0-1.0
-```
-
-**Thresholds.**
-
-| Confidence | Action |
-|------------|--------|
-| < 0.5 | STOP - Escalate to specialist or human immediately |
-| 0.5-0.6 | Request specialist review before proceeding |
-| 0.6-0.8 | Proceed with caution, document gaps |
-| > 0.8 | Proceed with confidence |
-| > 0.8 + critical path | Quick validation for auth/tenant/payments |
-
-Factor weights by role, Backend and Frontend summaries included:
-`references/confidence-factors.md` § Domain Factors (Summary).
-
-> **Confidence is earned structurally, not asserted.** When a finding has been checked by an
-> independent verification stage (a fresh-context reviewer, or a Workflow refute/judge pass),
-> trust that over a high self-scored number from the agent that produced the finding.
+Confidence is earned by evidence, not asserted. A `file:line` citation, a command that was run,
+or a test that fails without the fix is evidence; an agent's own score for its work is not. When
+a finding has been checked by an independent verification stage (a fresh-context reviewer, or a
+Workflow refute/judge pass), trust that over the producing agent's word.
 
 ## Coordination Patterns
 
