@@ -6,9 +6,7 @@ Patterns for agent handoffs, parallel execution, and workflow coordination.
 
 Thresholds live in `../SKILL.md` § Confidence Scoring (one table, not restated here).
 
-## Skip Coordination When
-
-Skip the full workflow when ALL conditions are met:
+**Skip Coordination When.** Skip the full workflow when ALL conditions are met:
 
 - [ ] Confidence > 0.8
 - [ ] All quality gates pass
@@ -44,7 +42,7 @@ Every agent must include coordination recommendations in final response:
 
 Role names in angle brackets stand for whichever agent covers that role in your setup.
 
-## After Backend Implementation
+**After Backend Implementation.**
 
 ```markdown
 **Confidence Score**: 0.XX
@@ -62,7 +60,7 @@ Role names in angle brackets stand for whichever agent covers that role in your 
    - Spawn `<test author>` for comprehensive test suite
 ```
 
-## After Frontend Implementation
+**After Frontend Implementation.**
 
 ```markdown
 **Confidence Score**: 0.XX
@@ -74,7 +72,7 @@ Role names in angle brackets stand for whichever agent covers that role in your 
    - Spawn `<frontend architecture reviewer>` for component structure review
 ```
 
-## After Investigation
+**After Investigation.**
 
 ```markdown
 **Confidence Score**: 0.XX
@@ -89,9 +87,7 @@ Role names in angle brackets stand for whichever agent covers that role in your 
    - Report to main agent with findings and blockers
 ```
 
-## Handoff Template (Generic)
-
-When recommending a specialist, provide:
+**Handoff Template (Generic).** When recommending a specialist, provide:
 
 ```markdown
 - **Spawn**: `[agent-name]`
@@ -109,18 +105,14 @@ When recommending a specialist, provide:
 
 ## Parallel vs Sequential Execution
 
-## Run in Parallel
-
-Use a single message with multiple `Agent` calls when:
+**Run in Parallel.** Use a single message with multiple `Agent` calls when:
 
 - Independent architecture reviews (backend + frontend)
 - Security reviews across domains
 - Domain analysis (auditor + security + performance)
 - Validation checks that don't depend on each other
 
-## Run Sequentially
-
-When output from one agent is input to another:
+**Run Sequentially.** When output from one agent is input to another:
 
 - Investigation -> Architecture -> Implementation
 - Backend API -> Frontend integration, until the API contract is fixed; after that the two
@@ -132,9 +124,7 @@ When a task spans domains (e.g., "fix API and update frontend consumer"), the do
 most code changes owns it: its implementer goes first and hands the next one a summary
 ("Backend complete, API contract is X"). The API is the source of truth its consumers build on.
 
-## Reconciling Parallel Results
-
-When parallel agents return different recommendations:
+**Reconciling Parallel Results.** When parallel agents return different recommendations:
 
 | Situation | Action |
 |-----------|--------|
@@ -155,9 +145,8 @@ When parallel agents return different recommendations:
 | Conflicting recommendations | Multiple agents disagree | Surface both with tradeoffs |
 | Specialist unavailable | Agent type not found | Use general-purpose with domain prompt from agent definition |
 
-## Platform Error Recovery Protocol
-
-When ANY `Agent()` call returns an error (platform error, tool rejection, empty result):
+**Platform Error Recovery Protocol.** When ANY `Agent()` call returns an error (platform error, tool
+rejection, empty result):
 
 1. **Log it** — record the error in the session's working artifact (review log, plan doc, etc.)
 2. **Assess scope** — can you do this work directly? Research/exploration often can be done inline.
@@ -194,7 +183,7 @@ compaction, and a re-run Workflow stage has no artifact to diff against.
   concurrent run overwrites another stage's log end to end, and the stage notices only when its
   counts do not match. When reading a stage's result, check the log it cites is its own.
 - **A brief's helper convention is a premise.** Before handing N agents a shared helper as "the
-  convention" (`loadResult()`), run it once against each real response shape the sites will see
+  convention" (`toResult()`), run it once against each real response shape the sites will see
   (2xx with body, 204 empty, 4xx/5xx with and without body, no response); mocks copy the client's
   real shape, not the helper's assumption; mark unverified premises "verify first". Untested, a
   helper that treats an empty body as an error calls every successful 204 DELETE a failure, and
@@ -221,7 +210,7 @@ Agents can be **continued** with `SendMessage` (by agent id or name) to preserve
 context — `Explore` included. A new `Agent` call always starts fresh. (Tool names: see
 `harness-api.md`.)
 
-## When to Continue vs Spawn Fresh
+**When to Continue vs Spawn Fresh.**
 
 | Scenario | Action | Why |
 |----------|--------|-----|
@@ -231,7 +220,7 @@ context — `Explore` included. A new `Agent` call always starts fresh. (Tool na
 | Investigation pivoted to new area | **Spawn fresh + summary** | Original context no longer relevant |
 | Different domain needed | **Spawn fresh** | Different specialist, no shared context |
 
-## Continue Pattern (Context Light)
+**Continue Pattern (Context Light).**
 
 ```markdown
 ## First invocation
@@ -256,9 +245,8 @@ handoff (findings at file:line + repo state) instead of continuing — a well-wr
 dispatch loses nothing, and continuing risks the agent degrading/compacting mid-task
 pointed at sensitive code.
 
-## Handoff Pattern (Context Heavy)
-
-When an agent has consumed significant context, spawn fresh but pass findings:
+**Handoff Pattern (Context Heavy).** When an agent has consumed significant context, spawn fresh but
+pass findings:
 
 ```markdown
 ## Don't continue - pass summary instead
@@ -276,7 +264,7 @@ Agent:
     Confirm the fix resolves the original flaky test.
 ```
 
-## Context Consumption Heuristics
+**Context Consumption Heuristics.**
 
 **Low context** (safe to continue via `SendMessage`):
 
@@ -300,7 +288,7 @@ Agent:
 For quality-critical code, spawn a **separate** reviewer agent AFTER implementation completes. The
 reviewer runs in its own context without bias from having written the code.
 
-## When to Use Fresh-Context Review
+**When to Use Fresh-Context Review.**
 
 | Trigger | Action |
 |---------|--------|
@@ -309,7 +297,7 @@ reviewer runs in its own context without bias from having written the code.
 | Complex logic (> 200 lines changed) | Consider fresh-context review |
 | User requests review | Use fresh-context review |
 
-## Pattern
+**Pattern.**
 
 ```text
 1. Implementation agent completes work
@@ -319,9 +307,8 @@ reviewer runs in its own context without bias from having written the code.
 5. Address findings, iterate if needed
 ```
 
-## What the Reviewer Gets: Contract, Not Claim
-
-Split the implementer's output in two before writing the review prompt:
+**What the Reviewer Gets: Contract, Not Claim.** Split the implementer's output in two before
+writing the review prompt:
 
 | Part | Contents | Pass to reviewer? |
 |------|----------|-------------------|
@@ -333,7 +320,7 @@ Hand over the artifact and the contract; the reviewer derives its own conclusion
 decision needs judging, ask the reviewer what it would have decided *before* showing the
 Decision Log, then compare.
 
-## Review Agent Prompt Template
+**Review Agent Prompt Template.**
 
 ```markdown
 Adversarial review. Find what is wrong with the changes in [files]. Assume the author is
@@ -358,17 +345,16 @@ Files to review:
 Provide specific findings with line references and suggested fixes.
 ```
 
-## Reconcile and Stop
-
-The reviewer's output is data, not a verdict. Re-read the artifact against each finding and
-classify: contract misread (fix the contract, re-review) → valid and actionable (fix, re-review)
-→ valid trade-off (document, accept) → noise (note it; ask whether the contract was unclear).
+**Reconcile and Stop.** The reviewer's output is data, not a verdict. Re-read the artifact against
+each finding and classify: contract misread (fix the contract, re-review) → valid and actionable
+(fix, re-review) → valid trade-off (document, accept) → noise (note it; ask whether the contract was
+unclear).
 
 Stop when a cycle yields only trivial or repeated findings, or after 3 cycles — then escalate
 to the user, don't keep looping. **Doubt theater**: 2+ cycles with substantive findings and
 zero classified actionable means the reconcile step is rubber-stamping — escalate.
 
-## Anti-Patterns
+**Anti-Patterns.**
 
 - **Resuming the same agent**: Defeats the purpose - same context, same blind spots
 - **Asking implementer to "review your own work"**: Self-review is weak validation

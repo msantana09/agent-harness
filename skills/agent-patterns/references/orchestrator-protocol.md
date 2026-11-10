@@ -61,21 +61,22 @@ Product Build" phase plan at the end of this file is exactly the kind of job tha
 ## Workspace Structure
 
 All orchestration state lives in one folder in the repo for the work (no separate orchestration
-folder):
+folder). The plan, context notes, task list and progress log take whatever file names the project
+uses; this protocol fixes only `agents.md` and `outputs/`:
 
 ```text
 <work-dir>/
-├── plan.md            # Strategy and phases
-├── notes.md           # Context notes: decisions and integration points
-├── tasks.md           # Task list with status
-├── progress.md        # Progress log (append-only)
+├── <plan>             # Strategy and phases
+├── <context notes>    # Decisions and integration points
+├── <task list>        # Tasks with status
+├── <progress log>     # Append-only
 ├── agents.md          # Agent registry (active orchestration state)
 └── outputs/           # Agent output files
     ├── {agent-id}-{task}.md
     └── ...
 ```
 
-## Agent Registry Format (`agents.md`)
+**Agent Registry Format (`agents.md`).**
 
 ```markdown
 <!-- RECOVERY: {work} | Orchestration State -->
@@ -127,10 +128,8 @@ note to the agent's output file:
 
 Agents write details to files and return only summaries, to keep the orchestrator's context small.
 
-## Agent Prompt Template
-
-Every agent prompt in this tier carries this template, ad-hoc spawns included; agents run in the
-background and the deliverable file is what survives compaction:
+**Agent Prompt Template.** Every agent prompt in this tier carries this template, ad-hoc spawns
+included; agents run in the background and the deliverable file is what survives compaction:
 
 ```markdown
 ## Output Requirements
@@ -153,7 +152,7 @@ background and the deliverable file is what survives compaction:
 4. Keep the full analysis in the file; the orchestrator reads it there when it needs detail.
 ```
 
-## Output File Format
+**Output File Format.**
 
 ```markdown
 <!-- AGENT: {agent-id} | {agent-type} | {timestamp} -->
@@ -194,13 +193,13 @@ Key choices made during this task and why:
 **Before spawning any agent**, decompose to agent-sized chunks. The scope table (single file,
 multi-file, large feature, cross-cutting) is `../SKILL.md` § Task Decomposition.
 
-## Agent Capacity Heuristics
+**Agent Capacity Heuristics.**
 
 | Scope | Agents | Notes |
 |-------|--------|-------|
 | Repetitive items (new tests, migrations) | 8-12 per agent | Split larger lists into batches; fix-until-green: 2-3 |
 
-## Decomposition Rules
+**Decomposition Rules.**
 
 1. **One concern per agent** - Don't ask an agent to "implement and test and document"
 1. **Explicit file scope** - List exact files the agent should touch
@@ -209,9 +208,8 @@ multi-file, large feature, cross-cutting) is `../SKILL.md` § Task Decomposition
 1. **Max 8-12 repetitive items** - New tests, migrations, updates; fix-until-green iteration
    caps at 2-3 (see Repetitive Task Decomposition; `../SKILL.md` § Task Decomposition)
 
-## Repetitive Task Decomposition
-
-When a task involves N similar items (tests, migrations, updates):
+**Repetitive Task Decomposition.** When a task involves N similar items (tests, migrations,
+updates):
 
 1. **Count the items** - How many tests/endpoints/files?
 1. **Apply limit** - Max 8-12 per agent (5-8 for complex items with fixtures/edge cases)
@@ -251,7 +249,7 @@ for i, batch in enumerate(test_batches):
 > `parallel`/`pipeline` call — the runtime caps concurrency (`min(16, cores−2)`) for you and holds
 > results in the script. Manual 8-12 batching is a Tier-1/3 concern only. See "Dynamic Workflows".
 
-## Example: Decomposing "Implement Scheduler"
+**Example: Decomposing "Implement Scheduler".**
 
 ```python
 # BAD: Single agent for entire scheduler
@@ -280,7 +278,7 @@ Core loop for executing the work, every turn:
 
 ```text
 1. READ STATE
-   - Read the task list (tasks.md) -> identify current phase
+   - Read the task list -> identify current phase
    - Read agents.md -> check active agents
 
 2. CHECK COMPLETIONS & DISPATCH
@@ -298,7 +296,7 @@ Core loop for executing the work, every turn:
 3. READ OUTPUT FILES
    - For completed agents: Read their output file directly
    - Use Read tool on <work-dir>/outputs/{agent-id}-*.md
-   - Extract summary, update the context notes (notes.md) if needed
+   - Extract summary, update the context notes if needed
    - Don't re-read the same output file
 
 4. SPAWN NEXT (atomic dispatch)
@@ -315,7 +313,7 @@ Core loop for executing the work, every turn:
 
 5. CHECKPOINT
    - Update the task list's progress
-   - Append to the progress log (progress.md) every 5 agents
+   - Append to the progress log every 5 agents
 
 6. REPEAT or PAUSE
    - If agents running: carry on with work that does not depend on them; act on each
@@ -326,9 +324,7 @@ Core loop for executing the work, every turn:
 
 ## Context Discipline
 
-## Process-Then-Forget Pattern
-
-After reading substantial content:
+**Process-Then-Forget Pattern.** After reading substantial content:
 
 1. Extract what's needed
 1. Persist summary to the work's folder
@@ -355,9 +351,9 @@ When a result gates the next decision, end the turn and act on the notification;
   which you instructed it to write): `Read` this freely.
 - The harness **`output_file`** surfaced in the launch response / completion notification
   (`/private/tmp/.../tasks/{id}.output`): **never `Read` or tail it.** It is the full sub-agent
-  JSONL transcript (~20× the summary) and reading it overflows your context and sets off
-  autocompact thrashing. The summarized `<result>` in the completion notification is all you
-  need.
+  JSONL transcript (~20× the summary) and reading it overflows your context — the autocompact
+  thrashing of claude-code #44703. The summarized `<result>` in the completion notification is
+  all you need.
 
 ```python
 Agent(
@@ -371,7 +367,7 @@ Agent(
 
 ## Validation Criteria
 
-## Pass/Fail Tests
+**Pass/Fail Tests.**
 
 | Test | Pass Criteria | How to Measure |
 |------|---------------|----------------|
@@ -381,7 +377,7 @@ Agent(
 | Checkpoint frequency | Checkpoint every 5 agents | Progress log entries |
 | Recovery test | New session can continue | Start fresh, read docs, proceed |
 
-## Proxy Metrics
+**Proxy Metrics.**
 
 | Metric | Target |
 |--------|--------|
@@ -424,7 +420,7 @@ Phase 6: Integration (~3 agents)
 
 ## Recovery After Compaction
 
-1. Read the progress log (`progress.md`) - scan recovery headers
-1. Read the task list (`tasks.md`) - identify current phase and progress
+1. Read the progress log - scan recovery headers
+1. Read the task list - identify current phase and progress
 1. Read `agents.md` - check agent status
 1. Continue orchestrator loop from current state
