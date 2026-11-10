@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deny an Edit or MultiEdit whose new_string ends in a space or tab.
+"""Deny an Edit or MultiEdit whose new_string ends in a space or tab, outside Markdown files.
 
 The Edit tool drops trailing spaces and tabs from new_string in any file but Markdown (`.md`,
 `.mdx`), so a replacement whose boundary is a space silently deletes it:
@@ -7,11 +7,13 @@ The Edit tool drops trailing spaces and tabs from new_string in any file but Mar
 `replace_all` that rewrites a prefix ending in a space corrupts every match.
 
 Usage: PreToolUse hook, matcher `Edit|MultiEdit`; Claude Code passes the call as JSON on stdin.
-Input: `tool_name` and `tool_input`; for MultiEdit `tool_input.edits` is a list of edits.
+Input: `tool_name` and `tool_input` with its `file_path`; for MultiEdit `tool_input.edits` is a
+list of edits.
 Output: nothing to allow, or a `permissionDecision: deny` JSON object on stdout.
 Exit code: 0. Malformed JSON, other tools and unexpected tool_input shapes are allowed.
 
 Decisions:
+- file_path ends in `.md` or `.mdx`, in any case -> allow: the tool keeps the whitespace there.
 - new_string ends in " " or "\\t" -> deny (for MultiEdit, any edit in the list).
 - new_string ends in a newline or any other character, or is empty -> allow.
 - old_string is not checked: the tool matches it exactly, so a trailing space there either
@@ -22,10 +24,13 @@ start blocks the edit instead of letting it through.
 """
 
 import json
+import re
 import sys
 from typing import Any
 
 TRAILING_WHITESPACE = (" ", "\t")
+# The paths whose trailing whitespace the Edit tool keeps.
+MARKDOWN = re.compile(r"\.(md|mdx)$", re.IGNORECASE)
 
 
 def deny(reason: str) -> None:
@@ -62,6 +67,9 @@ def main() -> None:
     tool_input = hook_input.get("tool_input")
     if not isinstance(tool_input, dict):
         sys.exit(0)
+    file_path = tool_input.get("file_path")
+    if isinstance(file_path, str) and MARKDOWN.search(file_path):
+        sys.exit(0)
 
     edits = edits_in(hook_input.get("tool_name", ""), tool_input)
     for index, edit in enumerate(edits, start=1):
@@ -69,8 +77,9 @@ def main() -> None:
         if isinstance(new_string, str) and new_string.endswith(TRAILING_WHITESPACE):
             which = f"edit {index} of {len(edits)}'s" if len(edits) > 1 else "this edit's"
             deny(
-                f"Blocked: {which} new_string ends in a space or tab, and the Edit tool drops "
-                "trailing spaces and tabs from new_string, so the replacement would silently "
+                f"Blocked: {which} new_string ends in a space or tab, and outside Markdown "
+                "files the Edit tool drops trailing spaces and tabs from new_string, so the "
+                "replacement would silently "
                 "lose it (`identifier: ` is written as `identifier:`, and the next token fuses "
                 "on). Anchor the boundary on a non-whitespace token: include the next token in "
                 "both old_string and new_string, or stop before the space. After a replace_all, "
