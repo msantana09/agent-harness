@@ -2,8 +2,9 @@
 
 > **Pick your tier first.** This file is the **Tier-3 fallback** — the manual, file-backed engine
 > for large multi-phase work *when state must survive across sessions and compaction*. Otherwise
-> prefer Tier 2 (`Workflow`, standing authorization — launch and announce): the script holds the
-> loop and intermediate results so you don't need the registry/polling below.
+> prefer Tier 2 (`Workflow`, on the user's standing authorization in "Dynamic Workflows" below —
+> launch and announce): the script holds the loop and intermediate results so you don't need the
+> registry/polling below.
 > See `../SKILL.md` § Choosing an Orchestration Tier and the "Dynamic Workflows" section below.
 > Tool names/limits are in `harness-api.md`.
 
