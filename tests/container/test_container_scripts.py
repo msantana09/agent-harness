@@ -1,11 +1,15 @@
 import json
+import shutil
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import check  # noqa: E402
+import check_clone  # noqa: E402
 import fixtures  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[2]
 
 SESSION = "run-1"
 
@@ -128,3 +132,127 @@ def test_the_invented_sessions_fall_inside_a_first_runs_window(tmp_path) -> None
         for line in path.read_text().splitlines():
             moment = datetime.fromisoformat(json.loads(line)["timestamp"].replace("Z", "+00:00"))
             assert today - timedelta(days=30) <= moment < today
+
+
+def probe(tmp_path: Path, *blocks: dict) -> Path:
+    """A probe session's output holding *blocks*, tool calls from the assistant and the rest
+    from the user."""
+    records = [
+        {
+            "type": "assistant" if block["type"] == "tool_use" else "user",
+            "message": {"content": [block]},
+        }
+        for block in blocks
+    ]
+    output = tmp_path / "probe.jsonl"
+    output.write_text("".join(json.dumps(r) + "\n" for r in records))
+    return output
+
+
+def write_call() -> dict:
+    content = "Done ✅\n"
+    return {
+        "type": "tool_use",
+        "id": "t1",
+        "name": "Write",
+        "input": {"file_path": "notes.md", "content": content},
+    }
+
+
+def result(text: str, is_error: bool = True) -> dict:
+    return {"type": "tool_result", "tool_use_id": "t1", "is_error": is_error, "content": text}
+
+
+def any_input(_: dict) -> bool:
+    return True
+
+
+def test_a_call_refused_with_the_hooks_own_reason_passes(tmp_path) -> None:
+    said = f"PreToolUse:Write hook error: Blocked: {check_clone.EMOJI_REASON} / ..."
+    output = probe(tmp_path, write_call(), result(said))
+    verdict = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
+    assert verdict == (check_clone.PASSED, "")
+
+
+def test_a_call_blocked_because_its_hook_crashed_fails(tmp_path) -> None:
+    said = "PreToolUse:Write hook error: SyntaxError: invalid syntax"
+    output = probe(tmp_path, write_call(), result(said))
+    verdict, why = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
+    assert verdict == check_clone.FAILED
+    assert "SyntaxError" in why
+
+
+def test_a_call_that_ran_fails(tmp_path) -> None:
+    output = probe(tmp_path, write_call(), result("File created", is_error=False))
+    verdict, _ = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
+    assert verdict == check_clone.FAILED
+
+
+def test_a_session_that_never_made_the_call_is_not_attempted(tmp_path) -> None:
+    output = probe(tmp_path, {"type": "text", "text": "I would rather not write that."})
+    verdict, _ = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
+    assert verdict == check_clone.SKIPPED
+
+
+def test_a_prose_question_passes_only_when_it_was_sent_back(tmp_path) -> None:
+    question = {"type": "text", "text": "Which color do you prefer?"}
+    feedback = {"type": "text", "text": f"Stop hook feedback:\n{check_clone.PROSE_FEEDBACK}."}
+    sent_back = check_clone.sent_back(
+        probe(tmp_path, question, feedback), check_clone.PROSE_FEEDBACK
+    )
+    assert sent_back == (check_clone.PASSED, "")
+    let_through, _ = check_clone.sent_back(probe(tmp_path, question), check_clone.PROSE_FEEDBACK)
+    assert let_through == check_clone.FAILED
+
+
+def test_the_stop_flag_passes_only_when_set_kept_then_removed(tmp_path) -> None:
+    for step, listed in (("stop", "s1\n"), ("machine_prompt", "s1\n"), ("human_prompt", "")):
+        (tmp_path / f"flag_after_{step}.txt").write_text(listed)
+    assert check_clone.stop_flag(tmp_path, "s1") == (check_clone.PASSED, "")
+    (tmp_path / "flag_after_human_prompt.txt").write_text("s1\n")
+    assert check_clone.stop_flag(tmp_path, "s1")[0] == check_clone.FAILED
+    (tmp_path / "flag_after_stop.txt").write_text("")
+    assert check_clone.stop_flag(tmp_path, "s1")[0] == check_clone.FAILED
+
+
+def test_a_commit_passes_only_as_one_typed_commit_on_a_clean_tree(tmp_path) -> None:
+    (tmp_path / "git_status.txt").write_text("")
+    (tmp_path / "git_log.txt").write_text("fix(shipping): raise the fee\nfeat: add the fee\n")
+    assert check_clone.committed(tmp_path) == (check_clone.PASSED, "")
+    (tmp_path / "git_log.txt").write_text("feat: add the fee\n")
+    assert check_clone.committed(tmp_path)[0] == check_clone.FAILED
+    (tmp_path / "git_log.txt").write_text("raise the fee\nfeat: add the fee\n")
+    assert check_clone.committed(tmp_path)[0] == check_clone.FAILED
+
+
+def test_the_installed_hook_commands_judge_a_payload(tmp_path, monkeypatch) -> None:
+    """The two hooks no session can trip, run as settings.json registers them, from a copy of the
+    hooks in a home folder of their own."""
+    config = tmp_path / ".claude"
+    shutil.copytree(REPO / "hooks", config / "hooks")
+    shutil.copy(REPO / "settings.json", config / "settings.json")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert check_clone.trailing_space(config) == (check_clone.PASSED, "")
+    assert check_clone.peer_reply(config) == (check_clone.PASSED, "")
+    (config / "hooks" / "pre_tool_use" / "edit_trailing_space_guard" / "main.py").unlink()
+    assert check_clone.trailing_space(config)[0] == check_clone.FAILED
+
+
+def test_the_clone_install_runs_the_commands_the_readme_gives() -> None:
+    readme = {line.strip() for line in (REPO / "README.md").read_text().splitlines()}
+    script = (REPO / "tests" / "container" / "clone_install.sh").read_text().splitlines()
+    commands = [line for line in script if line and not line.startswith(("#", "set "))]
+    assert commands
+    assert [line for line in commands if line not in readme] == []
+
+
+def test_a_session_that_ended_in_an_error_result_did_not_end_normally(tmp_path) -> None:
+    good = {"type": "result", "subtype": "success", "is_error": False, "result": "Done."}
+    for name in check_clone.SESSIONS:
+        (tmp_path / f"{name}.jsonl").write_text(json.dumps(good) + "\n")
+    assert check_clone.ended(tmp_path) == (check_clone.PASSED, "")
+    failed = {**good, "is_error": True, "result": "Failed to authenticate"}
+    (tmp_path / "emoji.jsonl").write_text(json.dumps(failed) + "\n")
+    verdict, why = check_clone.ended(tmp_path)
+    assert verdict == check_clone.FAILED
+    assert "emoji: Failed to authenticate" in why
