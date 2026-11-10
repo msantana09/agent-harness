@@ -35,8 +35,12 @@ instructions improve from what happens in real sessions.
   [codex](skills/codex/SKILL.md), [external-feedback](skills/external-feedback/SKILL.md),
   [commit](skills/commit/SKILL.md) and
   [command-output-patterns](skills/command-output-patterns/SKILL.md); beside it,
-  [default-stack](skills/default-stack/SKILL.md), [agent-patterns](skills/agent-patterns/SKILL.md),
-  [self-optimize](skills/self-optimize/SKILL.md) and [transcripts](skills/transcripts/SKILL.md).
+  [default-stack](skills/default-stack/SKILL.md) and
+  [agent-patterns](skills/agent-patterns/SKILL.md).
+  [transcripts](skills/transcripts/SKILL.md) reads past sessions through a SQLite index with
+  full-text search: a derived cache that indexes again only the files that changed and rebuilds
+  itself when deleted. [self-optimize](skills/self-optimize/SKILL.md) reads sessions through it to
+  count where the agent was corrected.
 - `hooks/`: seven checks Claude Code runs on the agent's tool calls and replies
   ([hooks](docs/hooks.md)).
 - `scripts/`: what the rules and skills run by path: `codex-jobs` for Codex reviews and tasks,
