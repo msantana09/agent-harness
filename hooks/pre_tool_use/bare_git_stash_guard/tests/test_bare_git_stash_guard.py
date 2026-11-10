@@ -77,8 +77,6 @@ def blocks(command: str) -> bool:
         "ssh host 'git stash -q'",
         "ssh host git -C repo stash -q",
         "bash -c 'git stash -q'",
-        # text that cannot be tokenized is read as before: its bare `git stash`
-        "git stash; echo it's",
         # a message the hook blanks keeps its word: the next one is no pathspec
         'git stash push -m x -m "$(date)"',
         "git stash push -m x -m 'y'",
@@ -118,6 +116,12 @@ def test_bare_stash_blocks(command):
         "git commit -m 'fix: never git stash -q'",
         "ssh host 'git stash push -- a.py'",
         "git stash list; echo it's",
+        # a word of another command, a comment, a help request
+        "echo git stash",
+        "git status # git stash",
+        "git stash save --help",
+        # a line with an unclosed quote: the shell refuses it, so nothing runs
+        "git stash; echo it's",
         # a message the hook blanks keeps its word: the word after it is the pathspec
         "git stash push -m x topic",
         "X=1 git stash push -m x topic",

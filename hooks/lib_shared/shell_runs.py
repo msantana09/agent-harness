@@ -2496,7 +2496,7 @@ def _cached_runs(text: str, remote: bool) -> tuple[_Run, ...] | None:
 
 def _read_runs(text: str, remote: bool = False) -> list[_Run] | None:
     """Each simple command *text* (a text of _guarded_texts) runs, in order, as
-    the shells read it (see the reader's comment above); None when *text*
+    the shells read it (_RunReader); None when *text*
     cannot be tokenized. *remote*: the text runs on an ssh destination."""
     runs = _cached_runs(text, remote)
     return None if runs is None else list(runs)
