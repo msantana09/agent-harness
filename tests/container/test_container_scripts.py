@@ -191,8 +191,14 @@ def probe(tmp_path: Path, *blocks: dict) -> Path:
     return output
 
 
-def stash_call() -> dict:
-    return {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "git stash"}}
+def write_call() -> dict:
+    content = "Done ✅\n"
+    return {
+        "type": "tool_use",
+        "id": "t1",
+        "name": "Write",
+        "input": {"file_path": "notes.md", "content": content},
+    }
 
 
 def result(text: str, is_error: bool = True) -> dict:
@@ -204,29 +210,29 @@ def any_input(_: dict) -> bool:
 
 
 def test_a_call_refused_with_the_hooks_own_reason_passes(tmp_path) -> None:
-    said = f"PreToolUse:Bash hook error: Blocked: {check_clone.STASH_REASON} / ..."
-    output = probe(tmp_path, stash_call(), result(said))
-    verdict = check_clone.refused(output, "Bash", any_input, check_clone.STASH_REASON)
+    said = f"PreToolUse:Write hook error: Blocked: {check_clone.EMOJI_REASON} / ..."
+    output = probe(tmp_path, write_call(), result(said))
+    verdict = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
     assert verdict == (check_clone.PASSED, "")
 
 
 def test_a_call_blocked_because_its_hook_crashed_fails(tmp_path) -> None:
-    said = "PreToolUse:Bash hook error: ModuleNotFoundError: No module named 'shell_runs'"
-    output = probe(tmp_path, stash_call(), result(said))
-    verdict, why = check_clone.refused(output, "Bash", any_input, check_clone.STASH_REASON)
+    said = "PreToolUse:Write hook error: SyntaxError: invalid syntax"
+    output = probe(tmp_path, write_call(), result(said))
+    verdict, why = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
     assert verdict == check_clone.FAILED
-    assert "shell_runs" in why
+    assert "SyntaxError" in why
 
 
 def test_a_call_that_ran_fails(tmp_path) -> None:
-    output = probe(tmp_path, stash_call(), result("Saved working directory", is_error=False))
-    verdict, _ = check_clone.refused(output, "Bash", any_input, check_clone.STASH_REASON)
+    output = probe(tmp_path, write_call(), result("File created", is_error=False))
+    verdict, _ = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
     assert verdict == check_clone.FAILED
 
 
 def test_a_session_that_never_made_the_call_is_not_attempted(tmp_path) -> None:
-    output = probe(tmp_path, {"type": "text", "text": "I would rather not run that."})
-    verdict, _ = check_clone.refused(output, "Bash", any_input, check_clone.STASH_REASON)
+    output = probe(tmp_path, {"type": "text", "text": "I would rather not write that."})
+    verdict, _ = check_clone.refused(output, "Write", any_input, check_clone.EMOJI_REASON)
     assert verdict == check_clone.SKIPPED
 
 
@@ -319,10 +325,10 @@ def test_a_session_that_ended_in_an_error_result_did_not_end_normally(tmp_path) 
         (tmp_path / f"{name}.jsonl").write_text(json.dumps(good) + "\n")
     assert check_clone.ended(tmp_path) == (check_clone.PASSED, "")
     failed = {**good, "is_error": True, "result": "Failed to authenticate"}
-    (tmp_path / "stash.jsonl").write_text(json.dumps(failed) + "\n")
+    (tmp_path / "emoji.jsonl").write_text(json.dumps(failed) + "\n")
     verdict, why = check_clone.ended(tmp_path)
     assert verdict == check_clone.FAILED
-    assert "stash: Failed to authenticate" in why
+    assert "emoji: Failed to authenticate" in why
 
 
 def test_self_optimize_passes_only_with_a_written_eval_suite(tmp_path) -> None:

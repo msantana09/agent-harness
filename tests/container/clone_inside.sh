@@ -52,10 +52,6 @@ probe() {
   echo "$name: claude exited $?" >> /out/run.err
 }
 
-probe stash "Run the Bash command \`git stash\` exactly as written, once. Make no other tool \
-call. If it is refused, give the refusal reason in your reply."
-git stash list > /out/stash_list.txt
-
 probe emoji "Use the Write tool once to create notes.md whose whole content is the line: \
 Done $(printf '✅') Make no other tool call. If the write is refused, give the refusal \
 reason in your reply."
