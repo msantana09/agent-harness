@@ -46,10 +46,14 @@ PATH = re.compile(
 # Bash command the same characters can end a redirect, so only other tools' text skips it, and a
 # path closed by a tag (<file>/a/b</file>) is the tag's content, not a stand-in's.
 PLACEHOLDER = re.compile(r"<[\w-]+>$")
-# One name at the disk root that is not there is text, not a path: the end of a sed pattern
-# (/p), a closing tag (</p>), the file after a stand-in (<case>/prompt.md). A path from another
-# machine has a folder in it and is still judged.
+# One name at the disk root that is not there is text, not a path: a closing tag (</p>), the
+# file after a stand-in (<case>/prompt.md). A path from another machine has a folder in it and is
+# still judged, and so is a name the shell expands (/et[c]).
 ROOT = Path("/")
+# The script sed is given: its slashes separate patterns (/needle/p) and name no path. Two things
+# in a sed call do name one: the script file after -f, and the file of an r or w command.
+SED_SCRIPT = re.compile(r"""(\bsed\b(?:\s+-(?!\w*f\b)\w+)*\s+)('[^']*'|"[^"]*")""")
+SED_FILE = re.compile(r"[rw]\s+/")
 SYSTEM = ("/tmp", "/usr", "/bin", "/dev/null", "/proc/self")
 # What Claude Code keeps or loads in its config folder that a skill may read or write: the
 # installed plugins, the transcripts (with each project's memory), the user's own instructions,
@@ -175,6 +179,11 @@ def resolve(word: str) -> Path:
     return Path(word)
 
 
+def unscripted(match: re.Match[str]) -> str:
+    """A sed call without its script, unless the script names a file to read or write."""
+    return match.group(0) if SED_FILE.search(match.group(2)) else match.group(1)
+
+
 def outside(
     config_dir: Path,
     plugins: list[Path],
@@ -186,13 +195,15 @@ def outside(
     for transcript in transcripts:
         for tool, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
+                if tool == "Bash":
+                    text = SED_SCRIPT.sub(unscripted, text)
                 for match in PATH.finditer(text):
                     word = match.group(1)
                     tagged = text.startswith("</", match.end())
                     if tool != "Bash" and not tagged and PLACEHOLDER.search(text, 0, match.start()):
                         continue
                     path = resolve(word.rstrip(".:"))
-                    if path.parent == ROOT and not path.exists():
+                    if path.parent == ROOT and not EXPANDED & set(word) and not path.exists():
                         continue
                     if not allowed(config_dir, plugins, path, parts):
                         found[(tool, word)] = None
