@@ -30,7 +30,8 @@ context accumulation, with all state in files so the work survives compaction.
 
 ## Dynamic Workflows (Tier 2 — the default for Tier-2-shaped work)
 
-`Workflow` runs under a standing authorization (`rules/automation.md` § Orchestrator Mode);
+`Workflow` runs under the user's standing authorization, their written opt-in
+(`rules/automation.md` § Orchestrator Mode);
 prefer it over the manual machinery in the rest of this file whenever state need not outlive
 the session. A Workflow script *is* the orchestrator loop — it holds
 phases, the worklist, and intermediate results in script variables, so **none of it lands in your
@@ -146,7 +147,6 @@ included; agents run in the background and the deliverable file is what survives
    - [Finding 1]
    - [Finding 2]
    - [Finding 3]
-   Confidence: 0.XX
    Next: [Recommended step]
 
 4. Keep the full analysis in the file; the orchestrator reads it there when it needs detail.
@@ -171,8 +171,6 @@ Key choices made during this task and why:
 
 - **[Decision]**: [What was chosen] — [Why, and what alternatives were considered]
 - **[Decision]**: [What was chosen] — [Why]
-
-## Confidence: 0.XX
 
 ## Recommendations
 
@@ -267,7 +265,7 @@ Files to create: app/models/scheduler.py
 
 ## Output Requirements
 Write detailed output to: <work-dir>/outputs/agent1-models.md
-Return ONLY the summary block: Output path, three findings, Confidence, Next.
+Return ONLY the summary block: Output path, three findings, Next.
 """,
 )
 ```

@@ -2,13 +2,10 @@
 
 Patterns for agent handoffs, parallel execution, and workflow coordination.
 
-## Confidence-Based Coordination
+## When to Skip Coordination
 
-Thresholds live in `../SKILL.md` § Confidence Scoring (one table, not restated here).
+Skip the full workflow when ALL conditions are met:
 
-**Skip Coordination When.** Skip the full workflow when ALL conditions are met:
-
-- [ ] Confidence > 0.8
 - [ ] All quality gates pass
 - [ ] Change < 50 lines
 - [ ] No auth/tenant/security code touched
@@ -26,8 +23,6 @@ recommendations. A Tier-3 agent returns the compact summary of `orchestrator-pro
 
 ```markdown
 ## Recommended Next Steps
-
-**Confidence Score**: 0.XX
 
 ### Immediate Validation (Required)
 - Run the project's lint, type and test gates
@@ -47,12 +42,10 @@ Role names in angle brackets stand for whichever agent covers that role in your 
 **After Backend Implementation.**
 
 ```markdown
-**Confidence Score**: 0.XX
-
 1. **Quality Gates** (Required)
    - Run the project's backend lint, type and test gates
 
-2. **Architecture Review** (if confidence < 0.8 OR complex)
+2. **Architecture Review** (if complex or not covered by tests)
    - Spawn `<architecture reviewer>` to review [specific aspects]
 
 3. **Security Validation** (if state-changing operations)
@@ -65,8 +58,6 @@ Role names in angle brackets stand for whichever agent covers that role in your 
 **After Frontend Implementation.**
 
 ```markdown
-**Confidence Score**: 0.XX
-
 1. **Quality Gates** (Required)
    - Run the project's frontend lint, type and test gates
 
@@ -77,8 +68,6 @@ Role names in angle brackets stand for whichever agent covers that role in your 
 **After Investigation.**
 
 ```markdown
-**Confidence Score**: 0.XX
-
 1. **Implementation** (if root cause found)
    - Spawn `<backend implementer>` or `<frontend implementer>` with fix
 
@@ -130,8 +119,8 @@ most code changes owns it: its implementer goes first and hands the next one a s
 
 | Situation | Action |
 |-----------|--------|
-| Both high confidence (> 0.8) | Merge recommendations, proceed |
-| One low confidence (< 0.6) | Address low-confidence concerns first |
+| Both backed by evidence (`file:line`, a command run, a failing test) | Merge recommendations, proceed |
+| One rests on claims without evidence | Check those claims before acting on them |
 | Conflicting advice | Surface both to orchestrator with tradeoffs and your lean |
 
 ---
@@ -140,7 +129,7 @@ most code changes owns it: its implementer goes first and hands the next one a s
 
 | Situation | Detection | Action |
 |-----------|-----------|--------|
-| Specialist returns confidence < 0.5 | Confidence field in output | Escalate to architect or human |
+| Specialist could not verify its result | It says so in its output | Escalate to architect or human |
 | Platform error (`[Tool result missing...]`, `internal error`, a dropped connection) | Error text in Agent result | Log error. Retry once. If retry fails, do the work directly or report blocker. |
 | Permission or policy denial (the user or a hook rejected the call) | Denial text in Agent result | Neither retry it nor route around it on your own: follow `rules/core-rules.md` ACT BY DEFAULT on denials. |
 | Agent returns empty/malformed output | Missing expected files or status markers | Treat as failure. Retry once with simplified prompt. |
@@ -301,7 +290,6 @@ the orchestrator's own (`rules/core-rules.md`: don't spawn a subagent to verify 
 | Trigger | Action |
 |---------|--------|
 | Security-sensitive code (auth, tenant, payments) | Use fresh-context review |
-| Confidence < 0.75 after implementation | Use fresh-context review |
 | Complex logic (> 200 lines changed) | Consider fresh-context review |
 | User requests review | Use fresh-context review |
 
