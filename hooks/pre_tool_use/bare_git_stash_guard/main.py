@@ -19,8 +19,11 @@ Decisions:
   git's own options, in nested shells (`bash -c '...'`, `eval`) and in what an ssh destination
   runs.
 - Only a command's words count: `grep 'git stash' docs/`, `echo git stash`, a comment and a
-  commit message that mention a stash pass. A command the reader cannot tokenize (an unclosed
-  quote) passes too: zsh runs none of it, and bash runs none of the line that holds the quote.
+  commit message that mention a stash pass.
+- A text the reader cannot tokenize (an unclosed quote) holds no commands for it, yet bash runs
+  every line before the one the quote opens on. Such a text is matched line by line on its
+  quote-masked form instead (BARE_GIT_STASH): a bare stash, pop or apply that ends its line or
+  its command, or any `save`.
 - Allowed: `git stash push -- <paths>`, `git stash push <paths>`, `--pathspec-from-file`,
   `pop`/`apply` with a stash ref, `list`, `show`, `drop`, `branch`, and `-h`/`--help`.
 - Malformed input, a tool other than Bash, and an exception anywhere in the check allow the
@@ -29,14 +32,27 @@ Decisions:
 """
 
 import json
+import re
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib_shared"))
 
-from shell_runs import _any_run, _join_line_continuations  # noqa: E402
+from shell_runs import (  # noqa: E402
+    _guarded_texts,
+    _join_line_continuations,
+    _mask_quoted_text,
+    _read_runs,
+)
 from shell_tokens import _git_globals  # noqa: E402
+
+# Matched only against a text the reader cannot tokenize, on its quote-masked form.
+BARE_GIT_STASH = re.compile(
+    r"\bgit\s+stash(?:\s+(?:pop|apply))?\s*(?:;|&&|\|\||$)"  # bare stash / pop / apply
+    r"|\bgit\s+stash\s+save\b",  # deprecated `save` (bare stash, no pathspec)
+    re.MULTILINE,
+)
 
 BLOCK_REASON = (
     "Blocked: do not run bare `git stash` / `git stash pop` / "
@@ -98,11 +114,18 @@ def check_bare_git_stash(command: str) -> str | None:
     """The block reason when *command* runs a bare `git stash` / `pop` / `apply` / `save`,
     else None.
 
-    Each simple command (_any_run), in nested shells and in what an ssh destination runs,
-    quoted or not, is checked by _is_bare_stash.
+    Each text a guard reads (_guarded_texts: the command, then each nested shell's payload and
+    what an ssh destination runs, quoted or not) is read into its simple commands, each checked
+    by _is_bare_stash; a text the reader cannot tokenize is matched by BARE_GIT_STASH instead.
     """
-    if _any_run(command, lambda run: _is_bare_stash(run.argv)):
-        return BLOCK_REASON
+    for text, _, remote in _guarded_texts(command):
+        runs = _read_runs(text, remote)
+        if (
+            BARE_GIT_STASH.search(_mask_quoted_text(text))
+            if runs is None
+            else any(_is_bare_stash(run.argv) for run in runs)
+        ):
+            return BLOCK_REASON
     return None
 
 

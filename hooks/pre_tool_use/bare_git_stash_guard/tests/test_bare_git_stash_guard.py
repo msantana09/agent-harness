@@ -77,6 +77,14 @@ def blocks(command: str) -> bool:
         "ssh host 'git stash -q'",
         "ssh host git -C repo stash -q",
         "bash -c 'git stash -q'",
+        # a text the reader cannot tokenize (an unclosed quote): bash runs the lines before it
+        "git stash;\necho it's",
+        "git stash\necho it's",
+        "git stash pop\necho it's",
+        "git stash save wip\necho it's",
+        "ssh host 'git stash;\necho it'\\''s'",
+        'bash -c "git stash;\necho it\'s"',
+        "git stash; echo it's",
         # a message the hook blanks keeps its word: the next one is no pathspec
         'git stash push -m x -m "$(date)"',
         "git stash push -m x -m 'y'",
@@ -120,8 +128,9 @@ def test_bare_stash_blocks(command):
         "echo git stash",
         "git status # git stash",
         "git stash save --help",
-        # a line with an unclosed quote: the shell refuses it, so nothing runs
-        "git stash; echo it's",
+        # a text the reader cannot tokenize, with no bare stash on any line
+        "git stash list\necho it's",
+        "git stash push -- a.py\necho it's",
         # a message the hook blanks keeps its word: the word after it is the pathspec
         "git stash push -m x topic",
         "X=1 git stash push -m x topic",
@@ -143,6 +152,11 @@ def test_quoted_data_passes_where_the_same_text_run_blocks():
 def test_the_check_runs_in_linear_time(assert_linear):
     unit = "git -C d stash push -q -m wip -u -- a b; "
     assert_linear(guard, guard.check_bare_git_stash, lambda size: unit * size, 1000)
+
+
+def test_a_text_that_cannot_be_tokenized_is_matched_in_linear_time(assert_linear):
+    unit = "git -C d stash push -q -m wip -u -- a b\n"
+    assert_linear(guard, guard.check_bare_git_stash, lambda size: unit * size + "echo it's", 1000)
 
 
 def run_main(monkeypatch, capsys, stdin: str) -> str:
