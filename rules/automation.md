@@ -52,7 +52,8 @@ surface is the one the user has worked on this session. If any is unclear or dif
 Pick the orchestration tier by *shape*, not headcount: a few independent tasks → inline `Agent`
 fan-out; fan-out-then-verify / loops / multi-phase / migrations / audits → `Workflow`; state that
 must survive compaction → files the agents read and update, since context does not survive it.
-`Workflow` is main-loop-only.
+`Workflow` is main-loop-only. The tiers in full, the durable-file fallback included:
+`Skill("agent-patterns")` § Choosing an Orchestration Tier.
 
 Standing authorization: launch a Workflow directly when the shape fits; announce a one-line scale
 note; pick per-stage effort per core-rules EXECUTE DIRECTLY.
