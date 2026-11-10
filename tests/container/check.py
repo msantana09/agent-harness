@@ -45,6 +45,8 @@ PATH = re.compile(
 # A stand-in such as <case-name> in prose: what follows it is the rest of a relative path. In a
 # Bash command the same characters can end a redirect, so only other tools' text skips it.
 PLACEHOLDER = re.compile(r"<[\w-]+>$")
+# The script sed is given: its slashes separate patterns and name no path.
+SED_SCRIPT = re.compile(r"""(\bsed\b(?:\s+-\w+)*\s+)('[^']*'|"[^"]*")""")
 SYSTEM = ("/tmp", "/usr", "/bin", "/dev/null", "/proc/self")
 # What Claude Code keeps or loads in its config folder that a skill may read or write: the
 # installed plugins, the transcripts (with each project's memory), the user's own instructions,
@@ -181,6 +183,8 @@ def outside(
     for transcript in transcripts:
         for tool, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
+                if tool == "Bash":
+                    text = SED_SCRIPT.sub(r"\1", text)
                 for match in PATH.finditer(text):
                     word = match.group(1)
                     if tool != "Bash" and PLACEHOLDER.search(text, 0, match.start()):
