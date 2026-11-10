@@ -10,13 +10,12 @@ Outputs: one line per check on stdout, `<check>: passed`, `<check>: FAILED, <why
 `<check>: not attempted, <why>`.
 
 A probe is a session asked to do one thing a hook, a rule or a skill decides. A hook check passes
-only on the hook's own words: three hooks are registered to block a call when they cannot start,
+only on the hook's own words: two hooks are registered to block a call when they cannot start,
 so a refusal alone would also pass an install whose hook crashes. A probe whose session never
 made the call the hook judges is not attempted, neither passed nor failed.
 
 Checks:
-- bare_git_stash_guard, emoji_guard, stop_gate: the session's tool call came back refused with
-  the hook's reason.
+- emoji_guard, stop_gate: the session's tool call came back refused with the hook's reason.
 - prose_question_blocker: a reply that asked a question in prose was sent back with the hook's
   feedback.
 - stop_flag: a bare "stop" left the session's flag, a machine prompt kept it and the next human
@@ -55,7 +54,6 @@ Verdict = tuple[str, str]
 CLONE = check.HOME / "agent-harness"
 # What the install from a clone adds to the config folder, and what its hooks keep there.
 CLONE_PARTS = (*check.CONFIG_PARTS, "hooks", "scripts", "state", "self-optimize")
-STASH_REASON = "do not run bare `git stash`"
 EMOJI_REASON = "this write puts emoji in a doc or text file"
 STOP_REASON = "The user typed stop. Make no tool calls."
 PROSE_FEEDBACK = "Prose question detected in assistant turn"
@@ -68,7 +66,6 @@ SKILL_LOADED = "Base directory for this skill: "
 TRIAGE_LINE = re.compile(r"\(exit \d+, \d+ lines\) full output: ")
 STATE_LINE = re.compile(r"branch=\S+ head=\S+ ")
 SESSIONS = (
-    "stash",
     "emoji",
     "prose",
     "stop1",
@@ -284,22 +281,9 @@ def paths(config_dir: Path, out: Path) -> Verdict:
     return PASSED, ""
 
 
-def stash(out: Path) -> Verdict:
-    verdict = refused(
-        out / "stash.jsonl",
-        "Bash",
-        lambda i: str(i.get("command")).strip() == "git stash",
-        STASH_REASON,
-    )
-    if verdict[0] == PASSED and (out / "stash_list.txt").read_text().strip():
-        return FAILED, "the hook refused the stash and a stash was made anyway"
-    return verdict
-
-
 def checks(config_dir: Path, out: Path) -> list[tuple[str, Verdict]]:
     session = json.loads((out / "sessions.json").read_text())["stop"]
     return [
-        ("bare_git_stash_guard", stash(out)),
         (
             "emoji_guard",
             refused(out / "emoji.jsonl", "Write", lambda _: True, EMOJI_REASON),

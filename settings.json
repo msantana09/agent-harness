@@ -32,17 +32,6 @@
             "onFailure": "block"
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$HOME/.claude/hooks/pre_tool_use/bare_git_stash_guard/main.py\"",
-            "timeout": 10,
-            "onFailure": "block"
-          }
-        ]
       }
     ],
     "Stop": [

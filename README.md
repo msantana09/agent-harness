@@ -60,7 +60,7 @@ flowchart LR
   full-text search: a derived cache that updates as files change and rebuilds itself when deleted.
   [self-optimize](skills/self-optimize/SKILL.md) counts where the agent was corrected in those
   sessions and tests a change to its instructions before proposing it.
-- `hooks/`: seven checks Claude Code runs on the agent's tool calls and replies
+- `hooks/`: six checks Claude Code runs on the agent's tool calls and replies
   ([hooks](docs/hooks.md)).
 - `scripts/`: what the rules and skills run by path: `codex-jobs` for Codex reviews and tasks,
   `triage_run.sh` for a long command's failures, `git_state.sh` for a repo's state on one line.
