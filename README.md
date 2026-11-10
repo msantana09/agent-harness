@@ -16,6 +16,7 @@ instructions improve from what happens in real sessions.
 | [command-output-patterns](skills/command-output-patterns/SKILL.md) | Saves a long command's output to a file once, then filters the file instead of running the command again. |
 | [default-stack](skills/default-stack/SKILL.md) | The languages, frameworks, database and test tools a new project starts from, so the agent does not pick a different stack for every build. |
 | [self-optimize](docs/self-optimize.md) | Finds where you corrected the agent in your own Claude Code sessions, then proposes and tests the instruction change that would have prevented it. |
+| [agent-patterns](skills/agent-patterns/SKILL.md) | How the agent coordinates subagents: picks inline fan-out, a Workflow or a file-backed loop by the shape of the work, writes briefs, sizes each assignment to one context window, and scores confidence. |
 | [transcripts](skills/transcripts/SKILL.md) | Lets the agent read past Claude Code sessions as plain text: search what was typed, list tool calls and results, and show the context around one message. |
 
 `rules/` holds the instructions every session follows: when to act and when to ask, how to verify

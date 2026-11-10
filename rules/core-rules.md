@@ -16,7 +16,8 @@ These rules have the highest priority and must be followed in all contexts.
      work is the failure the user sees most often; weigh it the same as overspawn.
    - **Size each assignment to finish inside one context window**. When a task cannot be cut
      before dispatch (unknown-size discovery, a migration whose scope emerges as it runs), tell
-     the agent in the prompt to fan its subtasks out to its own subagents.
+     the agent in the prompt to fan its subtasks out to its own subagents. Sizing an assignment
+     to one context window: `Skill("agent-patterns")` § Task Decomposition.
    - **Concurrency cap**: none of your own; the runtime's subagent limit is the only cap.
    - **Set subagent effort explicitly.** Named agents run their `effort:`
      pin. Workflow `agent()` stages always pass an explicit `effort` chosen for the assigned
