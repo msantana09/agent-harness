@@ -5,7 +5,8 @@ set -euo pipefail
 mkdir -p ~/.claude/rules ~/.claude/skills ~/.claude/scripts ~/.claude/hooks ~/.agents/skills
 ln -s "$PWD"/agent-harness/rules/*.md ~/.claude/rules/
 ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
-ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
+ln -s "$PWD"/agent-harness/scripts/*.sh ~/.claude/scripts/
+ln -s "$PWD"/agent-harness/scripts/codex ~/.claude/scripts/
 ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
 cp -R agent-harness/hooks/. ~/.claude/hooks/
 [ -e ~/.claude/settings.json ] || cp agent-harness/settings.json ~/.claude/settings.json
