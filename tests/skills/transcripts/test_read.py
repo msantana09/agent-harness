@@ -1,8 +1,10 @@
 """Tests for read.py's tools, messages and index commands and the index behind them, on the invented
 transcripts in fixtures/ beside this file."""
 
+import ast
 import json
 import os
+import runpy
 import sqlite3
 import subprocess
 import sys
@@ -15,6 +17,7 @@ from typing import Any
 
 import pytest
 
+READ = Path(__file__).resolve().parents[3] / "skills" / "transcripts" / "scripts" / "read.py"
 MAIN = "aaaa1111"
 PARENT = "pppp0000"
 FORK = "ffff0000"
@@ -422,3 +425,15 @@ def test_a_corrupt_index_is_reset_and_the_query_still_answers(
     assert code == 0
     assert len(out.splitlines()) == 2
     assert "corrupt" in err
+
+
+def test_an_older_python_is_told_the_version_read_needs(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ast.parse(READ.read_text(), feature_version=(3, 9))
+    monkeypatch.setattr(sys, "version_info", (3, 13, 5, "final", 0))
+    monkeypatch.setattr(sys, "version", "3.13.5 (main)")
+    with pytest.raises(SystemExit) as exited:
+        runpy.run_path(str(READ), run_name="read_on_an_older_python")
+    assert exited.value.code == 2
+    assert capsys.readouterr().err == "read.py needs Python 3.14 or newer; this is 3.13.5.\n"
