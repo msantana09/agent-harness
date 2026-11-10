@@ -91,7 +91,7 @@ ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
 OPERATOR_CHARS = ";&|()\n"
 # Stands in for an operator character the shell reads as data (quoted or escaped); a private-use
 # character, so it never matches a command name.
-LITERAL_OPERATOR = ""
+LITERAL_OPERATOR = "\ue000"
 # A redirection word: an optional file descriptor, then >, >>, <, <>, &>, &>>, >&, <& or >|, then
 # its target when written in the same word (`2>/dev/null`, `2>&1`).
 REDIRECTION = re.compile(r"\d*(?:&>>?|>>?|<>|<|>&|<&|>\|)")

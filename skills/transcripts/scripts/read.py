@@ -11,7 +11,7 @@ Outputs: readable text on stdout, or with --json one JSON object per row. Rows c
 index (index.py) that each query brings up to date first.
 Exit codes: 0 done; 1 the message a context command names was not found, the search index is
 unavailable, or the index turned out corrupt partway through; 2 a usage error or a bad --search,
-or no transcript folder or transcript at all.
+no transcript folder or transcript at all, or a Python older than 3.14.
 
 Commands:
 
@@ -67,6 +67,12 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+# The file keeps to syntax older versions parse (no `type` statements), and this check runs
+# before anything that needs 3.14, so an older python3 gets this message, not a traceback.
+if sys.version_info < (3, 14):  # noqa: UP036
+    print(f"read.py needs Python 3.14 or newer; this is {sys.version.split()[0]}.", file=sys.stderr)
+    sys.exit(2)
+
 import index
 import transcripts
 
@@ -91,8 +97,8 @@ CONTEXT_TURNS = 3
 NOT_FOUND = 1
 UNUSABLE_INDEX = 1
 
-type Row = dict[str, Any]
-type Who = dict[str, str | None]
+Row = dict[str, Any]
+Who = dict[str, str | None]
 
 
 def regex(pattern: str) -> re.Pattern[str]:
