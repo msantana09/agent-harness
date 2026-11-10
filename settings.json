@@ -1,0 +1,65 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$HOME/.claude/hooks/pre_tool_use/stop_gate/main.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
+            "timeout": 2
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/pre_tool_use/edit_trailing_space_guard/main.py\"",
+            "timeout": 2,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/pre_tool_use/emoji_guard/main.py\"",
+            "timeout": 2,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/stop/prose_question_blocker/main.py\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/stop/peer_reply_guard/main.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$HOME/.claude/hooks/user_prompt_submit/stop_flag/main.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}

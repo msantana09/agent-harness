@@ -25,6 +25,16 @@ review, consult and run jobs as a CLI or an MCP server, `scripts/triage_run.sh` 
 command and prints a short digest of what failed, and `scripts/git_state.sh` prints a repo's
 branch, drift and dirty count on one line.
 
+`hooks/` holds Claude Code hooks that check the agent as it works. Before a write, `emoji_guard`
+refuses emoji in docs and asks before writing them into code, and `edit_trailing_space_guard`
+refuses an edit whose replacement ends in a space or tab, which the Edit tool drops outside
+Markdown files. When the
+agent ends its turn, `prose_question_blocker` sends back a reply that asks the user a question in
+prose instead of through AskUserQuestion, offers a step instead of taking it, or announces work it
+never started, and `peer_reply_guard` sends back a session that answered another session's task
+in its own chat instead of with SendMessage. When the user types a bare "stop", `stop_flag` marks
+the session and `stop_gate` refuses its tool calls until the user's next prompt.
+
 More will be added as I clean them up.
 
 ## Install
@@ -65,6 +75,15 @@ it loads inspect-pr from its own skills folder; link it there too:
 ```bash
 mkdir -p ~/.agents/skills
 ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
+```
+
+The plugin installs no hooks. Copy them into `~/.claude/hooks/`, then merge the `hooks` key of the
+repo's `settings.json` into your `~/.claude/settings.json`; each command there runs a hook's
+`main.py` from that folder with `python3`:
+
+```bash
+mkdir -p ~/.claude/hooks
+cp -R agent-harness/hooks/. ~/.claude/hooks/
 ```
 
 ## Requirements

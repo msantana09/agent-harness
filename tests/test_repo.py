@@ -3,10 +3,13 @@ standard library or the repo, and the skill and plugin manifests are what their 
 
 import ast
 import json
+import os
 import re
+import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = ("docs", "hooks", "rules", "scripts", "skills", "tests")
@@ -171,3 +174,74 @@ def test_shebangs_and_command_lines_name_python3() -> None:
             if found.group(1) != "python3":
                 wrong.append(f"{where(path, text, found.start())}: {found.group(0)}")
     assert wrong == []
+
+
+def registrations() -> list[tuple[str, dict[str, Any]]]:
+    """Every (event, hook entry) in the root settings.json, which holds the `hooks` key and
+    nothing else."""
+    settings = json.loads((ROOT / "settings.json").read_text())
+    assert list(settings) == ["hooks"]
+    return [
+        (event, hook)
+        for event, groups in settings["hooks"].items()
+        for group in groups
+        for hook in group["hooks"]
+    ]
+
+
+# A command runs the hook from where the README installs it, ~/.claude/hooks/. A fail-open hook's
+# command exits 0 when the file is missing: Python exits 2 on a file it cannot open, and Claude
+# Code reads exit 2 from a PreToolUse or UserPromptSubmit hook as a block.
+LAUNCH = re.compile(r'python3 "\$HOME/\.claude/(hooks/(\w+)/\w+/main\.py)"')
+GUARDED_LAUNCH = re.compile(
+    r'f="\$HOME/\.claude/(hooks/(\w+)/\w+/main\.py)"; \[ -f "\$f" \] \|\| exit 0; python3 "\$f"'
+)
+# These run before every tool call or prompt, so a broken one must never lock a session. Every
+# other PreToolUse hook is a guard that blocks the call when it cannot run.
+FAIL_OPEN_HOOKS = {
+    "hooks/pre_tool_use/stop_gate/main.py",
+    "hooks/user_prompt_submit/stop_flag/main.py",
+}
+
+
+def test_every_hook_is_registered_once_under_its_folders_event() -> None:
+    named = []
+    for event, hook in registrations():
+        found = LAUNCH.fullmatch(hook["command"]) or GUARDED_LAUNCH.fullmatch(hook["command"])
+        assert found, hook["command"]
+        assert (ROOT / found.group(1)).is_file(), hook["command"]
+        assert event == found.group(2).title().replace("_", ""), hook["command"]
+        named.append(found.group(1))
+    hooks = sorted(
+        str(path.relative_to(ROOT))
+        for path in (ROOT / "hooks").glob("*/*/main.py")
+        if path.parent.parent.name != "lib_shared"
+    )
+    assert sorted(named) == hooks
+
+
+def test_fail_open_hooks_launch_guarded_and_every_other_guard_blocks_when_it_cannot_run() -> None:
+    for event, hook in registrations():
+        guarded = GUARDED_LAUNCH.fullmatch(hook["command"])
+        found = guarded or LAUNCH.fullmatch(hook["command"])
+        assert found, hook["command"]
+        path = found.group(1)
+        if path in FAIL_OPEN_HOOKS:
+            assert guarded and "onFailure" not in hook, hook["command"]
+        else:
+            assert not guarded, hook["command"]
+            if event == "PreToolUse":
+                assert hook.get("onFailure") == "block", hook["command"]
+
+
+def test_a_fail_open_hook_whose_file_is_missing_lets_the_call_through(tmp_path: Path) -> None:
+    for _, hook in registrations():
+        if GUARDED_LAUNCH.fullmatch(hook["command"]):
+            done = subprocess.run(
+                ["sh", "-c", hook["command"]],
+                input="{}",
+                capture_output=True,
+                text=True,
+                env={**os.environ, "HOME": str(tmp_path)},
+            )
+            assert done.returncode == 0, (hook["command"], done.stderr)
