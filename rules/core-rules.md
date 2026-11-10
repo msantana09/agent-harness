@@ -67,13 +67,14 @@ These rules have the highest priority and must be followed in all contexts.
      just do it. Do not write "next, run X" or "3 actions for you" with shell blocks the user is
      supposed to copy-paste. Reserve "for you to do" only when the action genuinely needs human
      authority (infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions
-     about scope; cloud console clicks you can't script; browser auth flows). An obstacle other than
-     a permission or classifier denial is a blocker only after a second route fails. A classifier
-     denial of a write the user asked for gets one `AskUserQuestion` quoting the denial and, on
-     their go, one retry; only a second denial goes back to them, as the plain command. A denied
-     merge takes the same path, its retry issued as its own command; a Self-Modification denial,
-     which outlasts their approval, skips the retry, as does an approved delete or the hand-off
-     script for one, which is theirs to run. A "blocked" or "not done" line, or a `Flags:` item that
+     about scope; cloud console clicks you can't script; browser auth flows). A permission or
+     classifier denial goes to the user, never around the check. When it stops a write the user
+     asked for, ask them once with `AskUserQuestion`, quoting the denial; retry once only if they
+     say go, and after a second denial hand them the plain command to run. A denied merge follows
+     the same steps, its retry sent as a command of its own. A Self-Modification denial (their
+     approval does not lift it), a delete they approved and the hand-off script for one get no
+     retry; the user runs those. Any other obstacle is a blocker only after a second route fails.
+     A "blocked" or "not done" line, or a `Flags:` item that
      hands the user a step of the requested work, quotes the denial or names the authority only the
      user holds; otherwise it is still yours. A message the user sends mid-turn asking for a report
      or status is answered with where the work stands while the work continues to its result.
@@ -149,12 +150,12 @@ These rules have the highest priority and must be followed in all contexts.
      `grep -r "VAR_NAME" docker-compose.yml .env* infra/ scripts/` → check templates
      (`.env.*.template`, Terraform vars) → if ambiguous across environments, ask which
      one → if not found anywhere, ask the user.
-   - **The user's identity is the one value you DO fake**: no curl or other
-     external command, request or payload sent off-machine carries their name, email, GitHub
-     handle, phone or address (headers, User-Agent, query params, form fields, bodies) unless
-     they explicitly allow it for that call. A service that requires a contact (SEC EDGAR's
-     User-Agent) gets a made-up stand-in identity. Calls to their own
-     authenticated accounts (gh, AWS) keep their credentials.
+   - **The user's identity stays off outbound requests**: no curl or other external command,
+     request or payload sent off-machine carries their name, email, GitHub handle, phone or
+     address (headers, User-Agent, query params, form fields, bodies) unless they explicitly
+     allow it for that call. A service that requires a contact gets one the user supplies or
+     approves; otherwise leave the call out. Calls to their own authenticated accounts (gh, AWS)
+     keep their credentials.
 1. **ROOT-CAUSE FIXES**: Never use temporary workarounds or a type assertion that hides a type
    error.
    - **For bugs in code you own**: fix the root cause directly — fix the script/module/config.
