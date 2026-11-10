@@ -15,9 +15,11 @@ and how the agent's instructions improve from what happens in real sessions.
   the rest. [core-rules](rules/core-rules.md)
 - A change touches only what the request needs and removes what it replaces.
   [engineering](rules/engineering.md#surgical-changes)
-- Every edit happens in a worktree, and a person merges. [core-rules](rules/core-rules.md#worktrees)
-- A pull request is reviewed by a second model, again only after a finding of medium severity or
-  worse, and each finding is checked against the code before it is accepted.
+- Every edit happens in a worktree, and a person decides every merge; the agent runs one only when
+  told to. [core-rules](rules/core-rules.md#worktrees), [ship](skills/ship/SKILL.md)
+- A second model reviews every pull request, and reviews it again only when a round finds
+  something of medium severity or worse. Each finding is checked against the code before it is
+  accepted.
   [ship](skills/ship/SKILL.md), [external-feedback](skills/external-feedback/SKILL.md)
 - A reviewer's suggestion is a recommendation, not scope.
   [communication](rules/communication.md#surface--scope-in)
@@ -27,7 +29,7 @@ and how the agent's instructions improve from what happens in real sessions.
 
 ## How a change ships
 
-Read it left to right: the agent does every step but the merge.
+Read it left to right: the agent does every step, and runs the merge only when the user says so.
 
 ```mermaid
 flowchart LR
@@ -38,7 +40,7 @@ flowchart LR
     ci --> triage
     triage --> fix["accepted findings<br/>fixed and pushed"]
     fix --> ready["PR marked ready,<br/>review trail in its body"]
-    ready --> merge["the user merges"]
+    ready --> merge["merged by the user,<br/>or on their word"]
     merge --> cleanup["worktree and<br/>branch removed"]
 ```
 
@@ -62,20 +64,23 @@ flowchart LR
   ([hooks](docs/hooks.md)).
 - `scripts/`: what the rules and skills run by path: `codex-jobs` for Codex reviews and tasks,
   `triage_run.sh` for a long command's failures, `git_state.sh` for a repo's state on one line.
-- `tests/`: the tests, and a release check that installs the repo on a clean machine in a
-  container and runs it there.
+- `tests/`: the tests, which run with `python3 -m pytest -q`, `ruff check .` and
+  `ruff format --check .` as CI does, and a release check. That check is a Docker run started by
+  hand that needs a Claude login; it installs the repo in a clean container and covers the hooks,
+  `/commit`, `triage_run.sh`, `git_state.sh` and self-optimize, not ship or the Codex review.
 
 ## Install
 
-Clone, then link into `~/.claude`, where Claude Code loads rules and skills and where the rules
-name the scripts:
+This needs Python 3.14 or newer as `python3` ([Requirements](#requirements)). Clone, then link
+into `~/.claude`, where Claude Code loads rules and skills and where the rules name the scripts:
 
 ```bash
 git clone https://github.com/msantana09/agent-harness
 mkdir -p ~/.claude/rules ~/.claude/skills ~/.claude/scripts ~/.claude/hooks ~/.agents/skills
 ln -s "$PWD"/agent-harness/rules/*.md ~/.claude/rules/
 ln -s "$PWD"/agent-harness/skills/* ~/.claude/skills/
-ln -s "$PWD"/agent-harness/scripts/* ~/.claude/scripts/
+ln -s "$PWD"/agent-harness/scripts/*.sh ~/.claude/scripts/
+ln -s "$PWD"/agent-harness/scripts/codex ~/.claude/scripts/
 ln -s "$PWD"/agent-harness/skills/inspect-pr ~/.agents/skills/
 cp -R agent-harness/hooks/. ~/.claude/hooks/
 [ -e ~/.claude/settings.json ] || cp agent-harness/settings.json ~/.claude/settings.json
@@ -83,8 +88,13 @@ cp -R agent-harness/hooks/. ~/.claude/hooks/
 
 The last line copies the settings only when you have no `~/.claude/settings.json`; when you do,
 merge the `hooks` key of the repo's file into yours. The `~/.agents/skills` link is for Codex,
-which loads inspect-pr from there when it reviews for ship. To update, pull the clone and copy the
-hooks again.
+which loads inspect-pr from there when it reviews for ship. To update, pull the clone, re-run the
+`ln` and `cp` lines (a link that is already there fails with "File exists" and stays as it is),
+and merge any new `hooks` entries from the repo's `settings.json` into yours.
+
+With the rules installed, the agent files a GitHub issue in the repo it is working in for each
+defect it finds and does not fix, and creates the `finding` and `priority` labels there if they
+are missing.
 
 To try the skills alone, install them as a Claude Code plugin. It carries no rules, hooks or
 scripts, so codex, ship, command-output-patterns and agent-patterns, which run the scripts, need
