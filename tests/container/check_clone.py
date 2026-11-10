@@ -29,6 +29,8 @@ Checks:
 - rules and scripts: asked to run the tests and report the repo's state, the session ran
   `triage_run.sh` and `git_state.sh`, which only the linked rules name, and each printed its own
   line.
+- self-optimize: `/self-optimize` on invented sessions wrote an eval suite, so a linked skill
+  that runs a sibling skill's scripts works.
 - every session ended normally, used no path outside the install and named no file in it that
   does not exist (check.py's path checks, with the clone and the linked folders allowed).
 
@@ -52,7 +54,7 @@ Verdict = tuple[str, str]
 
 CLONE = check.HOME / "agent-harness"
 # What the install from a clone adds to the config folder, and what its hooks keep there.
-CLONE_PARTS = (*check.CONFIG_PARTS, "hooks", "scripts", "state")
+CLONE_PARTS = (*check.CONFIG_PARTS, "hooks", "scripts", "state", "self-optimize")
 STASH_REASON = "do not run bare `git stash`"
 EMOJI_REASON = "this write puts emoji in a doc or text file"
 STOP_REASON = "The user typed stop. Make no tool calls."
@@ -65,7 +67,17 @@ SUBJECT = re.compile(
 SKILL_LOADED = "Base directory for this skill: "
 TRIAGE_LINE = re.compile(r"\(exit \d+, \d+ lines\) full output: ")
 STATE_LINE = re.compile(r"branch=\S+ head=\S+ ")
-SESSIONS = ("stash", "emoji", "prose", "stop1", "stop2", "stop3", "commit", "tests")
+SESSIONS = (
+    "stash",
+    "emoji",
+    "prose",
+    "stop1",
+    "stop2",
+    "stop3",
+    "commit",
+    "tests",
+    "selfoptimize",
+)
 
 
 def refused(
@@ -241,9 +253,20 @@ def ended(out: Path) -> Verdict:
     return (FAILED, f"{bad}") if bad else (PASSED, "")
 
 
-def paths(config_dir: Path) -> Verdict:
-    transcripts = list((config_dir / "projects").glob("*/*.jsonl"))
-    transcripts += list((config_dir / "projects").glob("*/*/subagents/*.jsonl"))
+def self_optimized(config_dir: Path) -> Verdict:
+    """Whether the run left a non-empty eval suite in self-optimize's folder."""
+    suites = [d for d in (config_dir / "self-optimize").glob("*-evals") if any(d.iterdir())]
+    return (PASSED, "") if suites else (FAILED, "no eval suite written")
+
+
+def paths(config_dir: Path, out: Path) -> Verdict:
+    """check.py's path checks over the probe sessions and the subagents they started (the
+    invented sessions self-optimize reads are input, not part of the run)."""
+    sessions = dict.fromkeys(session_of(out / f"{name}.jsonl") for name in SESSIONS)
+    transcripts = []
+    for session in filter(None, sessions):
+        transcripts += (config_dir / "projects").glob(f"*/{session}.jsonl")
+        transcripts += (config_dir / "projects").glob(f"*/{session}/subagents/*.jsonl")
     roots = [CLONE, check.HOME / ".agents"]
     stray = [
         f"{tool}: {word}"
@@ -290,8 +313,9 @@ def checks(config_dir: Path, out: Path) -> list[tuple[str, Verdict]]:
             ran_script(out / "tests.jsonl", "triage_run.sh", TRIAGE_LINE),
         ),
         ("rules: git_state.sh", ran_script(out / "tests.jsonl", "git_state.sh", STATE_LINE)),
+        ("self-optimize", self_optimized(config_dir)),
         ("every session ended normally", ended(out)),
-        ("paths", paths(config_dir)),
+        ("paths", paths(config_dir, out)),
     ]
 
 

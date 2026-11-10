@@ -28,12 +28,13 @@ flowchart LR
 | `edit_trailing_space_guard` | before an edit | Refuses a replacement that ends in a space or tab, which the Edit tool drops outside Markdown files. |
 | `stop_flag` | when the user sends a prompt | Marks the session when the prompt is a bare "stop", and clears the mark on the user's next prompt. |
 | `stop_gate` | before every tool call | Refuses the tool calls of a session marked by `stop_flag`. |
-| `prose_question_blocker` | when the agent ends its turn | Sends back a reply that asks a question in prose instead of through AskUserQuestion, offers a step instead of taking it, or announces work it never started. |
+| `prose_question_blocker` | when the agent ends its turn | Sends back a reply that asks a question in prose instead of through AskUserQuestion, offers a step instead of taking it, announces work it never started, or uses blockquote bars. |
 | `peer_reply_guard` | when the agent ends its turn | Sends back a session that answered another session's task in its own chat instead of with SendMessage. |
 
 The three write and Bash guards are registered to block the call when the hook itself cannot
 start, so a broken install is noticed. `stop_flag`, `stop_gate` and the two reply checks let the
-call or reply through when they fail, so a broken hook can never lock a session.
+call or reply through when they fail or their file is missing, so a broken hook can never lock
+a session.
 
 Each hook's `main.py` opens with what it reads, what it prints and every decision it makes. Its
 tests sit beside it in `tests/`.
@@ -48,5 +49,6 @@ so read one before you register it.
 ## Turning a check off for a project
 
 A project whose drafts legitimately hold questions, such as a documentation repo, turns off the
-prose-question check with an empty file named `.claude/prose-questions-ok` in the folder its
-sessions start from. A single reply opts out with the marker `<!-- ask-ok -->`.
+question, announcement and blockquote checks of `prose_question_blocker` with an empty file named
+`.claude/prose-questions-ok` in the folder its sessions start from; the check for an offered step
+stays on. A single reply opts out of all four with the marker `<!-- ask-ok -->`.
