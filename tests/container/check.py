@@ -13,7 +13,8 @@ The run stayed inside the install: every absolute or home-relative path in a too
 is the config folder itself or lies under an allowed root (allowed: inside the config folder,
 only what Claude Code itself keeps or loads there (CONFIG_PARTS) plus self-optimize's own folder,
 even when the config folder sits under another allowed root; outside it, the folders the plugins
-run from, the index cache, the working folder, /tmp and the system folders). A file of the
+run from, the index cache, the working folder, /tmp, the system folders and the home folder
+itself, which a `cd ~` names). A file of the
 author's own layout under the config folder (a `memory/` file) or any other folder fails it.
 Paths are found by PATH: a word starting with /, ~ or $HOME, not preceded by a word character, a
 colon, a slash, a glob character or a quote joined on with + (so `and/or`, URLs, `*/x.md` and
@@ -78,9 +79,9 @@ def plugin_roots(run_output: Path) -> list[Path]:
 def allowed(
     config_dir: Path, plugins: list[Path], path: Path, parts: tuple[str, ...] = PLUGIN_PARTS
 ) -> bool:
-    """Whether *path* is the config folder or lies under an allowed root. A path inside the config
-    folder is judged by *parts* alone, wherever the config folder itself sits."""
-    if path == config_dir:
+    """Whether *path* is the config folder, the home folder or lies under an allowed root. A path
+    inside the config folder is judged by *parts* alone, wherever the config folder itself sits."""
+    if path in (config_dir, HOME):
         return True
     if config_dir in path.parents:
         roots = [config_dir / part for part in parts]

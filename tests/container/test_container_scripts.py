@@ -67,6 +67,7 @@ def test_a_run_inside_the_install_that_wrote_its_evals_passes(tmp_path, capsys) 
         f"ls {config}/CLAUDE.md {config}/settings.json {config}/projects/*/memory/*.md",
         "ls ~/.cache/agent-harness/transcripts https://example.com/a/b and/or */x.md [ab]/y",
         "python3 -c 'p = dst+\"/prompt.md\"' && python3 -c \"q = dst + '/x.md'\"",
+        "cd /home/dev && cd ~ && ls",
     )
     assert check.main([str(config), SESSION, output]) == 0
     assert "reached step 7: yes" in capsys.readouterr().out
@@ -75,12 +76,16 @@ def test_a_run_inside_the_install_that_wrote_its_evals_passes(tmp_path, capsys) 
 def test_a_path_outside_the_install_fails_the_run(tmp_path, capsys) -> None:
     config = tmp_path / ".claude"
     output = run_with(
-        config, "python3 /home/dev/agent-harness-copy/x.py", "cat /Users/someone/notes"
+        config,
+        "python3 /home/dev/agent-harness-copy/x.py",
+        "cat /Users/someone/notes",
+        "cat /home/dev/notes.md",
     )
     assert check.main([str(config), SESSION, output]) == 1
     out = capsys.readouterr().out
     assert "Bash: /home/dev/agent-harness-copy/x.py" in out
     assert "Bash: /Users/someone/notes" in out
+    assert "Bash: /home/dev/notes.md" in out
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
