@@ -29,12 +29,13 @@ branch, drift and dirty count on one line.
 `hooks/` holds Claude Code hooks that check the agent as it works. Before a write, `emoji_guard`
 refuses emoji in docs and asks before writing them into code, and `edit_trailing_space_guard`
 refuses an edit whose replacement ends in a space or tab, which the Edit tool drops outside
-Markdown files. When the
-agent ends its turn, `prose_question_blocker` sends back a reply that asks the user a question in
-prose instead of through AskUserQuestion, offers a step instead of taking it, or announces work it
-never started, and `peer_reply_guard` sends back a session that answered another session's task
-in its own chat instead of with SendMessage. When the user types a bare "stop", `stop_flag` marks
-the session and `stop_gate` refuses its tool calls until the user's next prompt.
+Markdown files. Before a Bash command, `bare_git_stash_guard` refuses a bare `git stash`, `pop`,
+`apply` or `save`, which can take or reapply another session's changes. When the agent ends its
+turn, `prose_question_blocker` sends back a reply that asks the user a question in prose instead of
+through AskUserQuestion, offers a step instead of taking it, or announces work it never started, and
+`peer_reply_guard` sends back a session that answered another session's task in its own chat instead
+of with SendMessage. When the user types a bare "stop", `stop_flag` marks the session and
+`stop_gate` refuses its tool calls until the user's next prompt.
 
 More will be added as I clean them up.
 
