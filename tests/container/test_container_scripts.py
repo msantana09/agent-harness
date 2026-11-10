@@ -102,21 +102,27 @@ def test_a_path_under_a_stand_in_name_is_outside_only_in_a_bash_command(tmp_path
     assert found == [("Agent", "/home/dev/y"), ("Bash", "/home/dev/x")]
 
 
-def test_the_script_sed_is_given_names_no_path_and_the_file_it_reads_does(tmp_path) -> None:
+def test_a_sed_script_and_one_missing_name_at_the_disk_root_are_not_paths(tmp_path) -> None:
     config = tmp_path / ".claude"
     transcript = tmp_path / "session.jsonl"
     commands = [
         "sed -i 's/Three (a)/Two (b)/' /home/dev/report.md",
         "sed -n '/^# Review/,/^## /p' /home/dev/notes.md",
         "sed -n -f '/home/dev/edit.sed' shop.md",
+        "sed -n '/needle/p' shop.md",
+        "sed -n '1r /home/dev/more.md' shop.md",
+        "printf '<p>received</p>' > page.html",
+        "cat <names>/prompt.md",
+        "cat /etc",
+        "ls -d /et[c]",
     ]
     calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
     record = {"type": "assistant", "message": {"content": calls}}
     transcript.write_text(json.dumps(record) + "\n")
     found = check.outside(config, [], [transcript])
-    assert found == [
-        ("Bash", f"/home/dev/{name}") for name in ("report.md", "notes.md", "edit.sed")
-    ]
+    names = ("report.md", "notes.md", "edit.sed", "more.md")
+    names = (*(f"/home/dev/{name}" for name in names), "/etc", "/et[c]")
+    assert found == [("Bash", name) for name in names]
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
