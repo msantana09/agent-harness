@@ -30,7 +30,7 @@ from typing import Any
 
 TRAILING_WHITESPACE = (" ", "\t")
 # The paths whose trailing whitespace the Edit tool keeps.
-MARKDOWN = re.compile(r"\.(md|mdx)$", re.IGNORECASE)
+MARKDOWN = re.compile(r"\.(md|mdx)\Z", re.IGNORECASE)
 
 
 def deny(reason: str) -> None:

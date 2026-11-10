@@ -115,7 +115,9 @@ def test_allows_a_trailing_space_in_a_markdown_file_which_the_tool_keeps(name, m
     assert run_hook("MultiEdit", several, monkeypatch, capsys) is None
 
 
-@pytest.mark.parametrize("name", ["notes.md.txt", "md", "page.mdx.py", "notes.markdown", 7])
+@pytest.mark.parametrize(
+    "name", ["notes.md.txt", "md", "page.mdx.py", "notes.markdown", "notes.md\n", 7]
+)
 def test_denies_a_trailing_space_in_a_file_that_only_resembles_markdown(name, monkeypatch, capsys):
     path = f"/tmp/{name}" if isinstance(name, str) else name
     assert_denied(run_hook("Edit", {**edit("a", "b "), "file_path": path}, monkeypatch, capsys))
