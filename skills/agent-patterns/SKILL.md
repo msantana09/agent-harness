@@ -136,8 +136,11 @@ Factor weights by role, Backend and Frontend summaries included:
 
 ## Coordination Patterns
 
-**Standard Output Format.** Every agent ends with a `## Recommended Next Steps` block — the one
-template lives in `references/coordination-patterns.md` § Standard Output Format.
+**Standard Output Format.** An agent that returns its result inline ends with a
+`## Recommended Next Steps` block — the one template lives in
+`references/coordination-patterns.md` § Standard Output Format. A Tier-3 agent returns the
+compact summary of `references/orchestrator-protocol.md` § Agent Output Protocol (File-First)
+instead, and a Workflow stage returns its schema.
 
 **Parallel vs Sequential.** Parallel for independent reviews and analyses; sequential while one
 agent's output is the next one's input:

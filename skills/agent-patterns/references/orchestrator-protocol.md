@@ -286,12 +286,16 @@ Core loop for executing the work, every turn:
      exists via Bash
    - If complete: Update agents.md status
    - VERIFY DISPATCH (binding surface): for every row marked `running`, confirm dispatch
-     actually fired — check for the output file via Bash (`ls outputs/{agent-id}-*`; agents
-     write incrementally, so even a partial file is evidence the `Agent()` call launched) or a
-     completion <task-notification>. agents.md is a note you wrote, not proof the Agent() call
-     fired. A `running` row with neither means the dispatch was dropped (often after a
-     notification interrupted the turn) — re-spawn it. `TaskList` is an additional signal only
-     under Agent teams (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) — not available by default.
+     actually fired. The evidence is the `Agent()` launch response (record its agent id in the
+     row when it returns), the output file (`ls outputs/{agent-id}-*`; agents write
+     incrementally, so even a partial file counts) or a completion <task-notification>.
+     agents.md is a note you wrote, not proof the Agent() call fired. A row with a launch id
+     and no file yet is pending: an agent writes nothing before its first finished task, so
+     wait for its notification. Only a row with no launch id, file or notification was dropped
+     (often after a notification interrupted the turn): re-spawn it. Replace a launched agent
+     only after its notification reports a failure or you stop it with `TaskStop`, so two
+     agents never hold one assignment. `TaskList` is an additional signal only under Agent
+     teams (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) — not available by default.
 
 3. READ OUTPUT FILES
    - For completed agents: Read their output file directly

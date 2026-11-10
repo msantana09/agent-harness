@@ -20,7 +20,9 @@ Just commit and move on. Over-coordination is waste.
 
 ## Standard Output Format
 
-Every agent must include coordination recommendations in final response:
+An agent that returns its result inline ends its final response with coordination
+recommendations. A Tier-3 agent returns the compact summary of `orchestrator-protocol.md`
+§ Agent Output Protocol (File-First) instead, and a Workflow stage returns its schema.
 
 ```markdown
 ## Recommended Next Steps
@@ -286,7 +288,10 @@ Agent:
 ## Fresh-Context Reviews
 
 For quality-critical code, spawn a **separate** reviewer agent AFTER implementation completes. The
-reviewer runs in its own context without bias from having written the code.
+reviewer runs in its own context without bias from having written the code. A review is a
+judgment read that is not anchored on the implementer's; it never stands in for verification.
+Whether the code works binds at its tests, its output or the rendered page, and that check is
+the orchestrator's own (`rules/core-rules.md`: don't spawn a subagent to verify your own work).
 
 **When to Use Fresh-Context Review.**
 
