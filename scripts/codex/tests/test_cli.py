@@ -329,7 +329,8 @@ def test_cancel_marks_the_job_cancelled(env):
 
 def _group_exists(pgid: int) -> bool:
     try:
-        os.killpg(pgid, 0)  # signal 0 only probes: it raises once no process is left in the group
+        # Signal 0 only probes: it raises once no process is left in the group.
+        os.killpg(pgid, 0)
     except ProcessLookupError:
         return False
     return True
