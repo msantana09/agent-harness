@@ -518,9 +518,8 @@ def _start_job(ctx: _Context, args: argparse.Namespace, parser: argparse.Argumen
             ctx.root, job_id, records.FAILED, error=f"could not start: {exc}", runner_pid=None
         )
         raise
-    if (
-        prepared["state"] in records.TERMINAL_STATES
-    ):  # settled by someone else while this process prepared it
+    # settled by someone else while this process prepared it
+    if prepared["state"] in records.TERMINAL_STATES:
         records.update_job(ctx.root, job_id, runner_pid=None)
         if auto_dir:
             shutil.rmtree(output_dir, ignore_errors=True)
@@ -619,13 +618,11 @@ def _runner_dead(job: dict[str, Any], process: Any) -> bool:
     if pid is None:
         return False
     if process is None or process.pid != pid:
-        process = runner.spawned_runner(
-            pid
-        )  # a runner this process spawned, which no handle was passed for
+        # a runner this process spawned, which no handle was passed for
+        process = runner.spawned_runner(pid)
     if process is not None:
-        return (
-            process.poll() is not None
-        )  # polling reaps the child, so it never lingers as a zombie
+        # polling reaps the child, so it never lingers as a zombie
+        return process.poll() is not None
     return not _pid_alive(pid)
 
 
@@ -724,9 +721,8 @@ def _settle_holder(ctx: _Context, worktree: Path) -> None:
 
 
 def _cmd_release(ctx: _Context, args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
-    _server_settled(
-        ctx, _reconciled(ctx, args.job_id)
-    )  # a job whose runner died is settled first, which stops its app-server
+    # a job whose runner died is settled first, which stops its app-server
+    _server_settled(ctx, _reconciled(ctx, args.job_id))
     _say(worktrees.release_worktree(ctx.root, args.job_id)["worktree"])
     return EXIT_OK
 

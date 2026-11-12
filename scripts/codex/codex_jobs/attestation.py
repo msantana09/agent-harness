@@ -48,15 +48,12 @@ class Snapshot:
     head_sha: str | None
     diff_sha256: str | None
     prompt_sha256: str | None
-    review_target: dict[str, str] | None = (
-        None  # a native review's `review/start` target; None for a prompted review
-    )
-    target_merge_base_sha: str | None = (
-        None  # merge base of a `baseBranch` target's branch and HEAD
-    )
-    uncommitted_tracked: str | None = (
-        None  # `git status --porcelain --untracked-files=no`; None when clean
-    )
+    # a native review's `review/start` target; None for a prompted review
+    review_target: dict[str, str] | None = None
+    # merge base of a `baseBranch` target's branch and HEAD
+    target_merge_base_sha: str | None = None
+    # `git status --porcelain --untracked-files=no`; None when clean
+    uncommitted_tracked: str | None = None
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[bytes]:

@@ -116,9 +116,8 @@ def test_native_review_leaves_the_message_as_review_md_and_no_findings(env, revi
         True,
         None,
     )
-    assert (
-        result["effort_used"] == job["effort_requested"]
-    )  # the effort the thread/start reply reported
+    # the effort the thread/start reply reported
+    assert result["effort_used"] == job["effort_requested"]
     attestation = json.loads((output / "attestation.json").read_text())
     assert (attestation["exit_status"], attestation["prompt_sha256"]) == ("ok", None)
     sent = [
@@ -126,9 +125,8 @@ def test_native_review_leaves_the_message_as_review_md_and_no_findings(env, revi
         for e in records.read_events(env.root / job["job_id"])
         if e["kind"] == "dispatching"
     ]
-    assert sent == [
-        {"thread_id": job["thread_id"], "prior_turn_ids": []}
-    ]  # review/start is journaled like turn/start
+    # review/start is journaled like turn/start
+    assert sent == [{"thread_id": job["thread_id"], "prior_turn_ids": []}]
 
 
 @pytest.mark.parametrize(

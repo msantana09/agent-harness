@@ -547,9 +547,8 @@ def test_consult_job_succeeds_delivers_and_journals_every_notification(lab):
         True,
         None,
     )
-    assert result["output_dir"] == str(
-        lab.output
-    )  # where the deliverable is, for callers that get only result.json
+    # where the deliverable is, for callers that get only result.json
+    assert result["output_dir"] == str(lab.output)
     snapshot = job["admission"]
     assert result["usage"] == {
         "tokens": TOKEN_USAGE,

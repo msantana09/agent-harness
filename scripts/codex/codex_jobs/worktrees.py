@@ -375,9 +375,8 @@ def use_worktree(root: Path, job_id: str, path: str | os.PathLike[str]) -> Workt
     branch = current_branch(top)
     refuse_protected_branch(main, branch)
     with _lease_lock(root, top):
-        _refuse_if_held(
-            root, top
-        )  # a live job's edits make the tree dirty; name the holder, not the edits
+        # a live job's edits make the tree dirty; name the holder, not the edits
+        _refuse_if_held(root, top)
         dirty = git(top, "status", "--porcelain").strip()
         if dirty:
             raise WorktreeError(f"worktree {top} is dirty; commit or discard first:\n{dirty}")

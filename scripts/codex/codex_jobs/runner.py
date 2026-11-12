@@ -3,8 +3,8 @@
 `python3 -m codex_jobs.runner <job_dir> [--adopt] [--crash-at POINT]` is started detached by
 `spawn_runner`. It owns one job from `queued` to a terminal state: slot admission, app-server
 launch, usage check, thread, turn, journal, result, delivery, app-server shutdown. `--adopt` is for
-a job whose
-runner died while its turn still ran: the new runner waits for that turn instead of starting one.
+a job whose runner died while its turn still ran: the new runner waits for that turn instead of
+starting one.
 
 A runner never sends a second `turn/start`. Just before sending it the runner journals a
 `dispatching` event naming the thread and the turns it already held, so a turn whose acceptance
@@ -33,9 +33,8 @@ from . import admission, appserver, attestation, permissions, records, review
 from .appserver import AppServerClient, RpcError
 from .worktrees import WorktreeError
 
-PACKAGE_ROOT = (
-    Path(__file__).resolve().parents[1]
-)  # scripts/codex, the PYTHONPATH of a spawned runner
+# scripts/codex, the PYTHONPATH of a spawned runner
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS_DIR = PACKAGE_ROOT / "schemas"
 
 CRASH_POINTS = (
@@ -50,9 +49,8 @@ CRASH_POINTS = (
 POLL_SECONDS = 1.0
 INTERRUPT_GRACE_SECONDS = 30.0
 NEW_JOB_GRACE_SECONDS = 60.0  # a job created with no owning pid counts as starting, for this long
-USAGE_LIMIT_ERROR = (
-    "usageLimitExceeded"  # the `codexErrorInfo` of a turn that ran out of the account's usage
-)
+# The `codexErrorInfo` of a turn that ran out of the account's usage.
+USAGE_LIMIT_ERROR = "usageLimitExceeded"
 
 # Every file a job can deliver to its `output_dir`.
 DELIVERED_FILES = ("result.json", "answer.md", *review.DELIVERABLES, attestation.ATTESTATION_FILE)
@@ -78,10 +76,8 @@ _RUN_CONTRACT = (
 )
 
 # Codex may ask to run a command outside the sandbox. Every request goes to this runner, which
-# declines
-# and journals it: never to Codex's own auto-reviewer (a user's `approvals_reviewer =
-# "auto_review"`),
-# which could grant a read-only job write access.
+# declines and journals it: never to Codex's own auto-reviewer (a user's `approvals_reviewer =
+# "auto_review"`), which could grant a read-only job write access.
 APPROVAL_POLICY = "on-request"
 APPROVALS_REVIEWER = "user"
 
@@ -191,10 +187,8 @@ def runner_alive(job: dict[str, Any]) -> bool:
         return True
     try:
         os.kill(pid, 0)
-    except (
-        ProcessLookupError,
-        PermissionError,
-    ):  # gone, or another user's process now owns the pid
+    # gone, or another user's process now owns the pid
+    except (ProcessLookupError, PermissionError):
         return False
     return True
 
@@ -568,8 +562,7 @@ def applied_effort(job_dir: Path, thread_id: str | None) -> str | None:
     the journal; None if it never did.
 
     The server sends it after `turn/start`, not after `review/start`: a native review's effort is
-    the one
-    its `thread/start` reply reported.
+    the one its `thread/start` reply reported.
     """
     effort = None
     for event in records.read_events(job_dir):
@@ -659,8 +652,8 @@ def _group_reused(job_dir: Path, pgid: int) -> str | None:
     None.
 
     The group is the job's while its leader runs with the launch argument
-    `unix://<job_dir>/app.sock`,
-    or while the leader is gone or a zombie (a pid is not reused while its group still has members).
+    `unix://<job_dir>/app.sock`, or while the leader is gone or a zombie (a pid is not reused while
+    its group still has members).
     """
     leader = _leader_status(pgid)
     if leader is None or leader[0].startswith("Z"):
@@ -1035,9 +1028,8 @@ def run_job(
     A failure before `turn/start` was sent, or one the server answered with an error, fails the job,
     or cancels it when a cancel was recorded (the cancel is what interrupted the runner's wait), and
     the settled job has its app-server stopped. A failure once `turn/start` was sent and not
-    refused,
-    whether or not its reply arrived, is journaled as `runner_error` and leaves the job and its
-    app-server as they are: reconcile finds the turn on the server (or learns that none started)
+    refused, whether or not its reply arrived, is journaled as `runner_error` and leaves the job and
+    its app-server as they are: reconcile finds the turn on the server (or learns that none started)
     and settles the job from the server or the rollout once this runner has exited.
     """
     run = _Run(Path(job_dir), crash_at, recheck_seconds)

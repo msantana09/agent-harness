@@ -226,9 +226,8 @@ def test_a_finished_runner_is_reaped_by_the_next_tool_call(env):
     pid = records.load_job(env.root, job_id)["runner_pid"]
     exited = os.WEXITED | os.WNOHANG | os.WNOWAIT
     deadline = time.monotonic() + 15
-    while (
-        os.waitid(os.P_PID, pid, exited) is None
-    ):  # WNOWAIT leaves the exited child for the server to reap
+    # WNOWAIT leaves the exited child for the server to reap
+    while os.waitid(os.P_PID, pid, exited) is None:
         assert time.monotonic() < deadline, "the runner never exited"
         time.sleep(0.05)
     env.call("codex_status", {"job_id": job_id})
@@ -363,12 +362,10 @@ def test_wait_with_the_tasks_capability_returns_a_task_then_tasks_get_returns_th
         time.sleep(0.1)
     assert view["status"] == "completed" and view["result"]["isError"] is False
     assert json.loads(env.text(view["result"]))["state"] == "succeeded"
-    assert (
-        "resultType" not in view["result"]
-    )  # the measured completed-task result is {content, isError}
-    again = env.call(
-        "codex_wait", {"job_id": job_id}, meta=TASKS_META
-    )  # a task for a job that already ended carries its result
+    # the measured completed-task result is {content, isError}
+    assert "resultType" not in view["result"]
+    # a task for a job that already ended carries its result
+    again = env.call("codex_wait", {"job_id": job_id}, meta=TASKS_META)
     assert (
         again["resultType"] == "task"
         and again["status"] == "completed"
@@ -422,9 +419,8 @@ def test_submit_with_wait_true_follows_the_job(env):
 
 
 def test_bad_arguments_and_unknown_names_are_reported(env):
-    assert (
-        env.call("codex_consult", {"project_dir": str(env.project)})["isError"] is True
-    )  # no prompt
+    # no prompt
+    assert env.call("codex_consult", {"project_dir": str(env.project)})["isError"] is True
     assert env.call("codex_consult", {"prompt": "x", "prompt_file": "y"})["isError"] is True
     assert env.call("codex_wait", {"job_id": "../etc"})["isError"] is True
     assert env.call("codex_consult", {"prompt": "x", "bogus": 1})["isError"] is True

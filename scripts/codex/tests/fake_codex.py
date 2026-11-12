@@ -13,16 +13,15 @@ Environment (both required):
   FAKE_CODEX_LOG      path of a JSON-lines log the fake appends to
 
 Log records (one JSON object per line, all with "kind" and "t"):
-  start     argv (list), env (dict), cwd, pid, pgid          first record, before anything else
-  child     pid                                              the "spawn_child" process
-  listen    path, bound                                      bound differs when the path was too
-                                                   long
-  client    client (n), event ("open"|"close")      n counts clients whose handshake succeeded,
-                                                   from 1
+  start     argv (list), env (dict), cwd, pid, pgid        first record, before anything else
+  child     pid                                            the "spawn_child" process
+  listen    path, bound                                    bound differs when the path was too long
+  client    client (n), event ("open"|"close")             n counts clients whose handshake
+                                                           succeeded, from 1
   recv      client, msg (parsed JSON) or raw (text that was not JSON)
   send      client, msg
-  pong      client, payload                                  a pong received from a client
-  violation client, detail                                   e.g. an unmasked client frame
+  pong      client, payload                                a pong received from a client
+  violation client, detail                                 e.g. an unmasked client frame
 
 Script (JSON object; every key optional):
   thread_id           id of threads from thread/start            default "thr-fake-1"
@@ -30,8 +29,7 @@ Script (JSON object; every key optional):
   responses           {method: result}  canned results; wins over the built-ins, so
                       "account/rateLimits/read" and any other method carry arbitrary JSON
                       (use the real v2 names, or snake case for a negative canary)
-  errors              {method: {"code", "message", "data"?}}     canned JSON-RPC errors, win over
-                      all
+  errors              {method: {"code", "message", "data"?}}  canned JSON-RPC errors, win over all
   delays              {method: seconds}  the answer to that request comes this long after it arrived
   drop_reply          [method...]  the request takes effect (a turn/start starts its turn) but the
                       answer is never sent: the requesting client's connection is shut down instead
@@ -46,11 +44,10 @@ Script (JSON object; every key optional):
   spawn_child         true: start a `sleep 300` child in the same process group
   ignore_sigterm      true: SIGTERM is ignored (SIGKILL escalation tests)
   notify_on           {method: {"method", "params"}}  a notification sent to the requesting client
-                      right
-                      after the answer to each request of that method (the real server sends one per
-                      thread/read with includeTurns)
-  page_limit          largest page thread/turns/list and thread/items/list return, whatever "limit"
-                      asks
+                      right after the answer to each request of that method (the real server sends
+                      one per thread/read with includeTurns)
+  page_limit          largest page thread/turns/list and thread/items/list return, whatever
+                      "limit" asks
   history             {thread_id: [turn_id...]}  completed turns a thread/resume of that thread
                       starts with
 
@@ -65,33 +62,25 @@ Built-in methods (a "responses" entry replaces the built-in result):
                       starts empty
   thread/read         {"thread": {"id", "status", "turns": [...]}} from the turns played so far, the
                       running turn last with status "inProgress" (turns only when
-                      params.includeTurns
-                      is true, which also sends the requester a deprecationNotice as the real server
-                      does); status is {"type": "active"} during a turn, else {"type": "idle"};
-                      unknown thread -> -32600
+                      params.includeTurns is true, which also sends the requester a
+                      deprecationNotice as the real server does); status is {"type": "active"}
+                      during a turn, else {"type": "idle"}; unknown thread -> -32600
   thread/turns/list   {"data": [turn...], "nextCursor", "backwardsCursor"}: the thread's turns, the
-                      running
-                      one last in time, newest first unless params.sortDirection is "asc".
-                      params.itemsView
-                      "notLoaded" gives `items: []`, "summary" (default) leaves out the agent
-                      messages,
-                      "full" has every item. params.limit and params.cursor page it (the cursor is
-                      opaque
-                      to clients); unknown thread -> -32600
+                      running one last in time, newest first unless params.sortDirection is "asc".
+                      params.itemsView "notLoaded" gives `items: []`, "summary" (default) leaves out
+                      the agent messages, "full" has every item. params.limit and params.cursor page
+                      it (the cursor is opaque to clients); unknown thread -> -32600
   thread/items/list   {"data": [{"turnId", "item", "startedAtMs", "completedAtMs"}...],
-                      "nextCursor",
-                      "backwardsCursor"}: the thread's finished items, oldest first unless
-                      params.sortDirection
-                      is "desc"; params.turnId keeps one turn's items (an unknown turn gives no
-                      items);
-                      params.limit and params.cursor page it; unknown thread -> -32600
+                      "nextCursor", "backwardsCursor"}: the thread's finished items, oldest first
+                      unless params.sortDirection is "desc"; params.turnId keeps one turn's items
+                      (an unknown turn gives no items); params.limit and params.cursor page it;
+                      unknown thread -> -32600
   account/rateLimits/read   {"ordinaryUsageAllowed": true, "rateLimits": {"primary": {...}, ...}}
   turn/start          {"turn": {"id", "status": "inProgress", ...}} then plays the turn
   review/start        {"turn": {"id", "status": "inProgress", ...}, "reviewThreadId":
-                      params.threadId}
-                      then plays the scripted turn as a native review (see below); params must be
-                      exactly
-                      {threadId, target[, delivery]}, else -32600; needs a "turn" script key
+                      params.threadId} then plays the scripted turn as a native review (see below);
+                      params must be exactly {threadId, target[, delivery]}, else -32600; needs a
+                      "turn" script key
   turn/steer          {"turnId"}; expectedTurnId must be the active turn, else -32600
   turn/interrupt      {} and ends the active turn with status "interrupted"
   fake/echo           the params, unchanged (any size)
@@ -99,10 +88,10 @@ Built-in methods (a "responses" entry replaces the built-in result):
   fake/exit           the whole process exits abruptly (os._exit(1))
   fake/never          a request that is never answered
   anything else       -32601 "Method not found"
-Messages never carry a "jsonrpc" key. As measured on the real server (codex 0.167), turn/started,
-item/* and turn/completed go only to the client that sent turn/start (a second client sees none of
-them); when a turn ends every initialized client gets thread/status/changed {status: {type:
-"idle"}}.
+Messages never carry a "jsonrpc" key. As measured on the real server (codex 0.167),
+turn/started, item/* and turn/completed go only to the client that sent turn/start (a second
+client sees none of them); when a turn ends every initialized client gets
+thread/status/changed {status: {type: "idle"}}.
 A client that disconnects mid-turn does not stop the turn: it runs to its end and a later client's
 thread/read returns the result. A server request goes to the client that sent turn/start. An abrupt
 exit (fake/exit, exit_at) leaves the socket file in place, so a later connect gets ECONNREFUSED.
@@ -118,10 +107,8 @@ Turn (the "turn" script key):
   hang                true: after the approvals, wait for turn/interrupt (no scripted end)
   final_delay         seconds to wait before the final answer; a turn/interrupt ends the wait
   final_answer        text; sent as item/completed {item: agentMessage, phase "final_answer"}. A
-                      native
-                      review (review/start) sends enteredReviewMode and exitedReviewMode items
-                      around it
-                      and its agentMessage has phase null, as the real server's does
+                      native review (review/start) sends enteredReviewMode and exitedReviewMode
+                      items around it and its agentMessage has phase null, as the real server's does
   status              "completed" (default) | "failed" | ...  turn/completed status
   error               turn/completed turn.error                default null
   exit_at             "after_turn_start_response" | "after_turn_started" | "after_approval" |
