@@ -87,10 +87,10 @@ they never touch the main context. Use for fan-out-then-verify, loops, unknown-s
 multi-phase work, migrations, and audits.
 
 - **Standing authorization.** The built-in tool text (as of 2.1.296) says "ONLY call this tool
-  when the user has explicitly opted in...". The standing-authorization paragraph in
-  `rules/automation.md` § Orchestrator Mode is that opt-in, written by the user for their own
-  sessions: with it installed, launch Tier-2-shaped work directly and announce a one-line scale
-  note. A user who deletes that paragraph opts in run by run, so ask before each launch.
+  when the user has explicitly opted in...". Keeping the standing-authorization paragraph in
+  `rules/automation.md` § Orchestrator Mode is that opt-in: with it kept, launch Tier-2-shaped
+  work directly and announce a one-line scale note. A user who deletes that paragraph opts in run
+  by run, so ask before each launch.
 - **Script header:** every script begins with `export const meta = { name, description, phases? }`
   as a pure literal (no variables, calls, or interpolation); `name` and `description` are
   required, `phases` optional. Plain JavaScript, not TypeScript.
