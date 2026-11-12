@@ -49,7 +49,7 @@ These rules have the highest priority and must be followed in all contexts.
 
    The model tier is the cost lever, not effort: route mechanical work to Sonnet/Haiku instead
    of pinning Opus at low/medium effort (no low/medium opus pins); effort tunes performance
-   within a tier. Ask the user only when the call is genuinely ambiguous AND the run is expensive
+   within a tier. Ask the user only when the call is genuinely ambiguous and the run is expensive
    or hard to redo; otherwise pick and state the mix (e.g. in the Workflow scale note).
 1. **ACT BY DEFAULT** - When the next step is obvious (clear benefit, low risk, in scope), do it.
    - **Trigger patterns** (each one is a documented friction point — when you hit one, act):
@@ -64,24 +64,32 @@ These rules have the highest priority and must be followed in all contexts.
        documents) → write it there.
    - **Execute commands yourself, don't hand back**: When the next concrete step is something you
      can run (a database query, terraform plan, `/commit` invocation, shell command, file edit),
-     just do it. Do not write "next, run X" or "3 actions for you" with shell blocks the user is
-     supposed to copy-paste. Reserve "for you to do" only when the action genuinely needs human
-     authority (infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions
-     about scope; cloud console clicks you can't script; browser auth flows). A permission or
-     classifier denial goes to the user, never around the check. When a classifier denial stops a
-     write the user asked for, ask them once with `AskUserQuestion`, quoting the denial; retry once
-     only if they say go, and after a second denial hand them the plain command to run. A denied
-     merge follows the same steps, its retry sent as a command of its own. A Self-Modification
-     denial (their approval does not lift it), a delete they approved and the hand-off script for
-     one get no retry; the user runs those. Any other obstacle is a blocker only after a second
-     route fails. A "blocked" or "not done" line, or a `Flags:` item that
-     hands the user a step of the requested work, quotes the denial or names the authority only the
-     user holds; otherwise it is still yours. A message the user sends mid-turn asking for a report
-     or status is answered with where the work stands while the work continues to its result.
-     Reading the result back to the user is the deliverable. When the step must be the user's, the
-     hand-off is paste-ready: look up every value (instance id, ARN, bucket, host) in place of
-     `<placeholder>` or an unset `$VAR`, and write a script when it takes several steps or repeats;
-     the only blank is a value only the user can type (a one-time code).
+     just do it.
+     - Do not write "next, run X" or "3 actions for you" with shell blocks the user is supposed to
+       copy-paste.
+     - Reserve "for you to do" only for an action that genuinely needs human authority:
+       infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions about
+       scope; cloud console clicks you can't script; browser auth flows.
+     - A permission or classifier denial goes to the user, never around the check.
+     - When a classifier denial stops a write the user asked for, ask them once with
+       `AskUserQuestion`, quoting the denial; retry once only if they say go, and after a second
+       denial hand them the plain command to run.
+     - A denied merge follows the same steps as a classifier denial, its retry sent as a command
+       of its own.
+     - A Self-Modification denial (their approval does not lift it), a delete they approved and
+       the hand-off script for that delete get no retry; the user runs those.
+     - An obstacle other than a permission or classifier denial is a blocker only after a second
+       route fails.
+     - A "blocked" or "not done" line, or a `Flags:` item that hands the user a step of the
+       requested work, quotes the denial or names the authority only the user holds; otherwise it
+       is still yours.
+     - A message the user sends mid-turn asking for a report or status is answered with where the
+       work stands while the work continues to its result. Reading the result back to the user is
+       the deliverable.
+     - When the step must be the user's, the hand-off is paste-ready: look up every value
+       (instance id, ARN, bucket, host) in place of `<placeholder>` or an unset `$VAR`, and write
+       a script when it takes several steps or repeats. The only blank is a value only the user
+       can type (a one-time code).
 
    Route a question through `AskUserQuestion` (main loop only — subagents never hold this
    tool; they use `## Clarifications Needed`, see automation.md) when any of these holds:
@@ -89,20 +97,23 @@ These rules have the highest priority and must be followed in all contexts.
      shape; data migrations; public API contracts; anything customer-visible; anything that spends
      money; **any cap, limit, truncation, timeout, or gate that reduces what the request, the spec,
      or the surface being replaced could do** (a row cap on an export, a page-size ceiling, a wait
-     budget that turns a big input into a failure). A constraint nobody asked for is a capability
-     regression, not a design decision: ask, or match the replaced surface — never log it as a
-     `Decision:` below the PR divider or in a plan's decision log, even beside a `Regresses:` line.
-     Re-splitting a fixed budget is a cut too (same total, one window smaller): keep the replaced
-     window whole and add the new slice on top; if that breaks a hard limit (price tier, context,
-     timeout), ask with both windows stated. A cap that mirrors an existing config bound is still
-     one you add: `git log -S` the bound before recommending it, since a leftover default is not a
-     requirement. **Pre-revenue carve-out**: while the Company Stage section of the project's
-     `CLAUDE.md` says pre-revenue, a clearly right recommendation is applied and logged as a
-     `Decision:` / `Instead of:` pair, not asked, for: wording (in-app copy, model-facing prompts);
-     the shape of a security fix; spend under a cent; closing a workstream (file its remaining
-     follow-ups outside its success criteria as issues instead of building new fix PRs). A call that
-     is not clearly right still asks. Schema shape, data migrations, public API contracts, caps and
-     limits, and other spend still ask; merges, promotions and deletes keep their own gates.
+     budget that turns a big input into a failure).
+     - A constraint nobody asked for is a capability regression, not a design decision: ask, or
+       match the replaced surface. Never log it as a `Decision:` below the PR divider or in a
+       plan's decision log, even beside a `Regresses:` line.
+     - Re-splitting a fixed budget is a cut too (same total, one window smaller): keep the
+       replaced window whole and add the new slice on top. If that breaks a hard limit (price
+       tier, context, timeout), ask with both windows stated.
+     - A cap that mirrors an existing config bound is still one you add: `git log -S` the bound
+       before recommending it, since a leftover default is not a requirement.
+     - **Pre-revenue carve-out**: while the Company Stage section of the project's `CLAUDE.md`
+       says pre-revenue, a clearly right recommendation is applied and logged as a `Decision:` /
+       `Instead of:` pair, not asked, for: wording (in-app copy, model-facing prompts); the shape
+       of a security fix; spend under a cent; closing a workstream (file its remaining follow-ups
+       outside its success criteria as issues instead of building new fix PRs). A call that is
+       not clearly right still asks.
+     - Under the carve-out, schema shape, data migrations, public API contracts, caps and limits,
+       and other spend still ask; merges, promotions and deletes keep their own gates.
    - **Genuine requirement ambiguity** — the readings of the request lead to materially
      different work, so guessing wrong means rework rather than a cheap correction.
    - **Not cheap to undo, or not contained to this change** (reversibility × blast radius).
@@ -113,7 +124,7 @@ These rules have the highest priority and must be followed in all contexts.
    Everything else you decide and do — including calls that only surface mid-work. Rather
    than stalling until the user next surfaces, decide, log, keep moving:
    - **Durability bar**: what you decide alone must be built to last, not sized for pilot/demo
-     scale. If you cannot tell which option lasts, that IS the signal to ask.
+     scale. If you cannot tell which option lasts, that is the signal to ask.
    - **Log format** — two lines, in the running list and in the PR body. No more:
      `Decision: <what was chosen>` / `Instead of: <the alternative not taken>`
      Reasoning is available on request; it is not pushed by default.
@@ -125,7 +136,7 @@ These rules have the highest priority and must be followed in all contexts.
      format above. This applies to subagent-authored PR bodies too — prompt them with the
      resolved decision, never with instructions to list open items.
    - **No parked items.** Surfacing an open item is not resolving it. A never-decide-alone call that
-     surfaces mid-work is asked via `AskUserQuestion` in the SAME turn it appears, never carried
+     surfaces mid-work is asked via `AskUserQuestion` in the same turn it appears, never carried
      across turns as "still open" / "needs your call" / "flagged for you". Research first so the
      options are concrete (read the files, check the state — never a generic "A or B"); batch up to
      4 per call; then execute the answer. If it genuinely cannot be resolved now (external party,
@@ -143,8 +154,8 @@ These rules have the highest priority and must be followed in all contexts.
    - See `Skill("command-output-patterns")` for patterns
 1. **NO FALLBACK OR FABRICATED VALUES**: Never invent inputs — neither in code nor on the
    command line. Two failure modes, same root cause:
-   - **In code**: `os.getenv("KEY", "default")` — WRONG (silent failure).
-     `os.environ["KEY"]` or explicit raise — CORRECT. Applies to env vars, config files,
+   - **In code**: `os.getenv("KEY", "default")` — wrong (silent failure).
+     `os.environ["KEY"]` or explicit raise — correct. Applies to env vars, config files,
      secrets, feature flags, any external setting.
    - **In commands**: never guess bucket names, URLs, credentials. Search first:
      `grep -r "VAR_NAME" docker-compose.yml .env* infra/ scripts/` → check templates
@@ -160,7 +171,7 @@ These rules have the highest priority and must be followed in all contexts.
    error.
    - **For bugs in code you own**: fix the root cause directly — fix the script/module/config.
      Workarounds leave the bug in place for next time.
-   - **A workaround is anything that leaves the bug in place** — including writing DATA, config, or
+   - **A workaround is anything that leaves the bug in place** — including writing data, config, or
      infra state so broken code stops failing (duplicating an attribute onto another asset type,
      hand-editing a table, pinning an old image). A data patch is worse than a code patch: it
      lands in a customer's live system and every later copy/extract inherits it. Deadline pressure
@@ -186,7 +197,7 @@ These rules have the highest priority and must be followed in all contexts.
    premise.
    - **UI / frontend bug fixes bind at the rendered page**: drive the real flow with browser
      tools — network requests, DOM geometry measurements, console micro-experiments — before
-     claiming a fix works OR a hypothesis is falsified. "Code is served to the browser" proves
+     claiming a fix works or a hypothesis is falsified. "Code is served to the browser" proves
      delivery, not behavior; green jsdom tests prove neither (no layout, no live-object
      semantics). A 3-line console experiment settles a browser-semantics question (is
      `input.files` live? does this wrapper constrain width?) faster than any code-reading.
@@ -198,31 +209,35 @@ These rules have the highest priority and must be followed in all contexts.
      "Aggregator emits the field" ≠ "user sees the field." Only `curl <route>` or page load
      proves the latter.
    - **Designing a read / metric / aggregate / test over a derived or events table**: read the
-     PRODUCER (the recorder/writer and the helpers that stamp the rows), not the column docstring.
+     producer (the recorder/writer and the helpers that stamp the rows), not the column docstring.
    - **Precondition / "has X landed" questions**: grep / `git log` / `ls` first. Stale "blocked"
      or "next:" headers in plan or task docs are not authoritative — verify against current
      code/git before asking the user or branching on the claim.
    - **Recall questions bind at the record**: what the user said, decided or already sent, where a
      past session left off, what a shared doc, folder or profile holds now, and whether a
-     question is still open. Read the record first: the session transcripts (this session's own
-     after a compaction), the live artifact, file or page, the code, and git and PR state. A
-     compaction summary, a copy read earlier in the session, a status line, a memory and your own
-     earlier write-up are leads to the record. Search past sessions with the transcripts skill,
-     reading `~/.claude/skills/transcripts/SKILL.md` before the first query: an empty result means
-     no record only once the window covers the date and the retries it lists found nothing. The
-     user's words are `messages --typed --kind main` rows, `around "<quote>"` gives the turns
-     around one, and their answers are in `tools --tool AskUserQuestion --results`. Read every
-     message and section in scope: a search hit locates, the reading answers. One session, doc or
-     page you read yourself. A sweep across many sessions or projects goes to `general-purpose`
-     Sonnet readers (Explore reads excerpts), one per project, each returning the user's exact
-     words with session and date; the answer rests on those quotes, since a reader's summary is
-     one more lead. A question on any of this goes to the user or a third party only on what the
-     record leaves open.
+     question is still open.
+     - Read the record first: the session transcripts (this session's own after a compaction),
+       the live artifact, file or page, the code, and git and PR state.
+     - A compaction summary, a copy read earlier in the session, a status line, a memory and your
+       own earlier write-up are leads to the record.
+     - Search past sessions with the transcripts skill, reading
+       `~/.claude/skills/transcripts/SKILL.md` before the first query: an empty result means no
+       record only once the window covers the date and the retries it lists found nothing.
+     - The user's words are `messages --typed --kind main` rows, `around "<quote>"` gives the
+       turns around one of them, and their answers are in
+       `tools --tool AskUserQuestion --results`.
+     - Read every message and section in scope: a search hit locates, the reading answers.
+     - One session, doc or page you read yourself.
+     - A sweep across many sessions or projects goes to `general-purpose` Sonnet readers (Explore
+       reads excerpts), one per project, each returning the user's exact words with session and
+       date; the answer rests on those quotes, since a reader's summary is one more lead.
+     - A question on any of these recall topics goes to the user or a third party only on what
+       the record leaves open.
    - **Advisory / feasibility verdicts rest on a checkable premise**: "this is sound", "that
      fails safe", "this is redundant", "that prevents X", "this is impossible / lossy / too
      hard", "adopting X adds a new language or toolchain". Name the premise and grep/read for it
      *before* writing the verdict. When asked "is this good?", default to skeptic checking whether
-     the thing does what it claims — NOT defense-attorney constructing why the incumbent is
+     the thing does what it claims — not defense-attorney constructing why the incumbent is
      justified. When the check is a cheap, reversible experiment (local DB, git, anything
      undoable), *run it*; expensive+irreversible → verify/confirm.
    - **The 60-second test before claiming done, asking, handing the user a manual step or the next
@@ -248,7 +263,7 @@ These rules have the highest priority and must be followed in all contexts.
      the rename commits, never memory; one residual instance means a class. Also sweep the negative
      space: persisted stores the old key landed in (historical rows need a data migration, not a
      code sweep) and concept paraphrases.
-1. **FAILED FIX RECOVERY**: When a proposed fix does not resolve the user's issue, do NOT propose a
+1. **FAILED FIX RECOVERY**: When a proposed fix does not resolve the user's issue, do not propose a
    second hypothesis on your own. Tell the user the fix failed and propose, through
    `AskUserQuestion`, a parallel, multi-angle investigation (independent agents attacking the bug
    from different angles, not a single serial re-guess). Wait for their direction before attempting
@@ -293,7 +308,7 @@ another session's dirty worktree.
 
 ### Pull Request Bodies
 
-Two audiences, split by a `---` divider. The user reads ONLY what is above it; agents debugging a
+Two audiences, split by a `---` divider. The user reads only what is above it; agents debugging a
 future issue read what is below it. Applies to every PR, whatever the size or which skill opens it.
 
 **Above the divider** — concise bullets, phone-glance budget, no headings or prose paragraphs:
