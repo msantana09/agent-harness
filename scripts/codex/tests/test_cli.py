@@ -327,6 +327,15 @@ def test_cancel_marks_the_job_cancelled(env):
     assert job["state"] == "cancelled" and job["cancel_requested_at"]
 
 
+def _group_exists(pgid: int) -> bool:
+    try:
+        # Signal 0 only probes: it raises once no process is left in the group.
+        os.killpg(pgid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
 def test_cancel_leaves_a_reused_process_group_alone(env, monkeypatch):
     env.script(hang=True)
     job_id = env.start_detached()
@@ -337,7 +346,7 @@ def test_cancel_leaves_a_reused_process_group_alone(env, monkeypatch):
     monkeypatch.setattr(cli, "CANCEL_SETTLE_SECONDS", 0)
     env.run("cancel", job_id)
     try:
-        os.killpg(unrelated.pgid, 0)
+        assert _group_exists(unrelated.pgid)
     finally:
         records.update_job(env.root, job_id, pgid=own_pgid)
 
