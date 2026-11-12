@@ -1,8 +1,9 @@
 """Read Claude Code session transcripts: which records count, who typed what, and when.
 
-Holds the record and typed-message rules both scripts share, and one `load()` that finds the
-files, reads the window and reports what it could not use. Imported by scan.py and
-corrections.py; it prints nothing to stdout and makes no model calls.
+Holds the record and typed-message rules its callers share, and one `load()` that finds the
+files, reads the window and reports what it could not use. Imported by index.py and read.py in
+this folder and by scan.py and corrections.py in the self-optimize skill; it prints nothing to
+stdout and makes no model calls.
 
     import transcripts
     loaded = transcripts.load(args, "scan.py", subagents=True)
