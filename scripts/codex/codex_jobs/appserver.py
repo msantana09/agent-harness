@@ -25,9 +25,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-MAX_MESSAGE_BYTES = (
-    16 * 1024 * 1024
-)  # the server's x-codex-websocket-max-unfragmented-message-bytes
+# The server's x-codex-websocket-max-unfragmented-message-bytes.
+MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 DEFAULT_STARTUP_TIMEOUT = 30.0
 DEFAULT_STOP_GRACE = 5.0
 TOKEN_COMMAND_ENV = "CODEX_JOBS_GH_TOKEN_COMMAND"
@@ -621,14 +620,13 @@ def launch_app_server(
     the socket.
 
     Commands always run in a non-login shell (`-c allow_login_shell=false`). `extra_config` is a
-    list of `key=value` strings, each passed as `-c key=value`. The environment
-    is `build_app_server_env`; `token_resolver(repo_dir)` supplies GH_TOKEN, and when it returns one
+    list of `key=value` strings, each passed as `-c key=value`. The environment is
+    `build_app_server_env`; `token_resolver(repo_dir)` supplies GH_TOKEN, and when it returns one
     the launcher also sets `shell_environment_policy.ignore_default_excludes=true`. Output goes to
     `<job_dir>/app-server.log`. `on_spawn(pid, pgid)` is called as soon as the process exists,
-    before the wait for its socket, so a caller can record what to stop if it dies during that
-    wait. On
-    failure to listen, or when `on_spawn` raises, the process group is stopped; a failure to listen
-    raises `AppServerStartError` with the log tail.
+    before the wait for its socket, so a caller can record what to stop if it dies during that wait.
+    On failure to listen, or when `on_spawn` raises, the process group is stopped; a failure to
+    listen raises `AppServerStartError` with the log tail.
     """
     job_dir = Path(job_dir)
     socket_path = job_dir / "app.sock"

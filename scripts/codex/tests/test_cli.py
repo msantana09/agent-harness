@@ -388,9 +388,8 @@ def test_review_delivers_its_files_and_prints_the_output_dir(env, review_repo):
         "high",
     )
     output = Path(job["output_dir"])
-    assert output.is_relative_to(
-        review_repo / ".artifacts" / "codex"
-    )  # where a gate looks for attestation.json
+    # where a gate looks for attestation.json
+    assert output.is_relative_to(review_repo / ".artifacts" / "codex")
     assert sorted(p.name for p in output.iterdir() if p.name != ".gitignore") == [
         "attestation.json", "findings.json", "findings.md", "result.json", "review.md",
     ]  # fmt: skip
@@ -754,9 +753,8 @@ def test_fork_of_a_run_job_is_read_only(env, repo):
         str(env.fake.bin),
         "--wait",
     )
-    assert (
-        code == 1
-    )  # the fake answers the fork turn with the task envelope, which the consult schema rejects
+    # the fake answers the fork turn with the task envelope, which the consult schema rejects
+    assert code == 1
     (forked,) = [job for job in env.jobs() if job["parent_job_id"] == first["job_id"]]
     assert (forked["kind"], forked["sandbox"], forked["worktree"]) == ("consult", "read-only", None)
     (opened,) = env.sent("thread/fork")

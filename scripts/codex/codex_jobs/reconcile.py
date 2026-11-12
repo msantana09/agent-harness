@@ -1,8 +1,8 @@
 """Settle jobs whose runner died, from the job's app-server or Codex's rollout file.
 
 A job is acted on only when its runner process is gone and it is not terminal or still has an
-app-server to stop. Reconcile never
-sends `turn/start`: a turn that did not start is failed, never retried. Routes, in order:
+app-server to stop. Reconcile never sends `turn/start`: a turn that did not start is failed, never
+retried. Routes, in order:
 
 1. no `turn_id` recorded and no `dispatching` event: the runner stopped before sending
    `turn/start`, and the job failed.
@@ -38,12 +38,8 @@ from .appserver import AppServerClient, ConnectionClosed, ProtocolError, RpcErro
 from .runner import TurnOutcome
 
 PROBE_TIMEOUT = 10.0
-_SERVER_DOWN = (
-    OSError,
-    ConnectionClosed,
-    ProtocolError,
-    RpcError,
-)  # OSError covers refused, missing and timed-out sockets
+# OSError covers refused, missing and timed-out sockets
+_SERVER_DOWN = (OSError, ConnectionClosed, ProtocolError, RpcError)
 
 
 @contextmanager
@@ -76,9 +72,8 @@ def _probe_server(job_dir: Path, job: dict[str, Any]) -> TurnOutcome | str | Non
         return None
 
 
-ROLLOUT_STAMP_LENGTH = len("rollout-") + len(
-    "2026-11-08T12-00-00"
-)  # the filename prefix that orders rollouts in time
+# the filename prefix that orders rollouts in time
+ROLLOUT_STAMP_LENGTH = len("rollout-") + len("2026-11-08T12-00-00")
 
 
 def _rollout_rows(path: Path) -> Iterator[dict[str, Any]]:

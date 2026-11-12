@@ -305,15 +305,13 @@ def create_job(
     `model_requested` is what the caller asked for (a tier or a slug); `model_slug` is the model id
     it resolved to, which the runner sends to Codex without resolving again, and
     `catalog_fetched_at` is the model catalog's `fetched_at` at that resolution. `codex_bin` is the
-    resolved Codex executable the runner launches. `images` are absolute
-    paths sent with the prompt. `allow_commit` lets a `run` job commit to its branch; `worktree`,
-    `branch` and `base_commit` are set (with `cwd`) once the job holds its worktree. `source_mode`
-    (`resume` or `fork`) and `source_thread_id` go
-    together: the job continues or branches that thread instead of starting a new one.
-    `review_target` (a `review/start` target object) makes a review job run Codex's built-in
-    reviewer on it.
-    `runner_pid` is the live process that owns the job from the first write: the submitting CLI,
-    until the runner it spawns records its own pid.
+    resolved Codex executable the runner launches. `images` are absolute paths sent with the prompt.
+    `allow_commit` lets a `run` job commit to its branch; `worktree`, `branch` and `base_commit` are
+    set (with `cwd`) once the job holds its worktree. `source_mode` (`resume` or `fork`) and
+    `source_thread_id` go together: the job continues or branches that thread instead of starting a
+    new one. `review_target` (a `review/start` target object) makes a review job run Codex's
+    built-in reviewer on it. `runner_pid` is the live process that owns the job from the first
+    write: the submitting CLI, until the runner it spawns records its own pid.
 
     With an idempotency key already owned by another job, no job is created: the owner's
     record is returned with `created=False`.
