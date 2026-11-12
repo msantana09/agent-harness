@@ -94,7 +94,9 @@ and merge any new `hooks` entries from the repo's `settings.json` into yours.
 
 With the rules installed, the agent files a GitHub issue in the repo it is working in for each
 defect it finds and does not fix, and creates the `finding` and `priority` labels there if they
-are missing.
+are missing. The rules also opt you in to the agent launching Workflows without asking first;
+delete the "Standing authorization" paragraph under Orchestrator Mode in `rules/automation.md` to
+be asked before each run.
 
 To try the skills alone, install them as a Claude Code plugin. It carries no rules, hooks or
 scripts, so codex, ship, command-output-patterns and agent-patterns, which run the scripts, need

@@ -80,12 +80,11 @@ Count is only a tiebreaker.
 
 See `references/harness-api.md` for each mechanism's exact API, limits, and gating.
 
-The Workflow tool runs only on the user's opt-in. The standing authorization, the user's
-written opt-in for their own sessions, and its launch/announce obligations are in
-`rules/automation.md` § Orchestrator Mode — it binds here; without that paragraph, ask before
-each launch. The lone-spawn rule and per-stage
-effort selection live in `rules/core-rules.md` § Orchestration & Execution Rules (item EXECUTE
-DIRECTLY, DELEGATE WHEN IT PAYS).
+The Workflow tool runs only on the user's opt-in. Keeping the standing authorization paragraph
+in `rules/automation.md` § Orchestrator Mode is that opt-in, and the paragraph holds the
+launch/announce obligations, which bind here; if the user deleted it, ask before each launch.
+The lone-spawn rule and per-stage effort selection live in `rules/core-rules.md` §
+Orchestration & Execution Rules (item EXECUTE DIRECTLY, DELEGATE WHEN IT PAYS).
 
 ## Agent Selection
 
