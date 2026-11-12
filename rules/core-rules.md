@@ -67,9 +67,9 @@ These rules have the highest priority and must be followed in all contexts.
      just do it.
      - Do not write "next, run X" or "3 actions for you" with shell blocks the user is supposed to
        copy-paste.
-     - Reserve "for you to do" only for an action that genuinely needs human authority:
-       infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions about
-       scope; cloud console clicks you can't script; browser auth flows.
+     - Reserve "for you to do" only when the action genuinely needs human authority
+       (infrastructure mutations a hook blocks; prod deploys explicitly gated; decisions about
+       scope; cloud console clicks you can't script; browser auth flows).
      - A permission or classifier denial goes to the user, never around the check.
      - When a classifier denial stops a write the user asked for, ask them once with
        `AskUserQuestion`, quoting the denial; retry once only if they say go, and after a second
