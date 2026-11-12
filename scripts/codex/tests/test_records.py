@@ -103,6 +103,9 @@ def test_full_chain_through_running(tmp_path):
     job, _ = _create(tmp_path)
     for state in [*CHAIN, "succeeded"]:
         records.transition(tmp_path, job["job_id"], state)
+    assert records.load_job(tmp_path, job["job_id"])["state"] == "succeeded"
+    events = records.read_events(tmp_path / job["job_id"])
+    assert [e["data"]["to"] for e in events[1:]] == [*CHAIN, "succeeded"]
 
 
 def test_illegal_transition_raises_and_leaves_record_unchanged(tmp_path):
