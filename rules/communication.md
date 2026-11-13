@@ -1,5 +1,7 @@
 # Communication Preferences
 
+How replies are written, and which calls stay the user's.
+
 ## Default Output Budget (HIGHEST PRIORITY in this file)
 
 The user runs several sessions at once and reads turn-final messages on a phone-glance budget.
