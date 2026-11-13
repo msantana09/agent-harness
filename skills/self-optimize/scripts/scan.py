@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Summarize recent Claude Code session transcripts: activity, interruptions, hook blocks,
-skill loads and spend.
+tool errors, skill loads and spend.
 
 Reads the JSONL transcripts Claude Code keeps under <config dir>/projects and prints a markdown
 report. Standard library only; makes no model calls.
@@ -27,6 +27,11 @@ blocking hooks are told apart, is in transcripts.py. Beyond that:
   (the pattern, file or command one block was about), so a hook that checks several patterns
   can be counted per pattern. The report leaves out a part every block quotes, which is the
   rule's own text.
+* Each tool error names how many sessions it touched, the session with the most of it and how
+  many of it came from subagents; a subagent's errors count under the session it ran in. Errors
+  are ranked by sessions touched, then by count, so one session stuck in a loop does not outrank
+  an error that recurs across sessions. The report lists the first TOOL_ERRORS_SHOWN and counts
+  the rest; --json has every one.
 * A skill load is counted by how it loaded (a Skill tool call, typed as a slash command, or
   preloaded by an agent definition). A typed command counts only when it names an installed
   skill, since built-in commands look the same.
@@ -54,6 +59,7 @@ import transcripts  # noqa: E402
 
 HOOK_VALUES_SHOWN = 3  # quoted parts listed under a hook block in the report; --json has all
 HOOK_VALUE_CHARS = 60  # each shown at most this long, its middle cut; --json has it whole
+TOOL_ERRORS_SHOWN = 20  # tool errors listed in the report; --json has all
 
 type Summary = dict[str, Any]
 
@@ -179,11 +185,43 @@ def hooks_summary(read: list[transcripts.Transcript]) -> list[Summary]:
                 quoted[hook][part] += n
     rows = []
     for hook, n in counts.most_common():
-        session, most = min(per_session[hook].items(), key=lambda item: (-item[1], item[0]))
-        worst = {"session": session, "project": projects[session], "count": most}
+        worst = worst_session(per_session[hook], projects)
         values = [{"value": v, "count": c} for v, c in quoted[hook].most_common()]
         rows.append({"hook": hook, "count": n, "worst_session": worst, "values": values})
     return rows
+
+
+def worst_session(per_session: Counter[str], projects: dict[str, str]) -> Summary:
+    """The session with the most of one thing, the first by id on a tie."""
+    session, most = min(per_session.items(), key=lambda item: (-item[1], item[0]))
+    return {"session": session, "project": projects[session], "count": most}
+
+
+def errors_summary(
+    mains: list[transcripts.Transcript], subs: list[transcripts.Transcript]
+) -> list[Summary]:
+    """Each tool error's count, the sessions it touched, the session with the most of it and
+    how many of it came from subagents, ranked by sessions touched, then count."""
+    per_session: dict[str, Counter[str]] = defaultdict(Counter)
+    in_subagents: Counter[str] = Counter()
+    projects: dict[str, str] = {}
+    for t in mains + subs:
+        projects.setdefault(t.session, t.project)
+        for error, n in t.tool_errors.items():
+            per_session[error][t.session] += n
+    for t in subs:
+        in_subagents.update(t.tool_errors)
+    rows = [
+        {
+            "error": error,
+            "count": sum(sessions.values()),
+            "sessions": len(sessions),
+            "in_subagents": in_subagents[error],
+            "worst_session": worst_session(sessions, projects),
+        }
+        for error, sessions in per_session.items()
+    ]
+    return sorted(rows, key=lambda r: (-r["sessions"], -r["count"], r["error"]))
 
 
 def skills_summary(
@@ -222,6 +260,7 @@ def summarize(
         "activity": activity_summary(mains),
         "interrupts": stops_summary(mains),
         "hook_blocks": hooks_summary(mains + subs),
+        "tool_errors": errors_summary(mains, subs),
         "skills": skills_summary(mains, subs),
         "spend": spend_summary(mains + subs),
     }
@@ -291,6 +330,26 @@ def render_hooks(hooks: list[Summary]) -> list[str]:
     return lines
 
 
+def render_tool_errors(errors: list[Summary]) -> list[str]:
+    if not errors:
+        return []
+    lines = ["## Tool errors"]
+    for e in errors[:TOOL_ERRORS_SHOWN]:
+        worst = e["worst_session"]
+        lines.append(
+            f"- {e['count']}x in {plural(e['sessions'], 'session')}  {e['error']}  "
+            f"(most in {worst['session']} {worst['project']}, {worst['count']}; "
+            f"{e['in_subagents']} in subagents)"
+        )
+    rest = errors[TOOL_ERRORS_SHOWN:]
+    if rest:
+        lines.append(
+            f"- {plural(len(rest), 'other error')} not listed, "
+            f"{sum(e['count'] for e in rest):,} in all; --json has them"
+        )
+    return lines
+
+
 def render_skills(skills: Summary) -> list[str]:
     if not skills["loads"] and not skills["installed"]:
         return []
@@ -338,6 +397,7 @@ def render_markdown(summary: Summary) -> str:
         render_activity(summary["activity"], summary["window"]["label"]),
         render_interrupts(summary["interrupts"]),
         render_hooks(summary["hook_blocks"]),
+        render_tool_errors(summary["tool_errors"]),
         render_skills(summary["skills"]),
         render_spend(summary["spend"]),
     ]

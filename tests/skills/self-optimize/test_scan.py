@@ -2,6 +2,7 @@
 fixtures/ beside this file."""
 
 import json
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -353,6 +354,103 @@ def test_each_hook_block_counts_every_quoted_part_of_its_messages(
     assert "  - quoted: `DROP\\s+DATABASE` 2, `\\beval\\b` 1\n" in out
 
 
+EDIT_BEFORE_READ = "Edit: File has not been read yet. Read it first before writing to it."
+
+
+def test_tool_errors_are_counted_by_name_leaving_out_hook_blocks_and_rejections(
+    scan: ModuleType, place: Place, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    root = place({BASIC: "tool_errors.jsonl"})
+    _, numbers, _, _ = run_scan(scan, capsys, tmp_path, "--root", str(root))
+    assert {e["error"]: e["count"] for e in numbers["tool_errors"]} == {
+        EDIT_BEFORE_READ: 2,
+        "Bash exit 1: (eval):…: no matches found: …": 1,
+        "Bash exit 1: ModuleNotFoundError: No module named …": 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("tool", "text", "name"),
+    [
+        (
+            "Edit",
+            "<tool_use_error>File has been modified since read.</tool_use_error>",
+            "Edit: File has been modified since read.",
+        ),
+        (
+            "Bash",
+            "Exit code 127\nzsh: command not found: rg",
+            "Bash exit 127: zsh: command not found: rg",
+        ),
+        ("Bash", "Exit code 1", "Bash exit 1"),
+        (
+            "Bash",
+            "Exit code 1\nTraceback (most recent call last):\n"
+            '  File "x.py", line 9\nKeyError: \'id\'',
+            "Bash exit 1: KeyError: …",
+        ),
+        (
+            "Read",
+            "File content (31337 tokens) exceeds maximum allowed tokens (25000).",
+            "Read: File content (… tokens) exceeds maximum allowed tokens (…).",
+        ),
+    ],
+)
+def test_a_tool_error_is_named_by_the_line_that_names_the_failure(
+    scripts: dict[str, ModuleType], tool: str, text: str, name: str
+) -> None:
+    assert scripts["transcripts"].tool_error_name(tool, text) == name
+
+
+def test_each_tool_error_names_its_sessions_worst_session_and_subagent_count(
+    scan: ModuleType, place: Place, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    root = place(
+        {
+            BASIC: "tool_errors.jsonl",
+            OTHER: "one_interrupt.jsonl",
+            f"{OTHER}/subagents/agent-1": "tool_errors_subagent.jsonl",
+        }
+    )
+    _, numbers, out, _ = run_scan(scan, capsys, tmp_path, "--root", str(root))
+    assert numbers["tool_errors"][0] == {
+        "error": EDIT_BEFORE_READ,
+        "count": 3,
+        "sessions": 2,
+        "in_subagents": 1,
+        "worst_session": {"session": "aaaa1111", "project": "demo", "count": 2},
+    }
+    line = f"- 3x in 2 sessions  {EDIT_BEFORE_READ}  (most in aaaa1111 demo, 2; 1 in subagents)"
+    assert line in out
+
+
+def test_tool_errors_are_ranked_by_sessions_touched_before_count(
+    scan: ModuleType, scripts: dict[str, ModuleType]
+) -> None:
+    transcript = scripts["transcripts"].Transcript
+    loop = transcript(Path("a.jsonl"), "aaaa1111", tool_errors=Counter({"Bash exit 1": 9}))
+    spread = [
+        transcript(Path(f"{s}.jsonl"), s, tool_errors=Counter({EDIT_BEFORE_READ: 1}))
+        for s in ("bbbb2222", "cccc3333")
+    ]
+    rows = scan.errors_summary([loop, *spread], [])
+    assert [r["error"] for r in rows] == [EDIT_BEFORE_READ, "Bash exit 1"]
+
+
+def test_the_report_lists_the_first_tool_errors_and_counts_the_rest(
+    scan: ModuleType,
+    place: Place,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(scan, "TOOL_ERRORS_SHOWN", 1)
+    root = place({BASIC: "tool_errors.jsonl"})
+    _, numbers, out, _ = run_scan(scan, capsys, tmp_path, "--root", str(root))
+    assert len(numbers["tool_errors"]) == 3
+    assert "- 2 other errors not listed, 2 in all; --json has them" in out
+
+
 def install_skills(config_dir: Path, *names: str) -> None:
     for name in names:
         manifest = config_dir / "skills" / name / "SKILL.md"
@@ -469,12 +567,13 @@ def test_sections_appear_in_order(
     config_dir: Path,
 ) -> None:
     install_skills(config_dir, "review")
-    root = place({BASIC: "basic.jsonl"})
+    root = place({BASIC: "basic.jsonl", OTHER: "tool_errors.jsonl"})
     _, _, out, _ = run_scan(scan, capsys, tmp_path, "--root", str(root))
     assert headings(out) == [
         "## Activity",
         "## Interrupted turns",
         "## Hook blocks",
+        "## Tool errors",
         "## Skills",
         "## Spend",
     ]

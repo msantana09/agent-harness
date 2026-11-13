@@ -31,8 +31,8 @@ flowchart TD
     ledger -. next run .-> scan
 ```
 
-1. **Scan** counts sessions, interrupted turns, hook blocks, skills that never load and spend.
-   It reads files only and costs nothing.
+1. **Scan** counts sessions, interrupted turns, hook blocks, other failed tool calls, skills that
+   never load and spend. It reads files only and costs nothing.
 2. **Flag corrections**: a small model reads the messages you typed, each with up to the last 400
    characters of the agent's reply, question or rejected command that came before it, and flags
    the ones that correct the agent or state a preference. Each one is quoted exactly from the

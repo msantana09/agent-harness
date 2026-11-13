@@ -41,6 +41,11 @@ How the counts are made:
   paths and numbers in the message are masked so one rule keeps one name; the message's quoted
   spans are kept beside the name, so the patterns one rule checks can still be counted apart. The
   message is the name because Claude Code often records a hook's command only as `command hook 1`.
+* A tool error is a failed tool call that no hook blocked and the user did not reject. It is
+  named by its tool and the line of its result that names the failure, masked as a hook block's
+  message is (`Edit: File has not been read yet.`). A failed shell command adds its exit code,
+  since 1, 2 and 127 fail for different reasons, and a Python traceback is named by its last
+  line, the exception, since every traceback starts alike.
 * A window with `--until` ends at the midnight after that date. `--days N` counts back from the
   window's end: N whole days through `--until`, or N times 24 hours before now without it.
 """
@@ -77,6 +82,14 @@ SKILL_FORMAT_TAG = "<skill-format>true</skill-format>"
 # A hook that blocked a tool call shows up in the tool result as "PreToolUse:Bash hook error: ...".
 TOOL_HOOK_ERROR = re.compile(r"(?:Error: )?(\w+:\S+) hook error:?(.*)", re.DOTALL)
 HOOK_MESSAGE_CHARS = 60
+# The tool result of a call the user rejected, with or without feedback.
+REJECTED_CALL = re.compile(r"(?:Error: )?The user doesn't want to proceed with this tool use")
+# Claude Code wraps the errors it raises itself (a bad parameter, an edit before a read) in this.
+TOOL_USE_ERROR_TAG = re.compile(r"</?tool_use_error>")
+# A failed shell command's result: its exit code, then what it printed.
+EXIT_CODE = re.compile(r"Exit code (\d+)\n?(.*)", re.DOTALL)
+TRACEBACK_START = "Traceback (most recent call last)"
+TOOL_ERROR_CHARS = 80
 # A quote mark inside a word (the apostrophe in "project's") neither opens nor closes a span.
 QUOTED_SPAN = re.compile(r"`[^`\n]*`|(?<!\w)'[^'\n]*'(?!\w)|(?<!\w)\"[^\"\n]*\"(?!\w)")
 BARE_PATH = re.compile(r"(?<!\S)([(\[{<'\"`]*)\S*/\S*?([,.:;)\]}>'\"`]*)(?!\S)")
@@ -218,6 +231,16 @@ def tool_calls(record: Record) -> dict[str, str]:
     return calls
 
 
+def tool_names(record: Record) -> dict[str, str]:
+    """{tool_use id: tool name} for the tool calls in one assistant record."""
+    content = message_content(record)
+    return {
+        block.get("id") or "": block.get("name") or "Unknown"
+        for block in (content if isinstance(content, list) else [])
+        if isinstance(block, dict) and block.get("type") == "tool_use"
+    }
+
+
 def user_answers(record: Record, calls: dict[str, str]) -> list[tuple[str, str, bool]]:
     """The user's own words inside one tool-result record, as (context, text, typed) triples.
 
@@ -322,6 +345,41 @@ def blocking_hooks(record: Record) -> list[tuple[str, tuple[str, ...]]]:
                 event, message = found.group(1), found.group(2)
                 blocks.append((hook_block_name(event, message), quoted_parts(message)))
     return blocks
+
+
+def tool_error_name(tool: str, text: str) -> str:
+    """`tool`, with a shell command's exit code, and the line of its error that names the
+    failure: the first line it printed, or a traceback's last. Quoted spans, paths and numbers in
+    that line are masked."""
+    text = TOOL_USE_ERROR_TAG.sub("", text).strip().removeprefix("Error: ")
+    exited = EXIT_CODE.match(text)
+    if exited:
+        tool, text = f"{tool} exit {exited.group(1)}", exited.group(2)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        return tool
+    line = lines[-1] if lines[0].startswith(TRACEBACK_START) else lines[0]
+    return f"{tool}: {mask_variable_parts(line)[:TOOL_ERROR_CHARS].rstrip()}"
+
+
+def tool_errors(record: Record, tools: dict[str, str]) -> list[str]:
+    """The name of each tool error in one user record. `tools` maps a tool_use id to its tool.
+
+    A call a hook blocked counts as a hook block, and one the user rejected as a stop, so
+    neither is a tool error.
+    """
+    content = message_content(record) if record.get("type") == "user" else None
+    found = []
+    for block in content if isinstance(content, list) else []:
+        if not (
+            isinstance(block, dict) and block.get("type") == "tool_result" and block.get("is_error")
+        ):
+            continue
+        text = tool_result_text(block)
+        if TOOL_HOOK_ERROR.match(text) or REJECTED_CALL.match(text):
+            continue
+        found.append(tool_error_name(tools.get(block.get("tool_use_id") or "", "Unknown"), text))
+    return found
 
 
 def tool_result_text(block: Record) -> str:
@@ -464,6 +522,7 @@ class Transcript:
     stops: Counter[str] = field(default_factory=Counter)  # "interrupt" / "rejection"
     # (name, quoted parts) of each hook block
     hook_blocks: Counter[tuple[str, tuple[str, ...]]] = field(default_factory=Counter)
+    tool_errors: Counter[str] = field(default_factory=Counter)  # by name (see tool_error_name)
     skill_loads: list[tuple[str, str]] = field(default_factory=list)
     requests: dict[str, Request] = field(default_factory=dict)
     uuids: set[str] = field(default_factory=set)  # in-window records this file wrote itself
@@ -490,9 +549,11 @@ class Conversation:
         self.after_api_error = False  # the assistant's last turn was an API error
         self.last_typed = ""
         self.calls: dict[str, str] = {}
+        self.tools: dict[str, str] = {}
 
     def see_assistant(self, record: Record) -> None:
         self.calls.update(tool_calls(record))
+        self.tools.update(tool_names(record))
         self.after_api_error = bool(record.get("isApiErrorMessage"))
         text = message_text(record)
         if text:
@@ -543,7 +604,7 @@ def read_transcript(
     """Read one file once. `seen` holds the uuids of in-window records of earlier files.
 
     Only the main transcript of a session has activity, interrupts and typed messages; a subagent
-    file contributes hook blocks, skill loads and spend.
+    file contributes hook blocks, tool errors, skill loads and spend.
     """
     transcript = Transcript(path, session_of(path, subagent))
     talk = Conversation()
@@ -570,6 +631,7 @@ def read_transcript(
         if uuid:
             transcript.uuids.add(uuid)
         transcript.hook_blocks.update(blocking_hooks(record))
+        transcript.tool_errors.update(tool_errors(record, talk.tools))
         if kind == "user":
             load = skill_load(record)
             if load:
