@@ -386,7 +386,7 @@ def test_tool_errors_are_counted_by_name_leaving_out_hook_blocks_and_rejections(
         (
             "Bash",
             "Exit code 1\nTraceback (most recent call last):\n"
-            '  File "x.py", line 9\nKeyError: \'id\'',
+            "  File \"x.py\", line 9\nKeyError: 'id'",
             "Bash exit 1: KeyError: …",
         ),
         (
