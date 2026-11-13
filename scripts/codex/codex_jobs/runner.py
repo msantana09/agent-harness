@@ -133,7 +133,8 @@ def spawn_runner(
     """
     reap_spawned()
     job_dir = Path(job_dir)
-    argv = [sys.executable, "-m", "codex_jobs.runner", str(job_dir)]
+    # -P: the runner inherits the caller's folder, which must not be on its import path.
+    argv = [sys.executable, "-P", "-m", "codex_jobs.runner", str(job_dir)]
     if adopt:
         argv.append("--adopt")
     if crash_at is not None:

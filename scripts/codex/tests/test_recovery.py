@@ -572,6 +572,15 @@ def test_consult_job_succeeds_delivers_and_journals_every_notification(lab):
     assert moves == ["admitted", "starting", "dispatched", "running", "succeeded"]
 
 
+def test_runner_ignores_modules_in_the_callers_folder(lab, tmp_path, monkeypatch):
+    lab.fake.set_script({"turn": TURN})
+    folder = tmp_path / "callers-folder"
+    folder.mkdir()
+    (folder / "json.py").write_text("raise SystemExit(7)\n")
+    monkeypatch.chdir(folder)
+    assert lab.run(lab.job()) == 0
+
+
 def test_requests_carry_model_sandbox_schema_prompt_and_images(lab, tmp_path):
     lab.fake.set_script({"turn": TURN})
     image = tmp_path / "shot.png"

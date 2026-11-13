@@ -101,7 +101,7 @@ raw=$(digest_input "$out" | (cd "$(dirname "$out")" && env -u CLAUDE_CODE_PLUGIN
   --model haiku --tools "" --no-session-persistence \
   --output-format json --json-schema "$schema" "$prompt" 2>"$err"))
 crc=$?
-if digest=$(printf '%s' "$raw" | python3 -c "$parse"); then
+if digest=$(printf '%s' "$raw" | python3 -P -c "$parse"); then
   rm -f "$err"
 else
   printf '%s\n' "$raw" >>"$err"
