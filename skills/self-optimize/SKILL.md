@@ -40,12 +40,19 @@ every day it needs. On a first run, omit `--since` for 30 days. The ledger's lin
 `references/ledger.md`.
 
 It reports sessions with activity, messages the user typed, turns they interrupted, hook blocks,
-skills that never loaded, and spend by model. Each hook block is named
+tool errors, skills that never loaded, and spend by model. Each hook block is named
 `<event>: <start of the hook's message>`, with quoted parts, paths and numbers masked. It shows
 the session it hit most and, when they differ, the quoted parts it blocked on (the pattern, file
-or command), so one pattern of a hook can be counted alone. Read it for where
-friction clusters: a session with many interrupts or hook blocks is worth reading (the
-transcripts skill's `lead-up` and `around` commands). A skill that
+or command), so one pattern of a hook can be counted alone. A tool error is any other failed
+tool call, named by its tool and the line that names the failure (`Edit: File has not been read
+yet.`, `Bash exit 1: ModuleNotFoundError: …`), with the sessions it touched, the session it hit
+most and how many came from subagents. Read it for where friction clusters: a session with many
+interrupts or hook blocks is worth reading (the transcripts skill's `lead-up` and `around`
+commands). A tool error that recurs across sessions points at an instruction that sends the
+agent wrong or a hook message that does not say how to recover; an error mostly in one
+session is that session's loop, and a failing test or a search with no hits is the agent's normal
+work. A tool error is a lead, never a target on its own: step 5 picks from corrections and
+memories. A skill that
 never loads is a candidate to fix or delete only after a 30-day scan (`--days 30`) agrees, since
 some skills run monthly. A count is a lead, not a finding.
 
