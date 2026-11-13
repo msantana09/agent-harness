@@ -383,11 +383,16 @@ def test_tool_errors_are_counted_by_name_leaving_out_hook_blocks_and_rejections(
             "Bash exit 127: zsh: command not found: rg",
         ),
         ("Bash", "Exit code 1", "Bash exit 1"),
-        ("Bash", "Exit code 1\n--- a/parser.py\n+++ b/parser.py", "Bash exit 1"),
+        ("Bash", "Exit code 1\n--- a/errors.py\n+++ b/errors.py", "Bash exit 1"),
         (
             "Bash",
-            "Exit code 128\ntotal 8\nfatal: not a git repository",
+            "Exit code 128\nChecking invalid inputs\nfatal: not a git repository",
             "Bash exit 128: fatal: not a git repository",
+        ),
+        (
+            "Bash",
+            "Exit code 1\nE   AssertionError: 2 != 3",
+            "Bash exit 1: E AssertionError: … != …",
         ),
         (
             "Bash",
