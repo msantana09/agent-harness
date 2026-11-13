@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Launcher for the codex_jobs CLI and MCP server: runs `python3 -m codex_jobs` with this script's
 # own folder on PYTHONPATH, so a symlink to it works from any directory. python3 is the first one
-# on PATH and must be 3.14 or newer.
+# on PATH and must be 3.14 or newer. -P keeps the caller's folder off the import path, so a file
+# there named like a module (json.py) is never imported.
 set -euo pipefail
 
 script="${BASH_SOURCE[0]}"
@@ -12,4 +13,4 @@ while [[ -L "$script" ]]; do
 done
 codex_dir="$(cd -P "$(dirname "$script")" && pwd)"
 
-PYTHONPATH="$codex_dir" exec python3 -m codex_jobs "$@"
+PYTHONPATH="$codex_dir" exec python3 -P -m codex_jobs "$@"

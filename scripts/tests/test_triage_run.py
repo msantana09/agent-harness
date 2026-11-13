@@ -70,7 +70,9 @@ def _records(folder: Path) -> list[tuple[int, str]]:
     ]
 
 
-def _run(tmp_path: Path, output: str, bin_dir: Path) -> subprocess.CompletedProcess:
+def _run(
+    tmp_path: Path, output: str, bin_dir: Path, cwd: Path | None = None
+) -> subprocess.CompletedProcess:
     src = tmp_path / "src.txt"
     src.write_text(output)
     return subprocess.run(
@@ -86,6 +88,7 @@ def _run(tmp_path: Path, output: str, bin_dir: Path) -> subprocess.CompletedProc
         capture_output=True,
         text=True,
         env=_env(bin_dir),
+        cwd=cwd,
         timeout=60,
     )
 
@@ -102,6 +105,15 @@ def test_small_output_is_sent_whole(tmp_path: Path) -> None:
     res = _run(tmp_path, output, tmp_path / "bin")
     assert res.returncode == 1
     assert capture.read_text() == output
+    assert "- test_mid  t.py:3" in res.stdout
+
+
+def test_the_digest_ignores_modules_in_the_callers_folder(tmp_path: Path) -> None:
+    _fake_claude(tmp_path / "bin", _ok_json())
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "json.py").write_text("raise SystemExit(7)\n")
+    res = _run(tmp_path, "FAILED t.py::test_mid - boom\n", tmp_path / "bin", cwd=repo)
     assert "- test_mid  t.py:3" in res.stdout
 
 

@@ -565,6 +565,18 @@ def test_launcher_runs_capabilities_from_a_symlinked_path(tmp_path, fake_codex):
     assert caps["kinds"] == ["review", "consult", "run"] and caps["models"]["slug-sol"] == EFFORTS
 
 
+def test_launcher_ignores_modules_in_the_callers_folder(tmp_path):
+    (tmp_path / "json.py").write_text("raise SystemExit(7)\n")
+    done = subprocess.run(
+        [str(CODEX_DIR / "codex-jobs"), "--help"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert done.returncode == 0, done.stderr
+
+
 def test_jobs_live_in_the_user_data_folder(tmp_path, monkeypatch):
     from codex_jobs.__main__ import job_root
 
