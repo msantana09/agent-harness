@@ -53,12 +53,13 @@ it starts, and re-run each failing file alone before calling a timeout real.
 
 ## When This Applies
 
-Which commands qualify: read `rules/automation.md` § No Redundant Execution — it binds here.
+Which commands qualify: read NO REDUNDANT EXECUTION in
+`rules/core-rules.md` § Orchestration & Execution Rules — it binds here.
 
 ## Exception
 
 For a non-test command, piping to `tee` is fine since it saves AND displays output. Test runs
-go through `triage_run.sh`, except the verbatim-output runs that rule names: a long `tee`'d run
+go through `triage_run.sh`, except the verbatim-output runs core-rules names: a long `tee`'d run
 overflows the tool result, which then loses its pass/fail summary.
 
 ```bash

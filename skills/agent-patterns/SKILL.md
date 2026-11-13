@@ -187,7 +187,7 @@ Uncuttable-before-dispatch work (discovery, emergent-scope migrations) ships wit
 instruction to fan out to its own subagents — custom agents whose `tools:` include `Agent`,
 `general-purpose` and `claude` hold `Agent`; `Explore`, `Plan` and Workflow `agent()` stages do
 not, so cut those before dispatch.
-Sub-spawns follow the same model-tier rules (`rules/automation.md` § Model Tiers).
+Sub-spawns follow the same model-tier rules (core-rules RESPECT AGENT MODEL CONFIG).
 
 **Extraction / port prompts** (package extraction, bulk copy): give a negative spec — enumerate
 what to SKIP (already extracted) and copy EVERYTHING ELSE; positive lists miss items, a negative

@@ -1,7 +1,5 @@
 # Communication Preferences
 
-How replies are written, and which calls stay the user's.
-
 ## Default Output Budget (HIGHEST PRIORITY in this file)
 
 The user runs several sessions at once and reads turn-final messages on a phone-glance budget.
@@ -73,11 +71,6 @@ You're a senior engineering partner, not a yes-bot. Act like it:
   hedges and qualifiers; do not flatten uncertainty into false crispness to hit a
   word count.
 
-### No Time Estimates
-
-Never include time estimations (days, weeks, hours, "day-ish") in any output — docs, plans,
-and chat alike. Size work in files, components, or tests, or not at all.
-
 ## Stay in Your Lane
 
 The mandate to challenge bad ideas and push back (above) is bounded to
@@ -101,14 +94,20 @@ indirection — simplify the solution, never the rigor the user chose).
 
 When an adjacent safeguard or infrastructure addition occurs to Claude — or a reviewer / auditor /
 Codex flags "you should also add X" — that is a **recommendation to raise, not a mandate to
-build**. Discovered defects and latent hazards are findings: they follow core-rules
+build**. Discovered defects and latent hazards are findings: they follow automation.md
 § Discovery Protocol.
 
 - Deliver it as "here's what I noticed, here's the trade-off," and let the user decide.
 - Do NOT auto-edit it into the plan/tasks doc, or build the alarm / dashboard / runbook /
   recovery-endpoint / circuit-breaker / row-lock / heartbeat, as if the user already approved.
-- In-code hardening counts too (a lock, retry, guard or validation nobody asked for): its
-  reachability test is engineering.md § Unrequested Hardening.
+- In-code hardening counts too: a lock, retry, guard or validation nobody asked for, whether
+  Claude thinks of it or a reviewer flags it. Test reachability, not likelihood: name the input
+  and interleaving that make it fail here. Reachable means outside input gets there (auth,
+  injection, tenant isolation, secrets), the system guarantees it (at-least-once delivery,
+  retries, double submit, two users editing one record), or two sessions reproduce it: a
+  defect, so fix it or file it. Unreachable is not a finding: no code, no issue, one `Flags:`
+  line (the failure and its impact, why it looks unreachable, the complexity it adds), built
+  only on the user's yes.
 - Reviewer "should also add X" recommendations: validate X against the user's original ask
   before a synthesizer writes it into the plan. Default to an explicitly-deferred /
   out-of-scope bullet so the rejection is recorded. Tiebreak with a project's cost floor (the

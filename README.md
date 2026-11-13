@@ -12,8 +12,7 @@ and how the agent's instructions improve from what happens in real sessions.
 - A fix is done when it is seen working where the user meets it, not when the code changed.
   [core-rules](rules/core-rules.md)
 - A bug gets a failing test first, then a fix at its cause, and one instance starts a search for
-  the rest. [engineering](rules/engineering.md#test-first-bug-fixes),
-  [core-rules](rules/core-rules.md)
+  the rest. [core-rules](rules/core-rules.md)
 - A change touches only what the request needs and removes what it replaces.
   [engineering](rules/engineering.md#surgical-changes)
 - Every edit happens in a worktree, and a person decides every merge; the agent runs one only when
