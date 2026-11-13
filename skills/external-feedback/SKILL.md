@@ -54,7 +54,7 @@ worth it:
 | Claim holds? | Reachable? | Verdict |
 |--------------|------------|---------|
 | Yes | Yes, introduced by this change | Accept |
-| Yes | Yes, pre-existing or outside this change | File (an issue per rules/core-rules.md § Discovery Protocol) |
+| Yes | Yes, pre-existing or outside this change | File (an issue per rules/automation.md § Discovery Protocol) |
 | Yes | No | Reject: cite the `file:line` that gates the trigger off |
 | No | — | Reject (incorrect) |
 
@@ -69,7 +69,7 @@ worth it:
 - **Valid** = factually correct about the code and architecture
 - **Valuable** = solves a problem the project has today, at a cost its stage justifies
 - **Reachable** = outside input, a system guarantee, or two sessions get there
-  (rules/engineering.md § Unrequested Hardening)
+  (rules/communication.md § Surface ≠ Scope In)
 - **Accept** = the caller owns the action: a fix in an implementation flow, a sketch in an
   advisory one
 - **Recommend** = surfaced in the report as a one-line recommendation; neither built nor filed

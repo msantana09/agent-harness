@@ -1,20 +1,6 @@
 # Automation Rules
 
-How tools, subagents and parallel sessions are used.
-
 ## Tool Usage Patterns
-
-### No Redundant Execution
-
-Never run the same command twice to extract different information.
-
-- **First run**: tests and builds go through `~/.claude/scripts/triage_run.sh
-  <scratchpad>/run.txt -- <cmd>`; a run whose output you need verbatim (a single test with `-s`,
-  a collect-only listing) and any other long command redirect to a file in the scratchpad.
-- **Subsequent analysis**: grep/tail/head that file — never re-execute
-- This applies to tests, builds, migrations, docker compose, data queries — any command
-  that takes more than a few seconds
-- See `Skill("command-output-patterns")` for patterns
 
 ### Clarification & Resumption Protocol
 
@@ -76,30 +62,6 @@ per-stage effort per core-rules EXECUTE DIRECTLY.
 
 Locating code across 10+ files goes to Explore; reading them in full goes to general-purpose.
 
-### Model Tiers
-
-Fit the tier to the task; misfit in either direction is the failure (core-rules RESPECT AGENT
-MODEL CONFIG requires a tier on every generic subagent):
-
-- **Fable**: mystery-bug debugging; adjudicating between conflicting verdicts, binding-artifact
-  synthesis, recall-critical final audits — single calls whose output decides the outcome;
-  the hardest long-horizon problems.
-- **Opus**: reasoning/judgment-heavy work — architects, auditors, security engineers, curation,
-  code review, and per-item verify/refute passes in a fan-out (adversarial or not) — and strong
-  coding/agentic execution when the task warrants it. A stage that runs once per item
-  multiplies its tier's cost, so per-item stages default to Opus or below.
-- **Sonnet** (`xhigh` for the hardest): execution — engineers, QA, designers; implementation,
-  test-writing, verify batteries, refactors, rebases.
-- **Haiku** (5.5; `medium`, `high` for multi-step work): chores and bounded tasks that end
-  in a checkable artifact — file:line locate sweeps, run-and-report, test-failure
-  digests and summaries, formatting-level edits. Never implementation, review/verify,
-  design, or open-ended research.
-
-The model tier is the cost lever, not effort: route mechanical work to Sonnet/Haiku instead
-of pinning Opus at low/medium effort (no low/medium opus pins); effort tunes performance
-within a tier. Ask the user only when the call is genuinely ambiguous and the run is expensive
-or hard to redo; otherwise pick and state the mix (e.g. in the Workflow scale note).
-
 ## Concurrency Awareness
 
 ### Refresh Before Acting
@@ -126,3 +88,42 @@ When multiple agents touch the same area:
   run only across worktrees, with `git merge-tree --write-tree` dry-runs as *signal*; re-dispatch
   with merged context when reconciliation fails
 - Same function: one agent only, or explicit handoff, across worktrees too
+
+## Findings
+
+### Discovery Protocol
+
+A discovery from your OWN investigation is a finding; a suggestion from outside (reviewer,
+Codex, the user's musing) is a recommendation. Recommendations are surfaced, never scoped in
+(communication.md § Stay in Your Lane). A defect a report names is a fact to verify; once verified
+it is your own finding. Another site showing the defect in hand is the fix's
+scope, not a finding (core-rules EXHAUSTIVE INVESTIGATION). A different root cause met in the same
+file is a finding. Findings must land somewhere actionable:
+
+- **Critical** (security, data integrity): surface immediately with a `CRITICAL Finding:` prefix.
+- **High** (must land soon): at the moment you notice it, either fold it into the workstream
+  in flight (add the task, fix it in the same PR) or create its own workstream and notify
+  the user. Both are pre-approved; creating the workstream needs no permission.
+- **Not landing in this PR** (a reachable failure that can wait): open a GitHub issue in the repo
+  at discovery — `gh issue create --label finding,priority:<level>` (add `security` etc. as fits),
+  claim + location + why it matters — and link it from the PR body. The label is the only triage
+  an issue gets (the backlog drains by label, then age). Pick the level by checkable questions,
+  not feel:
+  - `priority:high` — data integrity, silently wrong output, a security delta, or a named person
+    loses something under today's usage (delta test: trigger frequency times cost).
+  - `priority:medium` — operator/dev pain, or a latent hazard with a plausible trigger.
+  - `priority:low` — cleanup, cosmetics, dead code, naming, doc drift.
+  Torn between two → the lower, unless the body names the delta (who loses what, how often).
+  A claim that stored data is wrong or at risk (bad values a migration or writer stored, lost or
+  corrupted rows) carries its count in the body: affected rows and tenants, read-only, on an
+  environment that holds the data. Code proves the mechanism, never the reach. No reachable
+  environment → the body opens `Unsized:` with why and the read-only query that would size it, and
+  the label is `priority:low` until a count lifts it. Counting comes before escalation: whoever
+  picks it up (a fix, a re-check, a decision round) takes the count first, and while none is
+  reachable it stays low with that unblock condition, never re-rated or put to the user as a
+  decision.
+  An unlabelled issue sorts as medium. If the repo lacks the labels, create them first:
+  `gh label create finding --color 0E8A16 -d "Incidental discovery parked at discovery time"`
+  plus `priority:high`, `priority:medium` and `priority:low`. Never park it in `findings.md` and
+  move on — logged findings became a graveyard.
+- **Genuinely inert** (a corrected assumption with no forward consequence): a plain note is fine.

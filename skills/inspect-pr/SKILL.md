@@ -39,9 +39,10 @@ Optimize for verified defects and consequential omissions, not finding count.
    - linked issues or workstream documents;
    - review decision, submitted reviews, unresolved discussion, and prior inline comments;
    - CI/check names, conclusions, and relevant failure logs.
-3. Command output volume: read `rules/automation.md` § No Redundant Execution — it binds
-   here. Use a repository-connected GitHub tool when available; otherwise use read-only
-   `gh pr`, `gh api`, and `git` commands.
+3. Command output volume: read NO REDUNDANT EXECUTION in
+   `rules/core-rules.md` § Orchestration & Execution Rules — it binds here. Use a
+   repository-connected GitHub tool when available; otherwise use read-only `gh pr`, `gh api`, and
+   `git` commands.
 4. Verify repository branch policy. For promotion PRs, distinguish expected branch-to-branch
    changes from feature work and apply the repository's deployment restrictions.
 5. Ensure the exact base and head objects are locally inspectable when deeper source context is
