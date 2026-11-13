@@ -1,5 +1,7 @@
 # Engineering Principles
 
+How code is written and changed.
+
 ## Code Quality Principles
 
 ### Code Search
@@ -8,30 +10,40 @@
   defined", and type errors — grep counts of callers are floors: dependency injection,
   decorators and re-exports hide some.
 
-### No Time Estimates
-
-- Never include time estimations (days, weeks, hours, "day-ish") in any output — docs, plans,
-  and chat alike. Size work in files, components, or tests, or not at all.
-
 ### Verify Before Implementing (No Speculative Code)
 
 - Before adding a code path, function, or capability nobody asked for: grep the app source tree for
   callers to verify they exist (a requested capability's caller is the request)
 - No callers = don't implement. Raise explicit error instead of handling gracefully.
+- **Before hand-rolling behavior**: check for a native platform/framework feature (MDN/spec search
+  for browser behavior)
 
 **Simplicity check**: overcomplication shows up as needless indirection or an abstraction
 with only one caller — collapse those before adding more.
 
-### Verify External Facts
+### Unrequested Hardening
 
-**Important for upgrades, migrations, and external dependencies** — training data has a cutoff date.
+A lock, retry, guard or validation nobody asked for, whether Claude thinks of it or a reviewer
+flags it, is a recommendation, not scope (communication.md § Surface ≠ Scope In). Test
+reachability, not likelihood: name the input and interleaving that make it fail here. Reachable
+means outside input gets there (auth, injection, tenant isolation, secrets), the system
+guarantees it (at-least-once delivery, retries, double submit, two users editing one record), or
+two sessions reproduce it: a defect, so fix it or file it. Unreachable is not a finding: no code,
+no issue, one `Flags:` line (the failure and its impact, why it looks unreachable, the complexity
+it adds), built only on the user's yes.
 
-- **Before hand-rolling behavior**: check for a native platform/framework feature (MDN/spec search
-  for browser behavior)
-- **Specs/standards, version dates, release history**: Use `WebSearch`
-- Before stating "X is/isn't supported" or "Y version does/doesn't exist": verify first.
-- A fix relayed from a search summary or forum post (a flag, setting or command) is unverified until
-  checked against the user's installed version (the binary, `--help`, the settings path).
+### No Fallback Values
+
+Never invent an input in code: `os.getenv("KEY", "default")` — wrong (silent failure).
+`os.environ["KEY"]` or explicit raise — correct. Applies to env vars, config files, secrets,
+feature flags, any external setting. On the command line the same rule is core-rules NO
+FABRICATED VALUES.
+
+### Test-First Bug Fixes
+
+When the user reports a bug or shares an error log, first write a failing test that reproduces
+it, then fix the code and confirm the test passes. The reproducing test comes before the fix,
+not after.
 
 ### Clean-Room Reference Designs
 
@@ -49,10 +61,10 @@ reproduced in ours. Reading a dependency's source to debug or learn its API is n
   or conventions require there (README, AGENTS.md, manifests)
 - Coin no shorthand in identifiers (`billing-api`, not `bapi`); a rename or refactor that touches
   an abbreviated identifier expands it
-- Unrelated dead code you notice is a `priority:low` finding: file it per automation.md
+- Unrelated dead code you notice is a `priority:low` finding: file it per core-rules
   § Discovery Protocol and leave the code in place
 - A pre-existing bug or hazard found while working: route it per
-  automation.md § Discovery Protocol; never bury the fix in the diff unflagged
+  core-rules § Discovery Protocol; never bury the fix in the diff unflagged
 - Tests are sized like the neighboring test files — roughly one focused test per stated
   behavior. Scratch scripts and quick checks used to verify are not turned into permanent
   test files. This is about extras only: every behavior the task asks for is implemented
@@ -110,7 +122,7 @@ behavior and nothing else: it never lands in the deliverable as a caveat, note o
 a docstring, a README, a skill or a script's output. Code and docs describe what the code does and
 what it assumes of its environment, never the review that shaped it.
 
-### Complete Changes
+### Tests and Docs Ship with the Change
 
 - Code changes must include corresponding updates to:
   - **Tests**: Add or update tests covering the changed functionality
