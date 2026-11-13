@@ -44,8 +44,10 @@ How the counts are made:
 * A tool error is a failed tool call that no hook blocked and the user did not reject. It is
   named by its tool and the line of its result that names the failure, masked as a hook block's
   message is (`Edit: File has not been read yet.`). A failed shell command adds its exit code,
-  since 1, 2 and 127 fail for different reasons, and a Python traceback is named by its last
-  line, the exception, since every traceback starts alike.
+  since 1, 2 and 127 fail for different reasons. What it printed mixes output with errors, so its
+  name takes the first line that reads as an error (`not found`, `No such file`, `fatal`), a
+  Python traceback's last line (the exception), or no line at all when none does, as when a
+  search finds nothing.
 * A window with `--until` ends at the midnight after that date. `--days N` counts back from the
   window's end: N whole days through `--until`, or N times 24 hours before now without it.
 """
@@ -89,6 +91,12 @@ TOOL_USE_ERROR_TAG = re.compile(r"</?tool_use_error>")
 # A failed shell command's result: its exit code, then what it printed.
 EXIT_CODE = re.compile(r"Exit code (\d+)\n?(.*)", re.DOTALL)
 TRACEBACK_START = "Traceback (most recent call last)"
+# A line of a failed shell command's output that reads as the error rather than its output.
+ERROR_LINE = re.compile(
+    r"error|not found|no such|no matches|fatal|denied|not permitted|permission|cannot|can't|"
+    r"couldn't|failed|invalid|unknown|refused|exception",
+    re.IGNORECASE,
+)
 TOOL_ERROR_CHARS = 80
 # A quote mark inside a word (the apostrophe in "project's") neither opens nor closes a span.
 QUOTED_SPAN = re.compile(r"`[^`\n]*`|(?<!\w)'[^'\n]*'(?!\w)|(?<!\w)\"[^\"\n]*\"(?!\w)")
@@ -348,17 +356,22 @@ def blocking_hooks(record: Record) -> list[tuple[str, tuple[str, ...]]]:
 
 
 def tool_error_name(tool: str, text: str) -> str:
-    """`tool`, with a shell command's exit code, and the line of its error that names the
-    failure: the first line it printed, or a traceback's last. Quoted spans, paths and numbers in
-    that line are masked."""
+    """`tool`, with a shell command's exit code, and the line that names the failure, its quoted
+    spans, paths and numbers masked: a traceback's last line; for a shell command, the first line
+    that reads as an error, or none; for any other tool, the first line."""
     text = TOOL_USE_ERROR_TAG.sub("", text).strip().removeprefix("Error: ")
     exited = EXIT_CODE.match(text)
     if exited:
         tool, text = f"{tool} exit {exited.group(1)}", exited.group(2)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    if not lines:
+    if lines and lines[0].startswith(TRACEBACK_START):
+        line = lines[-1]
+    elif exited:
+        line = next((line for line in lines if ERROR_LINE.search(line)), "")
+    else:
+        line = lines[0] if lines else ""
+    if not line:
         return tool
-    line = lines[-1] if lines[0].startswith(TRACEBACK_START) else lines[0]
     return f"{tool}: {mask_variable_parts(line)[:TOOL_ERROR_CHARS].rstrip()}"
 
 
