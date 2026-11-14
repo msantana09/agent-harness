@@ -125,6 +125,21 @@ def test_a_sed_script_and_one_missing_name_at_the_disk_root_are_not_paths(tmp_pa
     assert found == [("Bash", name) for name in names]
 
 
+def test_a_backslash_escaping_the_character_after_a_path_is_not_part_of_it(tmp_path) -> None:
+    config = tmp_path / ".claude"
+    transcript = tmp_path / "session.jsonl"
+    commands = [
+        "cat > prompt.md <<EOF\nRepo layout (\\`/home/dev/shop\\`, a small app)\nEOF",
+        'echo "run \\"/home/dev/shop/test_shipping.py\\" first"',
+        "echo \\`/home/dev/notes.md\\`",
+    ]
+    calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
+    record = {"type": "assistant", "message": {"content": calls}}
+    transcript.write_text(json.dumps(record) + "\n")
+    found = check.outside(config, [], [transcript])
+    assert found == [("Bash", "/home/dev/notes.md\\")]
+
+
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
     tmp_path, capsys, monkeypatch
 ):
