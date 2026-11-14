@@ -200,7 +200,7 @@ compaction, and a re-run Workflow stage has no artifact to diff against.
 
 Agents can be **continued** with `SendMessage` (by agent id or name) to preserve their previous
 context — `Explore` included. A new `Agent` call always starts fresh. (Tool names: see
-`harness-api.md`.)
+`claude-code-api.md`.)
 
 **When to Continue vs Spawn Fresh.**
 

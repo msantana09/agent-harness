@@ -1,11 +1,11 @@
-# Harness API — single source of truth
+# Claude Code API — single source of truth
 
 Facts that name a build were observed on that build; the rest were checked on earlier builds
 and not re-run.
 
-This file is the **one place** that names the harness's orchestration tools, their parameters,
+This file is the **one place** that names Claude Code's orchestration tools, their parameters,
 deprecations, and gated features. Everything else (skills, hooks, rules) should state capabilities
-**behaviorally** and link here for the concrete names/versions. When the harness renames a tool or
+**behaviorally** and link here for the concrete names/versions. When Claude Code renames a tool or
 deprecates a primitive, fix it **here** and the rest of the layer points at the corrected fact.
 
 > **Why this file exists:** the `Task`→`Agent` rename silently broke hooks because the tool
@@ -40,8 +40,8 @@ spawned agent with its context intact — this includes `Explore`. A **new `Agen
 fresh** — it does not resume.
 
 **Reading background results:** read the summarized `<result>` in the completion notification.
-**Do not** read the harness `output_file` (a `…/tasks/{id}.output` path) — it is the full sub-agent
-JSONL transcript (~20× the summary) and overflows context.
+**Do not** read Claude Code's `output_file` (a `…/tasks/{id}.output` path) — it is the full
+sub-agent JSONL transcript (~20× the summary) and overflows context.
 
 - **`TaskOutput` is deprecated (v2.1.83).** Do not call it; do not match it in hook matchers. <!-- drift-allow -->
 
@@ -101,7 +101,7 @@ multi-phase work, migrations, and audits.
   default, so `rules/core-rules.md` § Orchestration & Execution Rules (item EXECUTE DIRECTLY)
   requires it. **`model`**: Claude Code's built-in `workflow-authoring` skill says "default to
   omitting it"; `rules/core-rules.md` says "assign a tier deliberately" — the rule wins, the
-  skill text is the harness default, not this policy.
+  skill text is Claude Code's default, not this policy.
 - **`schema`** forces a validated structured return — no file/parse dance needed.
 - **A stage's model resolves in this order** (observed on build 2.1.318, 147 stages):
   `opts.model`, then the `agentType` file's `model:` pin, then
@@ -118,7 +118,7 @@ multi-phase work, migrations, and audits.
   / failed / never started), and launch a NEW workflow whose args carry only the unfinished
   lanes with "state of the tree" briefs. Session-limit failures show as agent errors with 0
   tool calls — those lanes' files are untouched.
-- **Launch from the turn whose user message requested the work.** The harness relays the latest
+- **Launch from the turn whose user message requested the work.** Claude Code relays the latest
   user message to every subagent as the request that triggered the run, and discounts consent
   quoted in the prompt (computed task text counts as script output). Launched in the same turn as
   an unrelated request, 3 of 5 stages stopped with `## Clarifications Needed` instead of working.
@@ -150,7 +150,7 @@ multi-phase work, migrations, and audits.
 
 ## Deprecated / renamed tokens (drift denylist)
 
-When the harness renames or deprecates a primitive, add the old token here. A drift check can
+When Claude Code renames or deprecates a primitive, add the old token here. A drift check can
 parse this table: the first backticked span of each row is the stale token to grep for.
 
 | Stale token | Replaced by | Notes |
@@ -160,7 +160,7 @@ parse this table: the first backticked span of each row is the stale token to gr
 | `TaskOutput` | (none) | Deprecated. Read the completion notification's `<result>` instead. <!-- drift-allow --> |
 | `run_in_background` (on `Agent`) | (none — always background) | Parameter removed; silently ignored if passed. Still valid on `Bash` — mark those lines `drift-allow`. <!-- drift-allow --> |
 
-Not a denylist token (the word is legitimate in hook payloads): reading the harness `output_file`
+Not a denylist token (the word is legitimate in hook payloads): reading Claude Code's `output_file`
 transcript path is also stale practice — read the `<result>` summary instead (see above).
 
 ## Hook payload shapes (for hooks that match agent calls)

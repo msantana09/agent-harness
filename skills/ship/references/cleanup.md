@@ -18,7 +18,7 @@ worktree (it `cd`-ed there) skips `ExitWorktree`, a no-op for it, and wraps the 
 subshell: `(cd <main tree> || exit 1` as the first line, the block's other lines unchanged
 on their own lines, then `)`. A Bash guard on worktree sessions cannot tell the two
 sessions apart, so the subshell form is the one that passes. Once the worktree is
-gone, the harness moves the session's cwd to the main tree. Hand the cleanup to a main-tree
+gone, Claude Code moves the session's cwd to the main tree. Hand the cleanup to a main-tree
 session only if a hook actually refuses it.
 
 The gate names `<branch>`, not `<N>`: `gh pr view <branch>` resolves that branch's own PR

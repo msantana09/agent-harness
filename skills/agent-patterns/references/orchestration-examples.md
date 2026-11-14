@@ -2,7 +2,8 @@
 
 This is the handoff shape for multi-phase orchestration: what one phase must hand the next so
 work stays composable instead of ad hoc. Under Tier 2, each phase below maps to a `Workflow`
-`pipeline` or `parallel` stage — see `harness-api.md` for the stage API; it is not restated here.
+`pipeline` or `parallel` stage — see `claude-code-api.md` for the stage API; it is not restated
+here.
 
 ## Template
 
@@ -34,7 +35,7 @@ Phase N — <name>
   list every top-level `await` and ask what it needs from the previous one — if the answer is
   "nothing", it belongs in the `parallel()` call, not after it. Serialize only the specific unit
   that shares a file (e.g. reconcile one dir after its synth), never the whole lane around it.
-  Get the shape right at launch: the resume cache (`harness-api.md`) makes reordering lanes
+  Get the shape right at launch: the resume cache (`claude-code-api.md`) makes reordering lanes
   after launch expensive.
 - A `Decision Point` gates every phase transition — GO/NO-GO is evaluated against the phase's
   own `Validation`, not assumed from the deliverable existing.
