@@ -169,6 +169,10 @@ def test_only_a_names_only_listing_of_the_home_folders_folders_is_inside(tmp_pat
     assert outside("ls /home/dev/*/") == ["/home/dev/*/"]
     assert outside("ls -dR ~/*/") == ["~/*/"]
     assert outside("cat ~/*") == ["~/*"]
+    assert outside("ls -I -d ~/*/") == ["~/*/"]
+    assert outside("ls --ignore -d ~/*/") == ["~/*/"]
+    assert outside("ls -d `cat ~/*`") == ["~/*"]
+    assert outside("ls -d $(cat ~/*)") == ["~/*"]
     assert outside("ls -d /tmp; grep -R needle $HOME/*/") == ["$HOME/*/"]
     assert outside("ls -d /home/dev/*/src ~/*/notes.md /home/*/") == [
         "/home/dev/*/src",
