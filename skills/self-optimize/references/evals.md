@@ -81,8 +81,8 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/cut_session.py --session <id> \
 
 It prints the message whole, which is the case's prompt, and drops the session's standing
 context: the instruction files it loaded, the memories it recalled, its system prompt, output
-style and tool listings. A rule, `CLAUDE.md` or memory file under test then reaches the agent only through
-the case. Copy the history into `<case>-edited/` as well. A replay case is a
+style and tool listings. A rule, `CLAUDE.md` or memory file under test then reaches the agent
+only through the case. Copy the history into `<case>-edited/` as well. A replay case is a
 `case.yaml` in place of `prompt.md`, with the same `graders/`:
 
 ```yaml
