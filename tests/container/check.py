@@ -71,9 +71,10 @@ CONFIG_PARTS = (
 # The config folder parts a plugin run may use: Claude Code's own and self-optimize's folder.
 PLUGIN_PARTS = (*CONFIG_PARTS, "self-optimize")
 MISSING = ("does not exist", "no such file")
-# What can end a path word without being part of it: sentence punctuation, and the backslash
-# that escapes the character after the path (a backtick or quote written into a heredoc).
-TRAILING = ".:\\"
+# The characters a backslash escapes when it ends a path word: the backslash is then the shell's,
+# not the path's (a heredoc writing \`/home/dev/shop\` into a file). Before anything else (a
+# space, a single quote) it stays, since there it can be part of the name.
+ESCAPED = ('`', '"')
 # Characters a shell expands, so a path holding one names no single file.
 EXPANDED = set("*?[{$")
 
@@ -161,8 +162,9 @@ def absent(config_dir: Path, plugins: list[Path], transcripts: list[Path]) -> li
     for transcript in transcripts:
         for _, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
-                for word in PATH.findall(text):
-                    path = resolve(word.rstrip(TRAILING))
+                for match in PATH.finditer(text):
+                    word = match.group(1)
+                    path = resolve(named(match))
                     in_config = config_dir in path.parents and path not in probed
                     in_plugin = any(root in path.parents for root in plugins)
                     if (
@@ -180,6 +182,15 @@ def resolve(word: str) -> Path:
         if word.startswith(prefix):
             return HOME / word[len(prefix) :].lstrip("/")
     return Path(word)
+
+
+def named(match: re.Match[str]) -> str:
+    """The path a matched word names: without the backslash escaping the backtick or double quote
+    after it, and without the sentence punctuation that ends it."""
+    word = match.group(1)
+    if word.endswith("\\") and match.string.startswith(ESCAPED, match.end()):
+        word = word[:-1]
+    return word.rstrip(".:")
 
 
 def unscripted(match: re.Match[str]) -> str:
@@ -205,7 +216,7 @@ def outside(
                     tagged = text.startswith("</", match.end())
                     if tool != "Bash" and not tagged and PLACEHOLDER.search(text, 0, match.start()):
                         continue
-                    path = resolve(word.rstrip(TRAILING))
+                    path = resolve(named(match))
                     if path.parent == ROOT and not EXPANDED & set(word) and not path.exists():
                         continue
                     if not allowed(config_dir, plugins, path, parts):
