@@ -545,6 +545,134 @@ def test_an_opted_out_project_still_gets_its_handback_offers_blocked(
     assert "Hand-back offer" in result["reason"]
 
 
+DRAFTED_QUESTION = "Draft reply: how are you?"
+
+
+@pytest.fixture
+def folders(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, Path]:
+    """An opted-out project holding the temp folder and the default config folder (`~/.claude`,
+    with HOME at the project), so a call there reads as inside the project unless skipped, and
+    another project beside it.
+
+    tmp_path itself sits under a system temp folder, so the fixed temp roots are cleared and
+    TMPDIR points at the project's temp folder instead.
+    """
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    opt_out_project(docs)
+    paths = {"docs": docs, "other": tmp_path / "other", "scratch": docs / "scratch"}
+    paths["config"] = docs / ".claude"
+    paths["other"].mkdir()
+    paths["scratch"].mkdir()
+    monkeypatch.setattr(hook, "SYSTEM_TEMP_DIRS", ())
+    monkeypatch.setenv("TMPDIR", str(paths["scratch"]))
+    monkeypatch.setenv("HOME", str(docs))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    return paths
+
+
+def tool_call(name: str, sidechain: bool = False, **tool_input: str) -> str:
+    content = [{"type": "tool_use", "id": "call", "name": name, "input": tool_input}]
+    return json.dumps(
+        {
+            "type": "assistant",
+            "isSidechain": sidechain,
+            "message": {"role": "assistant", "content": content},
+        }
+    )
+
+
+def opted_out_run(monkeypatch: pytest.MonkeyPatch, folders: dict[str, Path], *lines: str) -> None:
+    transcript = folders["scratch"] / "session.jsonl"
+    transcript.write_text("\n".join(lines) + "\n")
+    payload = stop_payload(DRAFTED_QUESTION) | {
+        "cwd": str(folders["docs"]),
+        "transcript_path": str(transcript),
+    }
+    run_main(monkeypatch, payload)
+
+
+def test_the_opt_out_applies_when_the_transcript_is_missing(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    payload = stop_payload(DRAFTED_QUESTION) | {
+        "cwd": str(folders["docs"]),
+        "transcript_path": str(folders["scratch"] / "missing.jsonl"),
+    }
+    run_main(monkeypatch, payload)
+
+    assert printed(capsys) == {}
+
+
+def test_the_opt_out_applies_when_the_last_located_call_is_in_the_project(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["other"] / "main.py")),
+        tool_call("Bash", command=f"cd {folders['docs']} && git status"),
+        tool_call("Read", file_path=str(folders["other"] / "main.py")),
+    )
+
+    assert printed(capsys) == {}
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda other: tool_call("Edit", file_path=str(other / "main.py")),
+        lambda other: tool_call("Bash", command=f"cd {other} && git status"),
+        lambda other: tool_call("Bash", command=f"git -C '{other}' log --oneline -3"),
+        lambda other: tool_call("Bash", command="(cd ../other && npm test)"),
+    ],
+    ids=["edit", "cd", "git-C", "relative-cd"],
+)
+def test_the_opt_out_does_not_apply_when_the_work_is_in_another_project(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    folders: dict[str, Path],
+    call,
+) -> None:
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["docs"] / "guide.md")),
+        call(folders["other"]),
+    )
+
+    result = printed(capsys)
+    assert result["decision"] == "block"
+    assert "Prose question" in result["reason"]
+
+
+@pytest.mark.parametrize(
+    "last_line",
+    [
+        lambda paths: tool_call("Write", file_path=str(paths["scratch"] / "notes.md")),
+        lambda paths: tool_call("Bash", command=f"cd {paths['config']} && ls"),
+        lambda paths: tool_call("Edit", file_path="~/.claude/memory/notes.md"),
+        lambda paths: '{"type": "assistant", "message": {"content": [{"type": "tool_use"',
+        lambda paths: tool_call("Edit", sidechain=True, file_path=str(paths["docs"] / "a.md")),
+    ],
+    ids=["temp-write", "config-cd", "home-config-edit", "malformed-line", "sidechain-call"],
+)
+def test_calls_that_say_nothing_about_the_project_are_skipped(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    folders: dict[str, Path],
+    last_line,
+) -> None:
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["other"] / "main.py")),
+        last_line(folders),
+    )
+
+    assert printed(capsys)["decision"] == "block"
+
+
 def test_a_project_without_the_opt_out_file_is_not_opted_out(tmp_path: Path) -> None:
     assert not hook.project_opted_out(str(tmp_path))
     assert not hook.project_opted_out("")
