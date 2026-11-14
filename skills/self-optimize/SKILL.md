@@ -1,6 +1,6 @@
 ---
 name: self-optimize
-description: Use weekly, or after a stretch of repeated corrections, to improve your agent's instructions from evidence. Mines your own Claude Code session transcripts and saved feedback memories for the places you corrected the agent, picks the one pattern that costs you most, and proposes the changes that would prevent it, tested before they are applied. Proposes; applies only on your yes.
+description: Use weekly, or after a stretch of repeated corrections, to improve your agent's instructions from evidence. Mines your own Claude Code session transcripts and saved memories for the places you corrected the agent, picks the one pattern that costs you most, and proposes the changes that would prevent it, tested before they are applied. Proposes; applies only on your yes.
 ---
 
 # Self-optimize
@@ -79,10 +79,11 @@ ended.
 
 ## 3. Read the saved lessons and the work
 
-- **Feedback memories.** Read every memory file whose frontmatter says `type: feedback`: the
-  `projects/*/memory/` folders under the Claude Code config folder, and any memory folder the
-  user's instructions name. A memory records that a lesson was learned; the corrections show
-  whether it still fails. Check each correction against them: one that repeats a saved lesson
+- **Memories.** Read every memory file, whatever its `type`: the `projects/*/memory/` folders
+  under the Claude Code config folder, and any memory folder the user's instructions name. A
+  lesson can sit in any type: a `feedback` memory holds a correction, a `reference` memory a
+  tool quirk the agent keeps tripping on, a `project` memory a proposal the user already declined.
+  A memory records that a lesson was learned; the corrections show whether it still fails. Check each correction against them: one that repeats a saved lesson
   means the lesson is not landing, and one with no memory is a lesson never captured.
 - **Git history.** For each repository the window's sessions ran in (the projects the scan
   names), read `git log --oneline --since=<same date>`. What kind of work dominated tells you
