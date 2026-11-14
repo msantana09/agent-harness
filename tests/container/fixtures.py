@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Write invented Claude Code sessions for the container gate to run self-optimize on.
 
-    python3 fixtures.py CONFIG_DIR
+    python3 fixtures.py CONFIG_DIR [PROJECT_DIR]
 
-Inputs: CONFIG_DIR, the Claude Code config folder the run uses (created when missing).
+Inputs: CONFIG_DIR, the Claude Code config folder the run uses (created when missing), and
+PROJECT_DIR, the folder the sessions were invented for.
 Outputs: CONFIG_DIR/CLAUDE.md with a vague testing rule, and ten sessions under
 CONFIG_DIR/projects/-home-dev-shop/, dated 2 to 14 days before now so a first run, which reads
 the 30 days through yesterday, sees them all. In five sessions the user corrects the same habit
 (the agent runs the whole test suite after a one-file change). In three more the agent does the
 same and the user lets it pass: the instances an eval suite is written from, since its cases never
 come from the sessions the diagnosis quotes. The other two hold an approval and a one-off
-correction. Each file's modification time is its last message's.
+correction. Each file's modification time is its last message's. With PROJECT_DIR, a
+`tests/test_<module>.py` there for each module the sessions touch, so a run that looks for a test
+file a session names finds it in the project; a file already there is left as it is.
 
 Exit codes: 0 written; 2 invalid arguments.
 """
@@ -27,6 +30,15 @@ CWD = "/home/dev/shop"
 PROJECT = "-home-dev-shop"
 MODEL = "claude-sonnet-5-5"
 RULES = "# Shop\n\nRun the tests before you finish a change.\n"
+# The modules the sessions touch; each has a test file a session names or implies.
+MODULES = ("orders", "tax", "api", "shipping", "export", "pricing", "cart")
+TEST_FILE = """import unittest
+
+
+class {name}(unittest.TestCase):
+    def test_{module}_module(self):
+        self.assertTrue("{module}")
+"""
 
 # (days ago, the request, the command the agent ran, what it said, the user's reply)
 SESSIONS: list[tuple[int, str, str, str, str]] = [
@@ -191,11 +203,27 @@ def write(config_dir: Path, now: datetime) -> list[Path]:
     return written
 
 
+def write_project(project_dir: Path) -> list[Path]:
+    """Write the test file of each module in MODULES under *project_dir*/tests, keeping any that
+    exists; returns the files written."""
+    folder = project_dir / "tests"
+    folder.mkdir(parents=True, exist_ok=True)
+    written = []
+    for module in MODULES:
+        path = folder / f"test_{module}.py"
+        if not path.exists():
+            path.write_text(TEST_FILE.format(name=module.title(), module=module))
+            written.append(path)
+    return written
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 1:
-        print("usage: fixtures.py CONFIG_DIR", file=sys.stderr)
+    if len(argv) not in (1, 2):
+        print("usage: fixtures.py CONFIG_DIR [PROJECT_DIR]", file=sys.stderr)
         return 2
     write(Path(argv[0]), datetime.now(UTC))
+    if len(argv) == 2:
+        write_project(Path(argv[1]))
     return 0
 
 
