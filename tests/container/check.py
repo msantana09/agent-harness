@@ -18,7 +18,10 @@ itself, which a `cd ~` names or an `ls -d ~/*/` lists the folders of). A file of
 author's own layout under the config folder (a `memory/` file) or any other folder fails it.
 Paths are found by PATH: a word starting with /, ~ or $HOME, not preceded by a word character, a
 colon, a slash, a glob character or a quote joined on with + (so `and/or`, URLs, `*/x.md` and
-`dst + '/x.md'` are not paths). The run found every file it named: a Read call that came back
+`dst + '/x.md'` are not paths). Two more things are text, not paths: a string that ends in an
+ellipsis and repeats the start of a longer string in the same call (a tool's preview of its own
+message, cut wherever it fell), and a word joined to a closed code span that names nothing on
+disk (`make test`/slow). The run found every file it named: a Read call that came back
 with no such file fails it, and so does a path a tool call names in the plugin's folder or the
 config folder that does not exist once the run
 ends, however it was opened (a shell `cat ... 2>/dev/null` reports nothing). Absence is expected,
@@ -82,6 +85,8 @@ MISSING = ("does not exist", "no such file")
 ESCAPED = ("`", '"')
 # Characters a shell expands, so a path holding one names no single file.
 EXPANDED = set("*?[{$")
+# What a tool ends a preview with when it cuts a longer text short.
+CUT = "…"
 
 
 def plugin_roots(run_output: Path) -> list[Path]:
@@ -120,6 +125,20 @@ def strings(value: Any) -> Iterator[str]:
     elif isinstance(value, list):
         for item in value:
             yield from strings(item)
+
+
+def texts(tool_input: Any) -> list[str]:
+    """Each string in a tool call's input, without the previews: a string that ends in CUT and
+    whose text before it starts a longer string of the same call."""
+    found = list(strings(tool_input))
+    return [
+        text
+        for text in found
+        if not (
+            text.endswith(CUT)
+            and any(other != text and other.startswith(text[:-1]) for other in found)
+        )
+    ]
 
 
 def blocks(path: Path) -> Iterator[dict[str, Any]]:
@@ -166,7 +185,7 @@ def absent(config_dir: Path, plugins: list[Path], transcripts: list[Path]) -> li
     found: dict[str, None] = {}
     for transcript in transcripts:
         for _, tool_input in tool_calls(transcript):
-            for text in strings(tool_input):
+            for text in texts(tool_input):
                 for match in PATH.finditer(text):
                     word = match.group(1)
                     path = resolve(named(match))
@@ -218,6 +237,14 @@ def lists_names(match: re.Match[str]) -> bool:
     )
 
 
+def joined(match: re.Match[str], path: Path) -> bool:
+    """Whether a matched word is joined to a code span that closes just before it, and names
+    nothing on disk: the backtick before it is the second of a pair on its line."""
+    text = match.string
+    line = text[text.rfind("\n", 0, match.start(1)) + 1 : match.start(1)]
+    return line.endswith("`") and line.count("`") % 2 == 0 and not path.exists()
+
+
 def unscripted(match: re.Match[str]) -> str:
     """A sed call without its script, unless the script names a file to read or write."""
     return match.group(0) if SED_FILE.search(match.group(2)) else match.group(1)
@@ -233,7 +260,7 @@ def outside(
     found: dict[tuple[str, str], None] = {}
     for transcript in transcripts:
         for tool, tool_input in tool_calls(transcript):
-            for text in strings(tool_input):
+            for text in texts(tool_input):
                 if tool == "Bash":
                     text = SED_SCRIPT.sub(unscripted, text)
                 for match in PATH.finditer(text):
@@ -245,6 +272,8 @@ def outside(
                     if path.parent == ROOT and not EXPANDED & set(word) and not path.exists():
                         continue
                     if tool == "Bash" and path == HOME / "*" and lists_names(match):
+                        continue
+                    if joined(match, path):
                         continue
                     if not allowed(config_dir, plugins, path, parts):
                         found[(tool, word)] = None

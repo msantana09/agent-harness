@@ -181,6 +181,34 @@ def test_only_a_names_only_listing_of_the_home_folders_folders_is_inside(tmp_pat
     ]
 
 
+def test_a_preview_cut_short_and_a_word_joined_to_a_code_span_are_not_paths(tmp_path) -> None:
+    config = tmp_path / ".claude"
+    transcript = tmp_path / "session.jsonl"
+
+    def found(tool: str, tool_input: dict) -> list[str]:
+        call = {"type": "tool_use", "name": tool, "input": tool_input}
+        transcript.write_text(json.dumps({"type": "assistant", "message": {"content": [call]}}))
+        stray = [word for _, word in check.outside(config, [], [transcript])]
+        return stray + check.absent(config, [], [transcript])
+
+    # A tool's own preview of a longer field of the same call, cut inside a path.
+    full = f"The edited file is at {config}/self-optimize/evals/EDITED.md. Copy it."
+    preview = f"The edited file is at {config}/…"
+    assert found("SendMessage", {"message": full, "content": preview}) == []
+    # Cut-short text with no longer field beside it is still judged.
+    assert found("SendMessage", {"message": f"See {config}/…"}) == [f"{config}/…"] * 2
+
+    def bash(command: str) -> list[str]:
+        return found("Bash", {"command": command})
+
+    # A word joined to a closed code span that names nothing on disk.
+    assert bash("cat > /tmp/note.md <<'EOF'\nThe `make test`/912/4-min line\nEOF") == []
+    assert bash('echo "The \\`make test\\`/912/4-min line"') == []
+    # A file that exists, or a path inside an open span, is still judged.
+    assert bash("cat `true`/etc/passwd") == ["/etc/passwd"]
+    assert bash("echo `/opt/elsewhere/notes.md`") == ["/opt/elsewhere/notes.md"]
+
+
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
     tmp_path, capsys, monkeypatch
 ):
