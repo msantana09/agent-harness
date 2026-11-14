@@ -256,6 +256,21 @@ def test_the_disk_root_given_to_a_command_that_walks_folders_is_outside(tmp_path
     assert outside("fd / tests") == []
     # A field the shell never runs.
     assert outside("pwd", description="Avoid find / when searching") == []
+    # A comment ends at its line; a heredoc body ends at its delimiter, and its substitutions run.
+    assert outside("# Locate tests\nfind / -name test_orders.py") == ["/"]
+    assert outside("pwd # current folder\nfind / -name test_orders.py") == ["/"]
+    assert outside("cat <<'EOF'\nnote\nEOF\nfind / -name test_orders.py") == ["/"]
+    assert outside("cat <<EOF\n$(find / -name test_orders.py)\nEOF") == ["/"]
+    assert outside("cat <<-EOF\n\tnote\n\tEOF\nfind / -name x") == ["/"]
+    # Quoted punctuation is an argument, not shell syntax.
+    assert outside("printf '%s\\n' ';' find /") == []
+    assert outside("rg -e '|' /") == ["/"]
+    # A pattern given in an attached or clustered option, and a wrapper's own option values.
+    assert outside("rg -eorders /") == ["/"]
+    assert outside("grep -reorders /") == ["/"]
+    assert outside("printf '%s\\n' t.py | xargs -I {} find / -name {}") == ["/"]
+    assert outside("xargs -n 1 du -sh / < list") == ["/"]
+    assert outside("sudo -u root find / -name x") == ["/"]
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
