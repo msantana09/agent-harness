@@ -23,9 +23,11 @@ ellipsis and repeats the start of a longer string in the same call (a tool's pre
 message, cut wherever it fell), and a word joined to a closed code span that names nothing on
 disk (`make test`/slow). In a Bash command a backtick also closes a command substitution, whose
 next word is a path, so there the span must be prose: its backtick escaped, or the word inside the
-body of a heredoc with a quoted delimiter. The run found every file it named: a Read call that
-came back with no such file fails it, and so does a path a tool call names in the plugin's folder
-or the config folder that does not exist once the run
+body of a heredoc with a quoted delimiter. PATH needs a name after the slash, so the disk root
+on its own is judged apart: a lone `/` is outside when it is an argument of a command that walks
+folders (WALKERS), as in `find / -name x`, and is otherwise a division or text. The run found
+every file it named: a Read call that came back with no such file fails it, and so does a path a
+tool call names in the plugin's folder or the config folder that does not exist once the run
 ends, however it was opened (a shell `cat ... 2>/dev/null` reports nothing). Absence is expected,
 so not a failure, in self-optimize's folder (a first run finds no ledger), under `projects/` (a
 project may have no memory yet), at a CONFIG_PARTS location itself, which a skill may probe, and
@@ -89,6 +91,8 @@ ESCAPED = ("`", '"')
 EXPANDED = set("*?[{$")
 # What a tool ends a preview with when it cuts a longer text short.
 CUT = "…"
+# Commands that descend into the folder they are given.
+WALKERS = frozenset({"find", "fd", "du", "tree", "grep", "rg"})
 # A heredoc whose delimiter is quoted, so the shell expands nothing in its body (group 3).
 HEREDOC = re.compile(r"""<<-?\s*(['"])(\w+)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)""", re.DOTALL)
 
@@ -257,6 +261,19 @@ def joined(match: re.Match[str], path: Path, shell: bool) -> bool:
     )
 
 
+def walks_the_disk(command: str) -> bool:
+    """Whether a Bash call gives the disk root to a command that walks folders: a lone `/` after
+    a WALKERS word in one command, outside the text a quoted heredoc writes."""
+    command = HEREDOC.sub(lambda body: body.group(0).replace(body.group(3), ""), command)
+    for mark in SEPARATORS:
+        command = command.replace(mark, "\n")
+    for line in command.split("\n"):
+        words = line.split()
+        if "/" in words and WALKERS & set(words[: words.index("/")]):
+            return True
+    return False
+
+
 def unscripted(match: re.Match[str]) -> str:
     """A sed call without its script, unless the script names a file to read or write."""
     return match.group(0) if SED_FILE.search(match.group(2)) else match.group(1)
@@ -275,6 +292,8 @@ def outside(
             for text in texts(tool_input):
                 if tool == "Bash":
                     text = SED_SCRIPT.sub(unscripted, text)
+                    if walks_the_disk(text):
+                        found[(tool, "/")] = None
                 for match in PATH.finditer(text):
                     word = match.group(1)
                     tagged = text.startswith("</", match.end())
