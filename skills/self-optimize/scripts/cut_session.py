@@ -66,17 +66,23 @@ def flat(text: str) -> str:
     return " ".join(text.split())
 
 
-def typed_message(record: Record) -> tuple[str, str] | None:
-    """(the message whole, the words a person typed in it), or None when the record holds no
-    typed message."""
-    record = transcripts.queued_prompt_as_user_record(record)
-    if record.get("type") != "user":
-        return None
-    text = transcripts.message_text(record)
-    words = transcripts.typed_words(text)
-    if not text or transcripts.untyped_reason(record, words):
-        return None
-    return text, words
+def typed_messages(records: list[Record]) -> list[tuple[int, str, str]]:
+    """(index, the message whole, the words a person typed in it) for each typed message.
+
+    A message Claude Code sent again after an API error is the same message, not a second one.
+    """
+    conversation = transcripts.Conversation()
+    typed = []
+    for index, raw in enumerate(records):
+        record = transcripts.queued_prompt_as_user_record(raw)
+        if record.get("type") == "assistant":
+            conversation.see_assistant(record)
+        if record.get("type") != "user" or record.get("toolUseResult") is not None:
+            continue
+        for _, words, reason in conversation.see_user(record):
+            if reason is None:
+                typed.append((index, transcripts.message_text(record), words))
+    return typed
 
 
 def standing(record: Record) -> bool:
@@ -124,16 +130,14 @@ def cut(records: list[Record], before: str) -> tuple[list[Record], str, int]:
     `before`.
     """
     wanted = flat(before)
-    typed = [
-        (index, found) for index, record in enumerate(records) if (found := typed_message(record))
-    ]
-    matches = [(index, found) for index, found in typed if flat(found[1]).startswith(wanted)]
+    typed = typed_messages(records)
+    matches = [found for found in typed if flat(found[2]).startswith(wanted)]
     if len(matches) != 1:
-        shown = [words for _, (_, words) in matches or typed]
+        shown = [words for _, _, words in matches or typed]
         listing = "\n".join(f"  {flat(words)[:100]}" for words in shown[:CANDIDATES_SHOWN])
         problem = "more than one typed message starts" if matches else "no typed message starts"
         raise ValueError(f"{problem} with that text; candidates:\n{listing}")
-    index, (message, _) = matches[0]
+    index, message, _ = matches[0]
     parent_of: dict[str, Any] = {}
     kept: list[Record] = []
     for record in records[:index]:
