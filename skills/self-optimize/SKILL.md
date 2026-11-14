@@ -144,8 +144,9 @@ How to write the cases and run them, including replaying a changed script or hoo
   (`references/evals.md`, Checking the grader). A tie means the suite cannot tell them apart, and
   "too close to call" means the two graders disagree on the outcome: say which, and let the user
   decide on the evidence alone.
-- When no case can set up the behavior (it only appears late in a long session, or after a tool
-  call), say so in the report and name what to watch for on the next run instead.
+- A behavior that only appears late in a long session is tested by replaying the real session up
+  to the user's message. When no case can set it up, not even a replay (it appears only after a
+  tool call, say), say so in the report and name what to watch for on the next run instead.
 
 ## 8. Propose and apply
 

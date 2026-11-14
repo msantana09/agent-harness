@@ -67,6 +67,45 @@ PASS if the reply <the behavior the edit asks for>.
 FAIL if the reply <the behavior the user corrected>, for example <a phrasing that fails>.
 ```
 
+## Replaying a session
+
+A behavior that shows up late in a long session needs the conversation that led to it, which a
+short case cannot set up. Replay the real session instead: the case resumes it just before the
+user's message and grades the agent's next reply. Cut it with the script in this skill's
+`scripts/` folder:
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/cut_session.py --session <id> \
+  --before "<start of the user's message>" --out <suite>/<case>-current/history.jsonl
+```
+
+It prints the message whole, which is the case's prompt, and drops the session's standing
+context: the instruction files and memory sections it loaded, its system prompt, output style and
+tool listings. A rule, `CLAUDE.md` or memory file under test then reaches the agent only through
+the case. Copy the history into `<case>-edited/` as well. A replay case is a
+`case.yaml` in place of `prompt.md`, with the same `graders/`:
+
+```yaml
+schema_version: "1.1"
+name: <case>-current
+context:
+  history_file: history.jsonl
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep]
+  append_system_prompt: |
+    <the whole instruction file, current or edited>
+  prompt: |
+    <the message cut_session.py printed>
+```
+
+- Tool results, skill and command bodies loaded during the session, and text hooks added stay in
+  the history as they were. An edit to a skill, a command, a hook's message or a memory a hook
+  injects shows there in its old form in both versions when it loaded before the cut: test that
+  edit with a short case.
+- Each run sends the whole history again, so a replay case costs more than a short one; the
+  eval reports what each run cost.
+
 ## Writing held-out cases
 
 A fresh subagent writes them, never the agent that diagnosed the problem. Give it one sentence
@@ -74,7 +113,8 @@ naming the behavior and the session ids to skip. It finds other sessions where t
 situation came up with the transcripts skill (`Skill("transcripts")`): `messages --typed` with
 `--search` or `--match`, and one `--skip-session` per session to skip. It reads each one around
 the moment with `around` and `since-reply`, and writes one case pair per instance, naming the
-session it came from.
+session it came from. An instance late in a long session becomes a replay case (Replaying a
+session above).
 Three to five instances are enough; fewer than two cannot separate the versions.
 
 ## Running
@@ -119,7 +159,8 @@ is "too close to call".
 - Too close to call: the graders disagree on the outcome. Do not recommend it; show both totals
   and the runs they disagree on, and let the user decide.
 - Both versions at or near full marks: the suite cannot separate them, usually because the real
-  failure appears late in a long session, which a short case does not reproduce. Say so.
+  failure appears late in a long session, which a short case does not reproduce. Rewrite those
+  cases as replays and run them again; if they still tie, say so.
 - Edited lower: do not recommend it. The diagnosis or the wording is wrong; go back to step 6.
 
 ## Script and hook edits

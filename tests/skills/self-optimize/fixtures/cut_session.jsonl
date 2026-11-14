@@ -1,0 +1,10 @@
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "attachment", "uuid": "a1", "parentUuid": null, "attachment": {"type": "instructions", "files": [{"path": "/home/ada/CLAUDE.md", "content": "Old rule text."}]}}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "user", "uuid": "u1", "parentUuid": "a1", "message": {"role": "user", "content": "Fix the login page"}}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "assistant", "uuid": "r1", "parentUuid": "u1", "message": {"role": "assistant", "content": [{"type": "text", "text": "Fixed the form handler."}]}}
+{"type": "api-request", "sessionId": "cccc3333-0000-0000-0000-000000000000", "id": "req1"}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "attachment", "uuid": "a2", "parentUuid": "r1", "attachment": {"type": "prompt_snapshot", "systemPrompt": ["Old system prompt."]}}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "attachment", "uuid": "d1", "parentUuid": "a2", "attachment": {"type": "date", "date": "2026-01-05"}}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "user", "uuid": "m1", "parentUuid": "d1", "isMeta": true, "message": {"role": "user", "content": "Fix the login page later, says the skill body"}}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "user", "uuid": "u2", "parentUuid": "m1", "message": {"role": "user", "content": "Why did you skip\n  the tests?"}}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "assistant", "uuid": "r2", "parentUuid": "u2", "message": {"role": "assistant", "content": [{"type": "text", "text": "I ran them now."}]}}
+{"sessionId": "cccc3333-0000-0000-0000-000000000000", "timestamp": "2026-01-05T10:00:00Z", "type": "user", "uuid": "u3", "parentUuid": "r2", "message": {"role": "user", "content": "Fix the login redirect too"}}

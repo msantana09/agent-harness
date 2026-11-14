@@ -21,6 +21,7 @@ LOAD_ORDER = {
     "transcripts": SKILLS / "transcripts" / "scripts" / "transcripts.py",
     "scan": SKILLS / "self-optimize" / "scripts" / "scan.py",
     "corrections": SKILLS / "self-optimize" / "scripts" / "corrections.py",
+    "cut_session": SKILLS / "self-optimize" / "scripts" / "cut_session.py",
     "grader_check": SKILLS / "self-optimize" / "scripts" / "grader_check.py",
 }
 
@@ -68,6 +69,11 @@ def scan(scripts: dict[str, ModuleType]) -> ModuleType:
 @pytest.fixture(scope="session")
 def corrections(scripts: dict[str, ModuleType]) -> ModuleType:
     return scripts["corrections"]
+
+
+@pytest.fixture(scope="session")
+def cut_session(scripts: dict[str, ModuleType]) -> ModuleType:
+    return scripts["cut_session"]
 
 
 @pytest.fixture(scope="session")
