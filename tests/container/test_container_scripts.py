@@ -223,8 +223,9 @@ def test_the_disk_root_given_to_a_command_that_walks_folders_is_outside(tmp_path
     config = tmp_path / ".claude"
     transcript = tmp_path / "session.jsonl"
 
-    def outside(command: str) -> list[str]:
-        call = {"type": "tool_use", "name": "Bash", "input": {"command": command}}
+    def outside(command: str, **fields: str) -> list[str]:
+        tool_input = {"command": command} | fields
+        call = {"type": "tool_use", "name": "Bash", "input": tool_input}
         transcript.write_text(json.dumps({"type": "assistant", "message": {"content": [call]}}))
         return [word for _, word in check.outside(config, [], [transcript])]
 
@@ -232,11 +233,29 @@ def test_the_disk_root_given_to_a_command_that_walks_folders_is_outside(tmp_path
     assert outside("git ls-files; find -L / -name 'CLAUDE.md' -not -path '*/x/*'") == ["/"]
     assert outside("cd /tmp && sudo du -sh / | tail -1") == ["/"]
     assert outside("grep -rl needle /") == ["/"]
+    # However the shell spells the root, and wherever the walker binary lives.
+    assert outside('find "/" -name test_orders.py') == ["/"]
+    assert outside("du -sh '/'") == ["/"]
+    assert outside("find \\\n  / -name test_orders.py") == ["/"]
+    assert outside("/usr/bin/find / -name test_orders.py") == ["/"]
+    assert outside("rg -l --hidden needle /") == ["/"]
+    assert outside("fd test_orders.py /") == ["/"]
+    assert outside("x=$(find / -name test_orders.py)") == ["/"]
     # A slash that divides, or sits in text a command writes, is no argument to a walk.
     assert outside("echo $((total / 2)); python3 -c 'print(1 - pct / 100)'") == []
     assert outside("echo 'run 1 / run 2' > /tmp/note.md") == []
     assert outside("cat > /tmp/n.md <<'EOF'\nfind / is slow, search the project\nEOF") == []
+    assert outside("cat > /tmp/n.md <<EOF\nfind / is slow, search the project\nEOF") == []
     assert outside("find . -name '*.py' | wc -l") == []
+    assert outside('printf "%s" "Never run find / on this machine"') == []
+    assert outside("git status  # never find / here") == []
+    # A slash a walker reads as its pattern or a test, not as where to start.
+    assert outside("grep -r / tests") == []
+    assert outside("rg -n / tests") == []
+    assert outside("find . -name /") == []
+    assert outside("fd / tests") == []
+    # A field the shell never runs.
+    assert outside("pwd", description="Avoid find / when searching") == []
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(

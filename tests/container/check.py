@@ -24,8 +24,11 @@ message, cut wherever it fell), and a word joined to a closed code span that nam
 disk (`make test`/slow). In a Bash command a backtick also closes a command substitution, whose
 next word is a path, so there the span must be prose: its backtick escaped, or the word inside the
 body of a heredoc with a quoted delimiter. PATH needs a name after the slash, so the disk root
-on its own is judged apart: a lone `/` is outside when it is an argument of a command that walks
-folders (WALKERS), as in `find / -name x`, and is otherwise a division or text. The run found
+on its own is judged apart, from the Bash command alone: a `/` is outside when, read as the shell
+reads it (quotes, continuations, comments, heredoc bodies), it is a folder a walking command
+(WALKERS) starts from, as in `find / -name x` or `du -sh "/"`. A `/` that a walker reads as its
+pattern or test (`grep -r / tests`, `find . -name /`), or that any other command or prose holds,
+is a division or text. The run found
 every file it named: a Read call that came back with no such file fails it, and so does a path a
 tool call names in the plugin's folder or the config folder that does not exist once the run
 ends, however it was opened (a shell `cat ... 2>/dev/null` reports nothing). Absence is expected,
@@ -38,7 +41,9 @@ session.
 """
 
 import json
+import os
 import re
+import shlex
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -93,6 +98,41 @@ EXPANDED = set("*?[{$")
 CUT = "…"
 # Commands that descend into the folder they are given.
 WALKERS = frozenset({"find", "fd", "du", "tree", "grep", "rg"})
+# Per walker, the options whose value is the next word; the value is never a starting folder.
+VALUED = {
+    "find": frozenset({"-D"}),
+    "fd": frozenset(
+        {"-e", "--extension", "-t", "--type", "-d", "--max-depth", "--min-depth", "--exact-depth"}
+        | {"-E", "--exclude", "-x", "--exec", "-X", "--exec-batch", "-S", "--size", "-j"}
+        | {"--threads", "--changed-within", "--changed-before", "-o", "--owner"}
+        | {"--search-path", "--base-directory"}
+    ),
+    "du": frozenset({"-d", "--max-depth", "-B", "--block-size", "-t", "--threshold", "-X"}),
+    "tree": frozenset({"-L", "-P", "-I", "-o", "-H", "-T", "--filelimit", "--charset"}),
+    "grep": frozenset(
+        {"-e", "--regexp", "-f", "--file", "-m", "--max-count", "-A", "-B", "-C", "-d", "-D"}
+    ),
+    "rg": frozenset(
+        {"-e", "--regexp", "-f", "--file", "-g", "--glob", "--iglob", "-t", "--type", "-T"}
+        | {"--type-not", "-m", "--max-count", "-A", "-B", "-C", "-j", "--threads", "-M"}
+        | {"--max-columns", "-d", "--max-depth", "-r", "--replace", "--sort", "--sortr", "-E"}
+        | {"--encoding", "--pre", "--pre-glob", "--type-add", "--color", "--colors"}
+    ),
+}
+# Walkers whose first operand is a pattern, unless an option below gives the pattern instead.
+PATTERN_FIRST = frozenset({"fd", "grep", "rg"})
+PATTERN_OPTIONS = {
+    "grep": frozenset({"-e", "--regexp", "-f", "--file"}),
+    "rg": frozenset({"-e", "--regexp", "-f", "--file"}),
+}
+# Options whose value is a folder the walker starts from.
+FOLDER_OPTIONS = {"fd": frozenset({"--search-path", "--base-directory"})}
+# Words before a command that run it rather than name it.
+WRAPPERS = frozenset({"sudo", "env", "command", "exec", "time", "nohup", "nice", "xargs"})
+KEYWORDS = frozenset({"if", "then", "elif", "else", "while", "until", "do", "!", "{"})
+ASSIGNMENT = re.compile(r"\w+=")
+# Any heredoc with its body (group 3): the body is text the command passes on, not commands.
+ANY_HEREDOC = re.compile(r"""<<-?\s*(['"]?)(\w+)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)""", re.DOTALL)
 # A heredoc whose delimiter is quoted, so the shell expands nothing in its body (group 3).
 HEREDOC = re.compile(r"""<<-?\s*(['"])(\w+)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)""", re.DOTALL)
 
@@ -261,16 +301,103 @@ def joined(match: re.Match[str], path: Path, shell: bool) -> bool:
     )
 
 
+def end_unquoted_lines(command: str) -> str:
+    """The command with each newline outside quotes turned into `;`, so that it ends a command
+    the way the shell ends one, and each backslash-newline continuation joined into one line."""
+    out, quote, escaped = [], "", False
+    for char in command:
+        if escaped:
+            out.append(" " if char == "\n" else "\\" + char)
+            escaped = False
+        elif char == "\\" and quote != "'":
+            escaped = True
+        elif quote:
+            quote = "" if char == quote else quote
+            out.append(char)
+        elif char in "'\"":
+            quote = char
+            out.append(char)
+        else:
+            out.append(";" if char == "\n" else char)
+    return "".join(out)
+
+
+def simple_commands(command: str) -> Iterator[list[str]]:
+    """The words of each command in a Bash call as the shell reads them, command substitutions
+    included, with heredoc bodies, comments and redirection targets left out."""
+    command = ANY_HEREDOC.sub(lambda body: body.group(0).split("\n", 1)[0], command)
+    command = end_unquoted_lines(command).replace("$(", "; (").replace("`", " ; ")
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    try:
+        tokens = list(lexer)
+    except ValueError:
+        tokens = command.split()
+    words: list[str] = []
+    redirected = False
+    for token in tokens:
+        if redirected:
+            redirected = False
+        elif token and set(token) <= set("<>&") and set(token) & set("<>"):
+            redirected = True
+        elif token and set(token) <= set(";&|()"):
+            if words:
+                yield words
+            words = []
+        else:
+            words.append(token)
+    if words:
+        yield words
+
+
+def starting_folders(walker: str, args: list[str]) -> list[str]:
+    """The folders a walker would start from, given its arguments."""
+    if walker == "find":
+        rest = list(args)
+        while rest and (rest[0] in ("-H", "-L", "-P") or rest[0].startswith("-O")):
+            rest.pop(0)
+        if rest[:1] == ["-D"]:
+            rest = rest[2:]
+        folders = []
+        for word in rest:
+            if word.startswith("-") or word in ("(", "!", ")", ","):
+                break
+            folders.append(word)
+        return folders
+    words = iter(args)
+    operands: list[str] = []
+    named: list[str] = []
+    pattern_given = False
+    for word in words:
+        if word == "--":
+            operands += list(words)
+            break
+        if not word.startswith("-") or word == "-":
+            operands.append(word)
+            continue
+        name, has_value, value = word.partition("=")
+        if not has_value and name in VALUED[walker]:
+            value = next(words, "")
+        pattern_given = pattern_given or name in PATTERN_OPTIONS.get(walker, ())
+        if name in FOLDER_OPTIONS.get(walker, ()):
+            named.append(value)
+    if walker in PATTERN_FIRST and not pattern_given:
+        operands = operands[1:]
+    return operands + named
+
+
 def walks_the_disk(command: str) -> bool:
-    """Whether a Bash call gives the disk root to a command that walks folders: a lone `/` after
-    a WALKERS word in one command, outside the text a quoted heredoc writes."""
-    command = HEREDOC.sub(lambda body: body.group(0).replace(body.group(3), ""), command)
-    for mark in SEPARATORS:
-        command = command.replace(mark, "\n")
-    for line in command.split("\n"):
-        words = line.split()
-        if "/" in words and WALKERS & set(words[: words.index("/")]):
-            return True
+    """Whether a Bash command gives the disk root to a command that walks folders."""
+    for words in simple_commands(command):
+        while words and (
+            words[0] in WRAPPERS or words[0] in KEYWORDS or ASSIGNMENT.match(words[0])
+        ):
+            wrapper = words.pop(0)
+            while wrapper in WRAPPERS and words and words[0].startswith("-"):
+                words.pop(0)
+        if words and os.path.basename(words[0]) in WALKERS:
+            if "/" in starting_folders(os.path.basename(words[0]), words[1:]):
+                return True
     return False
 
 
@@ -289,11 +416,12 @@ def outside(
     found: dict[tuple[str, str], None] = {}
     for transcript in transcripts:
         for tool, tool_input in tool_calls(transcript):
+            command = tool_input.get("command") if isinstance(tool_input, dict) else None
+            if tool == "Bash" and isinstance(command, str) and walks_the_disk(command):
+                found[(tool, "/")] = None
             for text in texts(tool_input):
                 if tool == "Bash":
                     text = SED_SCRIPT.sub(unscripted, text)
-                    if walks_the_disk(text):
-                        found[(tool, "/")] = None
                 for match in PATH.finditer(text):
                     word = match.group(1)
                     tagged = text.startswith("</", match.end())
