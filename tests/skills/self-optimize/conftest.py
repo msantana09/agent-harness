@@ -21,6 +21,7 @@ LOAD_ORDER = {
     "transcripts": SKILLS / "transcripts" / "scripts" / "transcripts.py",
     "scan": SKILLS / "self-optimize" / "scripts" / "scan.py",
     "corrections": SKILLS / "self-optimize" / "scripts" / "corrections.py",
+    "grader_check": SKILLS / "self-optimize" / "scripts" / "grader_check.py",
 }
 
 type Place = Callable[..., Path]
@@ -67,6 +68,11 @@ def scan(scripts: dict[str, ModuleType]) -> ModuleType:
 @pytest.fixture(scope="session")
 def corrections(scripts: dict[str, ModuleType]) -> ModuleType:
     return scripts["corrections"]
+
+
+@pytest.fixture(scope="session")
+def grader_check(scripts: dict[str, ModuleType]) -> ModuleType:
+    return scripts["grader_check"]
 
 
 @pytest.fixture(scope="session")

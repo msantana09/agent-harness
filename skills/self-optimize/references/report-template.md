@@ -61,8 +61,11 @@ Suite: `{date}-evals/`, {N} held-out cases, {runs} runs each, written without th
 |---|---|---|---|
 | {case} | {8-char id} | {score} | {score} |
 
-Verdict: {current score} vs {edited score}: {edited higher, cannot separate, or edited lower},
-with one line on why
+Second grader ({model}): {current score} vs {edited score}; {k} of {n} runs graded differently.
+Cases: {won} won, {tied} tied, {lost} lost.
+
+Verdict: {current score} vs {edited score}: {edited higher, cannot separate, edited lower or too
+close to call}, with one line on why
 
 ## How we will know
 

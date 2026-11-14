@@ -92,10 +92,11 @@ ended.
 ## 4. Check the last changes first
 
 Read `~/.claude/self-optimize/ledger.md`. Re-count every entry marked `applied` whose newest
-Re-count line is missing, `on track`, `did not work` or `too early`, on the same machine and
-transcript folders as its baseline and per session with activity. A correction measure carries the last
-count forward and adds only the days since, from this run's step 2 output; a hook measure is
-read again from the scan. Each Re-count line replaces the numbers on the ones before it. The
+Re-count line is missing, `on track`, `did not work` or `too early`, and every `worked` entry
+whose files changed after its newest Re-count line, since a later edit can undo a fix. Count on
+the same machine and transcript folders as its baseline and per session with activity. A
+correction measure carries the last count forward and adds only the days since, from this run's
+step 2 output; a hook measure is read again from the scan. Each Re-count line replaces the numbers on the ones before it. The
 line, the verdicts and the statuses are in `references/ledger.md`.
 
 A `did not work` entry is a candidate for this run: the first fix missed, so start from why.
@@ -138,8 +139,11 @@ How to write the cases and run them, including replaying a changed script or hoo
   every session read on the way to the changes, in any step, as ones to skip: the ones the
   changes were written from, not every session in the window. It never sees the changes. It
   finds real instances in other sessions and writes the cases from them.
-- **Recommend applying only when the edited text scores higher** on those cases. A tie means the
-  suite cannot tell them apart: say so, and let the user decide on the evidence alone.
+- **Recommend applying only when the edited text scores higher in total** on those cases, under
+  the eval's grader and under a second grader: `scripts/grader_check.py` re-grades the round
+  (`references/evals.md`, Checking the grader). A tie means the suite cannot tell them apart, and
+  "too close to call" means the two graders disagree on the outcome: say which, and let the user
+  decide on the evidence alone.
 - When no case can set up the behavior (it only appears late in a long session, or after a tool
   call), say so in the report and name what to watch for on the next run instead.
 
