@@ -13,7 +13,7 @@ if [[ ! -f /login/.credentials.json ]]; then
   exit 3
 fi
 cp /login/.credentials.json "$CLAUDE_CONFIG_DIR/.credentials.json"
-python3 "$here/fixtures.py" "$CLAUDE_CONFIG_DIR"
+python3 "$here/fixtures.py" "$CLAUDE_CONFIG_DIR" "$PWD"
 
 session=$(python3 -c 'import uuid; print(uuid.uuid4())')
 timeout "${GATE_TIMEOUT:-3600}" claude -p "/agent-harness:self-optimize" \

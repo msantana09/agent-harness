@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 import sys
 from datetime import UTC, datetime, timedelta
@@ -287,6 +288,20 @@ def test_the_invented_sessions_fall_inside_a_first_runs_window(tmp_path) -> None
         for line in path.read_text().splitlines():
             moment = datetime.fromisoformat(json.loads(line)["timestamp"].replace("Z", "+00:00"))
             assert today - timedelta(days=30) <= moment < today
+
+
+def test_the_project_holds_every_test_file_an_invented_session_names(tmp_path) -> None:
+    kept = tmp_path / "tests" / "test_orders.py"
+    kept.parent.mkdir()
+    kept.write_text("# the project's own\n")
+    written = fixtures.write_project(tmp_path)
+    said = " ".join(text for session in fixtures.SESSIONS for text in session[1:])
+    named = set(re.findall(r"tests/test_\w+\.py", said))
+    assert len(named) >= 5
+    for name in named:
+        assert (tmp_path / name).is_file()
+    assert kept.read_text() == "# the project's own\n" and kept not in written
+    compile((tmp_path / "tests" / "test_cart.py").read_text(), "test_cart.py", "exec")
 
 
 def probe(tmp_path: Path, *blocks: dict) -> Path:

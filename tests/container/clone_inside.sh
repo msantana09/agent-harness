@@ -78,7 +78,7 @@ git status --short > /out/git_status.txt
 probe tests "Run this project's test suite (python3 -m unittest) and tell me which test fails. \
 Then tell me which branch this repo is on and how many files are uncommitted. Change no files."
 
-python3 "$here/fixtures.py" "$CLAUDE_CONFIG_DIR"
+python3 "$here/fixtures.py" "$CLAUDE_CONFIG_DIR" "$PWD"
 limit=3600 probe selfoptimize "/self-optimize"
 
 cp -R "$CLAUDE_CONFIG_DIR/projects" /out/projects
