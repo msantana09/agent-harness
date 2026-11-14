@@ -14,7 +14,7 @@ is the config folder itself or lies under an allowed root (allowed: inside the c
 only what Claude Code itself keeps or loads there (CONFIG_PARTS) plus self-optimize's own folder,
 even when the config folder sits under another allowed root; outside it, the folders the plugins
 run from, the index cache, the working folder, /tmp, the system folders and the home folder
-itself, which a `cd ~` names, and `~/*`, which lists its folders). A file of the
+itself, which a `cd ~` names or an `ls -d ~/*/` lists the folders of). A file of the
 author's own layout under the config folder (a `memory/` file) or any other folder fails it.
 Paths are found by PATH: a word starting with /, ~ or $HOME, not preceded by a word character, a
 colon, a slash, a glob character or a quote joined on with + (so `and/or`, URLs, `*/x.md` and
@@ -70,6 +70,8 @@ CONFIG_PARTS = (
 )
 # The config folder parts a plugin run may use: Claude Code's own and self-optimize's folder.
 PLUGIN_PARTS = (*CONFIG_PARTS, "self-optimize")
+# What ends one command in a Bash call's text.
+SEPARATORS = (";", "&", "|", "\n", "(", ")")
 MISSING = ("does not exist", "no such file")
 # The delimiters prose wraps a path in. Written into a heredoc or a double-quoted string each is
 # escaped (\`/home/dev/shop\`), and the backslash before the closing one is then the shell's, not
@@ -96,10 +98,9 @@ def plugin_roots(run_output: Path) -> list[Path]:
 def allowed(
     config_dir: Path, plugins: list[Path], path: Path, parts: tuple[str, ...] = PLUGIN_PARTS
 ) -> bool:
-    """Whether *path* is the config folder, the home folder (or `~/*`, which lists the same names
-    an `ls ~` does) or lies under an allowed root. A path inside the config folder is judged by
-    *parts* alone, wherever the config folder itself sits."""
-    if path in (config_dir, HOME, HOME / "*"):
+    """Whether *path* is the config folder, the home folder or lies under an allowed root. A path
+    inside the config folder is judged by *parts* alone, wherever the config folder itself sits."""
+    if path in (config_dir, HOME):
         return True
     if config_dir in path.parents:
         roots = [config_dir / part for part in parts]
@@ -198,6 +199,17 @@ def named(match: re.Match[str]) -> str:
     return word.rstrip(".:")
 
 
+def lists_names(match: re.Match[str]) -> bool:
+    """Whether the command a matched word sits in only lists names: an `ls` with `-d` and without
+    `-R`, which prints what the word expands to and opens none of it."""
+    text = match.string
+    start = max(text.rfind(mark, 0, match.start()) for mark in SEPARATORS) + 1
+    ends = [at for mark in SEPARATORS if (at := text.find(mark, match.end())) != -1]
+    command = text[start : min(ends, default=len(text))].split()
+    flags = "".join(word[1:] for word in command[1:] if re.fullmatch(r"-[A-Za-z]+", word))
+    return command[:1] == ["ls"] and "d" in flags and "R" not in flags
+
+
 def unscripted(match: re.Match[str]) -> str:
     """A sed call without its script, unless the script names a file to read or write."""
     return match.group(0) if SED_FILE.search(match.group(2)) else match.group(1)
@@ -223,6 +235,8 @@ def outside(
                         continue
                     path = resolve(named(match))
                     if path.parent == ROOT and not EXPANDED & set(word) and not path.exists():
+                        continue
+                    if tool == "Bash" and path == HOME / "*" and lists_names(match):
                         continue
                     if not allowed(config_dir, plugins, path, parts):
                         found[(tool, word)] = None
