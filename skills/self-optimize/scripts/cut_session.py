@@ -17,19 +17,21 @@ starting with the text or more than one, or invalid arguments.
 
 How the cut is made:
 
-* Only messages the user typed can be cut before; a tool result, skill body, command expansion
-  or notice is never one. A match compares the message's start with the given text, with runs of
-  whitespace treated as one space.
-* Standing context is dropped: the instruction files Claude Code loaded (`CLAUDE.md`, rules), the
-  saved system prompt, the memory and session context sections, the output style, the listings
+* Only messages the user typed can be cut before, a prompt sent during a running turn included;
+  a tool result, skill body, command expansion or notice is never one. A match compares the start
+  of the words the user typed, without a side agent's note, with the given text, runs of
+  whitespace treated as one space. The message printed is the whole message, note included.
+* Standing context is dropped: the instruction files Claude Code loaded (`CLAUDE.md`, rules,
+  nested ones included), the memories it recalled, the saved system prompt, the memory and
+  session context sections, the output style, the listings
   of skills, agents, MCP servers and deferred tools, and the logged API requests. With them kept,
   the resumed agent reads the old text of the file under test and never sees the text a case
   appends, so both versions of a case run the same; the listings name tools the eval sandbox
   does not have.
 * Everything else stays as it was: tool results, skill and command bodies loaded during the
   session, and text hooks added.
-* A dropped record's children are re-attached to its parent, so the conversation stays one
-  unbroken chain for the resume to walk.
+* A dropped record's children are re-attached to its parent, and compaction boundaries stop
+  naming it, so the conversation stays one unbroken chain for the resume to walk.
 """
 
 import argparse
@@ -43,6 +45,8 @@ import transcripts  # noqa: E402
 
 STANDING_ATTACHMENTS = {
     "instructions",
+    "nested_memory",
+    "relevant_memories",
     "prompt_snapshot",
     "context_sections",
     "session_context",
@@ -62,14 +66,17 @@ def flat(text: str) -> str:
     return " ".join(text.split())
 
 
-def typed_text(record: Record) -> str | None:
-    """The message a person typed in this record, or None when the record is not one."""
+def typed_message(record: Record) -> tuple[str, str] | None:
+    """(the message whole, the words a person typed in it), or None when the record holds no
+    typed message."""
+    record = transcripts.queued_prompt_as_user_record(record)
     if record.get("type") != "user":
         return None
     text = transcripts.message_text(record)
-    if not text or transcripts.untyped_reason(record, transcripts.typed_words(text)):
+    words = transcripts.typed_words(text)
+    if not text or transcripts.untyped_reason(record, words):
         return None
-    return text
+    return text, words
 
 
 def standing(record: Record) -> bool:
@@ -80,6 +87,36 @@ def standing(record: Record) -> bool:
     )
 
 
+def kept_uuid(uuid: Any, parent_of: dict[str, Any]) -> Any:
+    """`uuid`, or the nearest kept record above it when it was dropped."""
+    while uuid in parent_of:
+        uuid = parent_of[uuid]
+    return uuid
+
+
+def forget_dropped(metadata: Record, parent_of: dict[str, Any]) -> None:
+    """Take dropped records out of a compaction boundary's preserved messages and segment.
+
+    The resume rebuilds the conversation kept across a compaction from these lists; one naming a
+    record the history no longer holds breaks that rebuild and loses the preserved turns.
+    """
+    preserved = metadata.get("preservedMessages")
+    if isinstance(preserved, dict):
+        for key in ("uuids", "allUuids"):
+            if isinstance(preserved.get(key), list):
+                preserved[key] = [u for u in preserved[key] if u not in parent_of]
+        if "anchorUuid" in preserved:
+            preserved["anchorUuid"] = kept_uuid(preserved["anchorUuid"], parent_of)
+    segment = metadata.get("preservedSegment")
+    if isinstance(segment, dict):
+        remaining = preserved.get("uuids") if isinstance(preserved, dict) else None
+        if segment.get("headUuid") in parent_of and remaining:
+            segment["headUuid"] = remaining[0]
+        for key in ("headUuid", "anchorUuid", "tailUuid"):
+            if key in segment:
+                segment[key] = kept_uuid(segment[key], parent_of)
+
+
 def cut(records: list[Record], before: str) -> tuple[list[Record], str, int]:
     """(the records kept, the matched message, how many were dropped as standing context).
 
@@ -87,20 +124,16 @@ def cut(records: list[Record], before: str) -> tuple[list[Record], str, int]:
     `before`.
     """
     wanted = flat(before)
-    matches = [
-        (index, text)
-        for index, record in enumerate(records)
-        if (text := typed_text(record)) is not None and flat(text).startswith(wanted)
+    typed = [
+        (index, found) for index, record in enumerate(records) if (found := typed_message(record))
     ]
+    matches = [(index, found) for index, found in typed if flat(found[1]).startswith(wanted)]
     if len(matches) != 1:
-        if matches:
-            shown = [text for _, text in matches]
-        else:
-            shown = [text for record in records if (text := typed_text(record)) is not None]
-        listing = "\n".join(f"  {flat(t)[:100]}" for t in shown[:CANDIDATES_SHOWN])
+        shown = [words for _, (_, words) in matches or typed]
+        listing = "\n".join(f"  {flat(words)[:100]}" for words in shown[:CANDIDATES_SHOWN])
         problem = "more than one typed message starts" if matches else "no typed message starts"
         raise ValueError(f"{problem} with that text; candidates:\n{listing}")
-    index, message = matches[0]
+    index, (message, _) = matches[0]
     parent_of: dict[str, Any] = {}
     kept: list[Record] = []
     for record in records[:index]:
@@ -110,11 +143,10 @@ def cut(records: list[Record], before: str) -> tuple[list[Record], str, int]:
             continue
         kept.append(record)
     for record in kept:
-        parent = record.get("parentUuid")
-        while parent in parent_of:
-            parent = parent_of[parent]
         if "parentUuid" in record:
-            record["parentUuid"] = parent
+            record["parentUuid"] = kept_uuid(record["parentUuid"], parent_of)
+        if isinstance(record.get("compactMetadata"), dict):
+            forget_dropped(record["compactMetadata"], parent_of)
     return kept, message, index - len(kept)
 
 
