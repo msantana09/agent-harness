@@ -33,9 +33,10 @@ Where the work is: the session's most recent tool call that names a location, fo
 the transcript backwards from its end. An Edit or Write `file_path` or a NotebookEdit
 `notebook_path` names one; so does a Bash command's `cd <path>`, `git -C <path>`, `make -C <path>`
 or `npm --prefix <path>`, each at command position; in a command naming several, the last one not
-skipped counts. Relative paths resolve against cwd, or against the directory an earlier
-`cd` in the same command moved to. A Bash path the shell would have to expand (a variable, a command
-substitution, a glob, `cd -`) names nothing. Paths under the system temp folders (/tmp,
+skipped counts. Relative paths resolve against the folder the transcript records for that call
+(cwd when it records none), or against the directory an earlier `cd` in the same command moved
+to. A Bash path the shell would have to expand (a variable, a command substitution, a glob,
+`cd -`) names nothing. Paths under the system temp folders (/tmp,
 /private/tmp, TMPDIR) or the Claude config folder (CLAUDE_CONFIG_DIR, else ~/.claude) say nothing
 about the project, so those calls are skipped, as are subagent (sidechain) records and lines that
 are not valid JSON. A location inside cwd keeps the opt-out; one outside it runs every check. No
@@ -224,8 +225,10 @@ def last_work_location(transcript_path: str, cwd: str) -> str | None:
                 event = json.loads(line)
             except ValueError:
                 continue
+            shell_folder = event.get("cwd") if isinstance(event, dict) else None
+            base = shell_folder if isinstance(shell_folder, str) and shell_folder else cwd
             for block in _tool_calls(event):
-                for location in reversed(_call_locations(block, cwd)):
+                for location in reversed(_call_locations(block, base)):
                     forms = {Path(location), Path(os.path.realpath(location))}
                     if not any(form.is_relative_to(root) for form in forms for root in skipped):
                         return location

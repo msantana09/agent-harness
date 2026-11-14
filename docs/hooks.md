@@ -51,4 +51,5 @@ A project whose drafts legitimately hold questions, such as a documentation repo
 question, announcement and blockquote checks of `prose_question_blocker` with an empty file named
 `.claude/prose-questions-ok` in the folder its sessions start from. The opt-out holds only while
 the session's latest file edit or directory change is inside that folder: once the work moves to
-another project, every check runs again. The check for an offered step stays on. A single reply opts out of all four with the marker `<!-- ask-ok -->`.
+another project, every check runs again. The check for an offered step stays on. A single reply
+opts out of all four with the marker `<!-- ask-ok -->`.
