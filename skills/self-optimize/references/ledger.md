@@ -77,10 +77,11 @@ waits for a run there.
 
 Re-count a `worked` entry too when any file on its Files line changed after the date of its
 newest Re-count line: a commit to it (`git log --since=<that date> -- <file>` in the repository
-that holds it), or, for a file outside a repository, a modification time after that date. A
-later edit can undo the fix, and the count is the only check that would notice. From then on
-the entry's count starts the day after the first such change, so the weeks the fix held do not
-dilute what came after the edit. The verdict is `too early` until that window has as many
+that holds it), an edit not yet committed (`git status --porcelain -- <file>` lists it; its
+modification time dates the change), or, for a file outside a repository, a modification time
+after that date. A later edit can undo the fix, and the count is the only check that would
+notice. From then on the entry's count starts the day after the first such change, so the weeks
+the fix held do not dilute what came after the edit. The verdict is `too early` until that window has as many
 sessions as the baseline, and the newest verdict replaces `worked`.
 
 A count's start day is the day after the apply date, or, once a `worked` entry's files have

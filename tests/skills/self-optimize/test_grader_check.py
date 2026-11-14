@@ -23,7 +23,7 @@ text = sys.stdin.read()
 (state / f"stdin-{{os.getpid()}}.txt").write_text(text)
 if (state / "broken").exists():
     sys.exit(1)
-data = json.loads(re.search(r"=== BEGIN DATA \\\\w+ ===\\n(.*)\\n=== END DATA", text, re.S)[1])
+data = json.loads(re.search(r"=== BEGIN DATA \\w+ ===\\n(.*)\\n=== END DATA", text, re.S)[1])
 fail = json.loads((state / "fail.json").read_text())
 verdict = "FAIL" if any(word in data["reply"] for word in fail) else "PASS"
 reply = {{"is_error": False, "total_cost_usd": 0.001,
@@ -86,7 +86,7 @@ def test_a_verdict_the_second_grader_does_not_share_is_too_close_to_call(
     code, out, _ = run(grader_check, capsys, str(suite(tmp_path, "evals", "round.json")))
     assert code == 0
     assert "## edited vs current: too close to call" in out
-    assert "sonnet: 3 vs 3, cannot separate" in out
+    assert "sonnet: 3 of 6 vs 3 of 6, cannot separate" in out
     assert "tone-edited run 1: eval PASS, sonnet FAIL" in out
 
 
@@ -102,7 +102,30 @@ def test_an_edit_in_a_second_suite_folder_is_compared_with_the_current_cases(
     code, out, _ = run(grader_check, capsys, str(first), str(retry))
     assert code == 0
     assert "## edited2 vs current: edited higher" in out
-    assert "Eval grader: 3 vs 6, edited higher" in out
+    assert "Eval grader: 3 of 6 vs 6 of 6, edited higher" in out
+
+
+def test_more_runs_with_a_lower_pass_rate_score_lower(
+    grader_check: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    install_claude(tmp_path, monkeypatch, fail=["bad"])
+    first = suite(tmp_path, "evals", "round.json")
+    retry = suite(tmp_path, "evals-retry", "retry.json")
+    results = next(retry.glob("results/*/aggregate-result.json"))
+    data = json.loads(results.read_text())
+    for case in data["cases"]:
+        good = case["arms"]["with"][0]
+        grader = {**good["graders"][0], "passed": False, "evidence": "bad: nothing named"}
+        bad = {**good, "score": 0, "passed": False, "graders": [grader]}
+        case["arms"]["with"] = [good] * 4 + [bad] * 6
+    results.write_text(json.dumps(data))
+    code, out, _ = run(grader_check, capsys, str(first), str(retry))
+    assert code == 0
+    assert "## edited2 vs current: edited lower" in out
+    assert "Eval grader: 3 of 6 vs 8 of 20, edited lower" in out
 
 
 def test_the_second_grader_sees_only_the_criteria_and_the_reply(
@@ -129,7 +152,7 @@ def test_a_run_the_eval_did_not_grade_is_not_sent_to_the_second_grader(
     state = install_claude(tmp_path, monkeypatch, fail=["bad"])
     code, out, _ = run(grader_check, capsys, str(suite(tmp_path, "evals", "round.json")))
     assert code == 0
-    assert len(list(state.glob("stdin-*.txt"))) == 12
+    assert len(list(state.glob("stdin-*.txt"))) == 11
     assert "1 runs the eval did not grade" in out
 
 

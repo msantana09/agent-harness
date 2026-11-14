@@ -19,11 +19,12 @@ Exit codes: 0 success; 1 a model call failed; 2 a folder without results, a resu
 script does not know (schemaVersion other than 1, or a partial run), a case name without a
 `-current` or `-edited` suffix, a case name in two folders, or no case pair to compare.
 
-How the counts are made: a version's total is the runs it passed, over the cases that have both
-a `-current` and that version. A run the eval did not grade (an error, or a grader that did not
-score) is not sent to the second model and counts as the eval counted it. The verdict under each
-grader compares the edited total with the current total: higher, lower, or equal ("cannot
-separate"). Each case also gets a win, tie or loss from the eval grader's per-case scores.
+How the counts are made: a version's total is the runs it passed out of the runs it had, over the
+cases that have both a `-current` and that version. A run the eval did not grade (an error, or a
+grader that did not score) is not sent to the second model and counts as the eval counted it. The
+verdict under each grader compares the edited pass rate with the current one: higher, lower, or
+equal ("cannot separate"), so an attempt run more times does not score higher for that. Each case
+also gets a win, tie or loss from the eval grader's per-case pass rates.
 """
 
 import argparse
@@ -166,10 +167,13 @@ def passed(run: Run, grader: str) -> bool:
     return run.first
 
 
-def verdict(current: int, edited: int) -> str:
-    if edited > current:
+def verdict(current: dict[str, int], edited: dict[str, int], grader: str) -> str:
+    """Compare pass rates, so a version given more runs does not score higher for it."""
+    edited_side = edited[grader] * current["runs"]
+    current_side = current[grader] * edited["runs"]
+    if edited_side > current_side:
         return "edited higher"
-    if edited < current:
+    if edited_side < current_side:
         return "edited lower"
     return "cannot separate"
 
@@ -178,9 +182,10 @@ def compare(runs: list[Run]) -> list[dict[str, Any]]:
     """One comparison per edited version against current, under both graders."""
     scores: dict[tuple[str, str], dict[str, int]] = {}
     for run in runs:
-        score = scores.setdefault((run.case, run.version), {"first": 0, "second": 0})
+        score = scores.setdefault((run.case, run.version), {"first": 0, "second": 0, "runs": 0})
         score["first"] += passed(run, "first")
         score["second"] += passed(run, "second")
+        score["runs"] += 1
     versions = sorted({v for _, v in scores if v != "current"}, key=lambda v: (len(v), v))
     comparisons: list[dict[str, Any]] = []
     for version in versions:
@@ -188,17 +193,15 @@ def compare(runs: list[Run]) -> list[dict[str, Any]]:
         if not cases:
             continue
         totals = {
-            grader: {
-                "current": sum(scores[(c, "current")][grader] for c in cases),
-                version: sum(scores[(c, version)][grader] for c in cases),
+            side: {
+                key: sum(scores[(c, side)][key] for c in cases) for key in scores[(cases[0], side)]
             }
-            for grader in ("first", "second")
+            for side in ("current", version)
         }
-        first = verdict(totals["first"]["current"], totals["first"][version])
-        second = verdict(totals["second"]["current"], totals["second"][version])
+        first = verdict(totals["current"], totals[version], "first")
+        second = verdict(totals["current"], totals[version], "second")
         per_case = {
-            c: verdict(scores[(c, "current")]["first"], scores[(c, version)]["first"])
-            for c in cases
+            c: verdict(scores[(c, "current")], scores[(c, version)], "first") for c in cases
         }
         comparisons.append(
             {
@@ -233,13 +236,14 @@ def render(runs: list[Run], comparisons: list[dict[str, Any]], cost: float) -> s
     for comp in comparisons:
         version = comp["version"]
         totals = comp["totals"]
+        cur_total, new_total = totals["current"], totals[version]
         lines += [
             f"## {version} vs current: {comp['verdict']}",
             "",
-            f"- Eval grader: {totals['first']['current']} vs {totals['first'][version]}, "
-            f"{comp['first_verdict']}",
-            f"- {MODEL}: {totals['second']['current']} vs {totals['second'][version]}, "
-            f"{comp['second_verdict']}",
+            f"- Eval grader: {cur_total['first']} of {cur_total['runs']} vs "
+            f"{new_total['first']} of {new_total['runs']}, {comp['first_verdict']}",
+            f"- {MODEL}: {cur_total['second']} of {cur_total['runs']} vs "
+            f"{new_total['second']} of {new_total['runs']}, {comp['second_verdict']}",
             f"- Cases, eval grader: {comp['wins']} won, {comp['ties']} tied, {comp['losses']} lost",
             "",
             f"| Case | current (eval / {MODEL}) | {version} (eval / {MODEL}) |",
@@ -248,7 +252,8 @@ def render(runs: list[Run], comparisons: list[dict[str, Any]], cost: float) -> s
         for case in comp["cases"]:
             cur, new = comp["scores"][case]["current"], comp["scores"][case][version]
             lines.append(
-                f"| {case} | {cur['first']} / {cur['second']} | {new['first']} / {new['second']} |"
+                f"| {case} | {cur['first']} / {cur['second']} of {cur['runs']} "
+                f"| {new['first']} / {new['second']} of {new['runs']} |"
             )
         lines.append("")
     if disagree:
