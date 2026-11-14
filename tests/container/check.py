@@ -70,8 +70,10 @@ CONFIG_PARTS = (
 )
 # The config folder parts a plugin run may use: Claude Code's own and self-optimize's folder.
 PLUGIN_PARTS = (*CONFIG_PARTS, "self-optimize")
-# What ends one command in a Bash call's text.
-SEPARATORS = (";", "&", "|", "\n", "(", ")")
+# What ends one command in a Bash call's text, a command substitution included.
+SEPARATORS = (";", "&", "|", "\n", "(", ")", "`")
+# The ls options that only shape a listing of names and take no value.
+NAME_FLAGS = set("adlhFp1")
 MISSING = ("does not exist", "no such file")
 # The delimiters prose wraps a path in. Written into a heredoc or a double-quoted string each is
 # escaped (\`/home/dev/shop\`), and the backslash before the closing one is then the shell's, not
@@ -200,14 +202,20 @@ def named(match: re.Match[str]) -> str:
 
 
 def lists_names(match: re.Match[str]) -> bool:
-    """Whether the command a matched word sits in only lists names: an `ls` with `-d` and without
-    `-R`, which prints what the word expands to and opens none of it."""
+    """Whether the command a matched word sits in only lists names: an `ls` whose options are all
+    among NAME_FLAGS and include `-d`, which prints what the word expands to and opens none of it.
+    Any other option (one that recurses, or takes the next word as its value) leaves the word to
+    the path check."""
     text = match.string
     start = max(text.rfind(mark, 0, match.start()) for mark in SEPARATORS) + 1
     ends = [at for mark in SEPARATORS if (at := text.find(mark, match.end())) != -1]
     command = text[start : min(ends, default=len(text))].split()
-    flags = "".join(word[1:] for word in command[1:] if re.fullmatch(r"-[A-Za-z]+", word))
-    return command[:1] == ["ls"] and "d" in flags and "R" not in flags
+    options = [word[1:] for word in command[1:] if word.startswith("-")]
+    return (
+        command[:1] == ["ls"]
+        and all(option and set(option) <= NAME_FLAGS for option in options)
+        and any("d" in option for option in options)
+    )
 
 
 def unscripted(match: re.Match[str]) -> str:
