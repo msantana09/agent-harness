@@ -644,10 +644,10 @@ def test_a_command_run_in_the_project_does_not_bring_the_opt_out_back(
 @pytest.mark.parametrize(
     "command",
     [
-        "git grep -C 3 word",
-        "grep -C 2 word notes.md",
-        "git commit -F - <<'EOF'\ndocs: setup\n\ncd /opt/app && make\nEOF",
-        "cat > notes.md <<EOF\ncd /opt/app\nEOF\ngit status",
+        lambda other: f"git grep -C {other} word",
+        lambda other: f"grep -C {other} word notes.md",
+        lambda other: f"git commit -F - <<'EOF'\ndocs: setup\n\ncd {other} && make\nEOF",
+        lambda other: f"cat > notes.md <<EOF\ncd {other}\nEOF\ngit status",
     ],
     ids=["git-grep-context", "grep-context", "quoted-heredoc", "plain-heredoc"],
 )
@@ -655,13 +655,13 @@ def test_text_that_only_looks_like_a_move_names_no_location(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     folders: dict[str, Path],
-    command: str,
+    command,
 ) -> None:
     opted_out_run(
         monkeypatch,
         folders,
         tool_call("Edit", file_path=str(folders["docs"] / "guide.md")),
-        tool_call("Bash", command=command),
+        tool_call("Bash", command=command(folders["other"])),
     )
 
     assert printed(capsys) == {}
@@ -764,7 +764,6 @@ def test_a_record_the_hook_cannot_read_keeps_the_opt_out(
         lambda other: tool_call("Bash", command=f"npx --prefix {other} tsc"),
         lambda other: tool_call("Bash", command=f"uv run --directory {other} pytest"),
         lambda other: tool_call("Bash", shell_folder=other, command="pytest -q"),
-        lambda other: tool_call("Bash", command=f"cd {other} && cd scratch"),
     ],
     ids=[
         "edit",
@@ -781,7 +780,6 @@ def test_a_record_the_hook_cannot_read_keeps_the_opt_out(
         "npx-prefix",
         "uv-directory",
         "shell-already-there",
-        "two-moves",
     ],
 )
 def test_the_opt_out_does_not_apply_when_the_work_is_in_another_project(
@@ -815,12 +813,46 @@ def test_a_relative_path_resolves_against_the_folder_the_shell_was_in(
     assert printed(capsys)["decision"] == "block"
 
 
+def test_a_relative_path_after_a_move_resolves_against_the_new_folder(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["docs"] / "guide.md")),
+        tool_call(
+            "Bash", shell_folder=folders["docs"], command=f"cd {folders['scratch']} && cd .."
+        ),
+    )
+
+    assert printed(capsys) == {}
+
+
+@pytest.mark.parametrize("variable", ["TMPDIR", "CLAUDE_CONFIG_DIR"])
+def test_a_command_in_a_temp_or_config_folder_outside_the_project_is_skipped(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    folders: dict[str, Path],
+    variable: str,
+) -> None:
+    outside = folders["docs"].parent / "outside"
+    outside.mkdir()
+    monkeypatch.setenv(variable, str(outside))
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["docs"] / "guide.md")),
+        tool_call("Bash", command=f"cd {outside} && ls"),
+    )
+
+    assert printed(capsys) == {}
+
+
 @pytest.mark.parametrize(
     "last_line",
     [
         lambda paths: tool_call("Write", file_path=str(paths["scratch"] / "notes.md")),
         lambda paths: tool_call("Write", file_path=str(paths["fixed_temp"] / "notes.md")),
-        lambda paths: tool_call("Bash", command=f"cd {paths['config']} && ls"),
         lambda paths: tool_call("Edit", file_path="~/.claude/memory/notes.md"),
         lambda paths: '{"type": "assistant", "message": {"content": [{"type": "tool_use"',
         lambda paths: tool_call("Edit", sidechain=True, file_path=str(paths["docs"] / "a.md")),
@@ -828,7 +860,6 @@ def test_a_relative_path_resolves_against_the_folder_the_shell_was_in(
     ids=[
         "temp-write",
         "fixed-temp-write",
-        "config-cd",
         "home-config-edit",
         "malformed-line",
         "sidechain-call",
