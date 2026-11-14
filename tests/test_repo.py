@@ -153,12 +153,13 @@ def test_every_skill_is_named_for_its_folder_with_a_short_enough_description() -
         assert 0 < len(fields.get("description", "")) < DESCRIPTION_LIMIT, manifest
 
 
-def test_both_plugin_files_parse_and_name_the_repo() -> None:
+def test_the_plugin_is_named_for_the_repo_and_the_marketplace_for_its_owner() -> None:
     plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
     marketplace = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text())
-    repo = plugin["repository"].rstrip("/").rsplit("/", 1)[-1]
+    owner, repo = plugin["repository"].rstrip("/").rsplit("/", 2)[-2:]
     assert plugin["name"] == repo
-    assert marketplace["name"] == repo
+    # A user registers one marketplace per name, so it takes the owner's name, not the repo's.
+    assert marketplace["name"] == owner
     assert [entry["name"] for entry in marketplace["plugins"]] == [repo]
 
 

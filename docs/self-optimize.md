@@ -55,7 +55,7 @@ Code, run:
 
 ```text
 /plugin marketplace add msantana09/agent-harness
-/plugin install agent-harness@agent-harness
+/plugin install agent-harness@msantana09
 ```
 
 Or on its own, copied into your skills folder with the transcripts skill it reads sessions
