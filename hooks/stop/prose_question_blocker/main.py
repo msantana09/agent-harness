@@ -29,19 +29,21 @@ drafted copy legitimately contains questions, trailing colons or blockquote bars
 session's work is in that project. The hand-back check stays on: an offer at the end of the reply
 is the agent's own, and drafted copy can carry the marker.
 
-Where the work is: the session's most recent tool call that names a location, found by reading
-the transcript backwards from its end. An Edit or Write `file_path` or a NotebookEdit
-`notebook_path` names one; so does a Bash command's `cd <path>`, `git -C <path>`, `make -C <path>`
-or `npm --prefix <path>`, each at command position; in a command naming several, the last one not
-skipped counts. Relative paths resolve against the folder the transcript records for that call
-(cwd when it records none), or against the directory an earlier `cd` in the same command moved
-to. A Bash path the shell would have to expand (a variable, a command substitution, a glob,
-`cd -`) names nothing. Paths under the system temp folders (/tmp,
-/private/tmp, TMPDIR) or the Claude config folder (CLAUDE_CONFIG_DIR, else ~/.claude) say nothing
-about the project, so those calls are skipped, as are subagent (sidechain) records and lines that
-are not valid JSON. A location inside cwd keeps the opt-out; one outside it runs every check. No
-transcript, an unreadable one, or no located call in its last 32 MiB keeps the opt-out, since the
-marker's project is then the only evidence.
+Where the work is: the session's most recent tool call that says, found by reading its transcript
+and its subagents' transcripts backwards from their ends. An Edit or Write `file_path` or a
+NotebookEdit `notebook_path` says so wherever it points. A Bash command says so only when it ran
+in, or names, a folder outside cwd: the folder the transcript records for the call, or a
+`cd <path>`, `pushd <path>`, `git -C <path>`, `make -C <path>`, `npm --prefix <path>`,
+`npx --prefix <path>` or `uv --directory <path>` at command position. A command run inside cwd
+does not bring the opt-out back; an edit there does. Relative paths resolve against the folder
+recorded for the call (cwd when none is), or against the directory an earlier `cd` in the same
+command moved to. A Bash path the shell would have to expand (a variable, a command
+substitution, a glob, `cd -`) names nothing, and neither does text in a heredoc body. Paths under
+the system temp folders (/tmp, /private/tmp, TMPDIR) or the Claude config folder
+(CLAUDE_CONFIG_DIR, else ~/.claude) say nothing about the project, so those calls are passed
+over, as are lines that are not valid JSON. The last located call inside cwd keeps the opt-out;
+one outside it runs every check. No transcript, one that cannot be read, or no located call in
+the last 32 MiB of each keeps the opt-out, since the marker's project is then the only evidence.
 
 Loop protection: on the redo turn (`stop_hook_active` true) the hand-back, announcement and
 blockquote checks do not block again, since the agent already complied once. The prose-question
@@ -74,6 +76,7 @@ import os
 import re
 import sys
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib_shared"))
@@ -88,46 +91,57 @@ def project_opted_out(cwd: str) -> bool:
     return bool(cwd) and (Path(cwd) / PROJECT_OPT_OUT).is_file()
 
 
-# The transcript is read backwards from its end, at most this many bytes; a session whose last
-# located call is further back counts as having none.
+# Each transcript is read backwards from its end, at most this many bytes; a transcript whose
+# last located call is further back counts as having none.
 TRANSCRIPT_SCAN_BYTES = 32 * 1024 * 1024
 TRANSCRIPT_CHUNK_BYTES = 1024 * 1024
 # Fixed system temp folders; TMPDIR is read at call time beside them.
 SYSTEM_TEMP_DIRS: tuple[str, ...] = ("/tmp", "/private/tmp")
 EDIT_TOOLS = {"Edit": "file_path", "Write": "file_path", "NotebookEdit": "notebook_path"}
 TOOL_USE_BYTES_RE = re.compile(rb'"type":\s*"tool_use"')
+# What can go wrong reading a record nobody promised the shape of.
+UNREADABLE = (OSError, ValueError, TypeError, RecursionError)
 
-# A directory a Bash command changes to or names, each command at command position (start of the
-# command, or after `&&`, `||`, `;`, `|`, `(` or a newline): `cd <path>`, `git -C <path>` (among
-# git's own options, before the subcommand, so `git grep -C 3` is not one), `make -C <path>` and
-# `npm --prefix <path>` (or `--prefix=<path>`).
-_COMMAND_START = r"(?:^|[;&|(\n])[ \t]*"
+# A heredoc with its body: the body is text the command passes on, not commands it runs.
+HEREDOC_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?\n[ \t]*\2[ \t]*(?=\n|$)", re.DOTALL)
+
+# A directory a Bash command moves to or names, each command at command position (start of the
+# command, after `&&`, `||`, `;`, `|`, `(`, `{`, a newline or a keyword such as `if` or `then`,
+# with any `NAME=value` settings in front): `cd <path>` or `pushd <path>`, `git -C <path>` (among
+# git's own options, before the subcommand, so `git grep -C 3` is not one), `make -C <path>`,
+# `npm --prefix <path>` or `npx --prefix <path>`, and `uv --directory <path>`.
+_COMMAND_START = r"(?:^|[;&|({\n]|\b(?:if|then|elif|else|while|until|do)\b)[ \t]*(?:\w+=\S*[ \t]+)*"
 _WORD = r"[^\s;&|()]+"
-_PATH_TOKEN = r"(\"[^\"]*\"|'[^']*'|" + _WORD + ")"
-CD_RE = re.compile(_COMMAND_START + r"cd[ \t]+" + _PATH_TOKEN)
+_TOKEN = r"\"[^\"]*\"|'[^']*'|" + _WORD
+_PATH_TOKEN = "(" + _TOKEN + ")"
+_FLAG_VALUE = r"(?:=|[ \t]+)"
+MOVE_RE = re.compile(_COMMAND_START + r"(?:cd|pushd)[ \t]+(?:--[ \t]+)?" + _PATH_TOKEN)
 DIRECTORY_FLAG_RES = [
     re.compile(
         _COMMAND_START
-        + r"git(?:[ \t]+(?:-c[ \t]+"
-        + _WORD
-        + r"|-(?!C\b)"
+        + r"git(?:[ \t]+(?:-c[ \t]+(?:"
+        + _TOKEN
+        + r")|-(?!C\b)"
         + _WORD
         + r"))*[ \t]+-C[ \t]*"
         + _PATH_TOKEN
     ),
     re.compile(_COMMAND_START + r"make\b[^;&|\n]*?[ \t]-C[ \t]*" + _PATH_TOKEN),
-    re.compile(_COMMAND_START + r"npm\b[^;&|\n]*?[ \t]--prefix(?:=|[ \t]+)" + _PATH_TOKEN),
+    re.compile(_COMMAND_START + r"np[mx]\b[^;&|\n]*?[ \t]--prefix" + _FLAG_VALUE + _PATH_TOKEN),
+    re.compile(_COMMAND_START + r"uv\b[^;&|\n]*?[ \t]--directory" + _FLAG_VALUE + _PATH_TOKEN),
 ]
 
 
-def _non_work_roots() -> list[str]:
+def _non_work_roots() -> list[Path]:
     """Folders whose files say nothing about which project the work is in: the system temp
-    folders and the Claude config folder (CLAUDE_CONFIG_DIR, else ~/.claude)."""
+    folders and the Claude config folder (CLAUDE_CONFIG_DIR, else ~/.claude), each as written
+    and as resolved, since a config folder can be a link into a repository."""
     roots = list(SYSTEM_TEMP_DIRS)
     if os.environ.get("TMPDIR"):
         roots.append(os.environ["TMPDIR"])
     roots.append(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"))
-    return roots
+    written = [Path(os.path.normpath(os.path.expanduser(root))) for root in roots]
+    return written + [Path(os.path.realpath(root)) for root in roots]
 
 
 def _resolve(path: str, base: str) -> str:
@@ -145,18 +159,20 @@ def _resolve_shell_word(raw: str, base: str) -> str | None:
 
 
 def _bash_locations(command: str, base: str) -> list[str]:
-    """Directories a Bash command names, in command order; a `cd` moves the base that later
-    relative paths in the same command resolve against."""
-    found = [(match.start(1), True, match.group(1)) for match in CD_RE.finditer(command)]
+    """Directories a Bash command runs in or names, in command order: the folder the shell was
+    in, then each one the command names. A `cd` moves the base that later relative paths in the
+    same command resolve against."""
+    command = HEREDOC_RE.sub(lambda heredoc: heredoc.group(0).split("\n", 1)[0], command)
+    found = [(match.start(1), True, match.group(1)) for match in MOVE_RE.finditer(command)]
     for pattern in DIRECTORY_FLAG_RES:
         found += [(match.start(1), False, match.group(1)) for match in pattern.finditer(command)]
-    locations = []
-    for _, is_cd, raw in sorted(found):
+    locations = [base]
+    for _, is_move, raw in sorted(found):
         path = _resolve_shell_word(raw, base)
         if path is None:
             continue
         locations.append(path)
-        if is_cd:
+        if is_move:
             base = path
     return locations
 
@@ -164,7 +180,7 @@ def _bash_locations(command: str, base: str) -> list[str]:
 def _call_locations(block: dict, base: str) -> list[str]:
     name = block.get("name")
     tool_input = block.get("input")
-    if not isinstance(tool_input, dict):
+    if not isinstance(name, str) or not isinstance(tool_input, dict):
         return []
     if name in EDIT_TOOLS:
         raw = tool_input.get(EDIT_TOOLS[name])
@@ -192,10 +208,11 @@ def _lines_from_end(path: Path) -> Iterator[bytes]:
             yield carry
 
 
-def _tool_calls(event: object) -> list[dict]:
-    """The session's own tool calls in one transcript record, last first. Subagent (sidechain)
-    records and request blobs, which repeat earlier calls, carry none."""
-    if not isinstance(event, dict) or event.get("isSidechain") is True:
+def _tool_calls(event: dict, subagent: bool) -> list[dict]:
+    """The tool calls in one transcript record, last first. A session's own transcript counts
+    only its own records and a subagent's transcript only the subagent's; request blobs, which
+    repeat earlier calls, carry none."""
+    if (event.get("isSidechain") is True) is not subagent:
         return []
     if event.get("type") == "tool_use":
         return [event]
@@ -209,40 +226,71 @@ def _tool_calls(event: object) -> list[dict]:
     return blocks[::-1]
 
 
-def last_work_location(transcript_path: str, cwd: str) -> str | None:
-    """The location named by the session's most recent tool call that names one outside the temp
-    and config folders, or None when there is none (or no readable transcript)."""
-    if not transcript_path:
-        return None
-    roots = _non_work_roots()
-    skipped = [Path(os.path.realpath(root)) for root in roots]
-    skipped += [Path(os.path.normpath(os.path.expanduser(root))) for root in roots]
-    try:
-        for line in _lines_from_end(Path(transcript_path)):
-            if not TOOL_USE_BYTES_RE.search(line):
-                continue  # cheap filter before parsing: no tool call on this line
-            try:
-                event = json.loads(line)
-            except ValueError:
-                continue
-            shell_folder = event.get("cwd") if isinstance(event, dict) else None
-            base = shell_folder if isinstance(shell_folder, str) and shell_folder else cwd
-            for block in _tool_calls(event):
-                for location in reversed(_call_locations(block, base)):
-                    forms = {Path(location), Path(os.path.realpath(location))}
-                    if not any(form.is_relative_to(root) for form in forms for root in skipped):
-                        return location
-    except OSError:
-        return None
+def _inside(location: str, folder: str) -> bool:
+    return Path(os.path.realpath(location)).is_relative_to(os.path.realpath(folder))
+
+
+def _last_located(transcript: Path, cwd: str, subagent: bool) -> tuple[str, str] | None:
+    """The time and place of the most recent call in one transcript that says where the work is:
+    an edit anywhere, or a Bash command run in or naming a folder outside `cwd`. Folders that
+    say nothing about the project are passed over."""
+    skipped = _non_work_roots()
+    for line in _lines_from_end(transcript):
+        if not TOOL_USE_BYTES_RE.search(line):
+            continue  # cheap filter before parsing: no tool call on this line
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        shell_folder = event.get("cwd")
+        base = shell_folder if isinstance(shell_folder, str) and shell_folder else cwd
+        timestamp = event.get("timestamp")
+        for block in _tool_calls(event, subagent):
+            for location in reversed(_call_locations(block, base)):
+                forms = {Path(location), Path(os.path.realpath(location))}
+                if any(form.is_relative_to(root) for form in forms for root in skipped):
+                    continue
+                if block.get("name") in EDIT_TOOLS or not _inside(location, cwd):
+                    return (timestamp if isinstance(timestamp, str) else "", location)
     return None
 
 
-def work_in_project(cwd: str, transcript_path: str) -> bool:
-    """True unless the session's most recent located tool call is outside `cwd`."""
-    location = last_work_location(transcript_path, cwd)
-    if location is None:
+def _written_after(transcript: Path, timestamp: str) -> bool:
+    """True when the file changed after the record time `timestamp` (or the time is unknown)."""
+    try:
+        moment = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp()
+    except ValueError:
         return True
-    return Path(os.path.realpath(location)).is_relative_to(os.path.realpath(cwd))
+    return transcript.stat().st_mtime > moment
+
+
+def last_work_location(transcript_path: str, cwd: str) -> str | None:
+    """Where the session's work is: the latest located call across the session's transcript and
+    its subagents' transcripts (`<transcript without .jsonl>/subagents/**/agent-*.jsonl`), or
+    None when no call says."""
+    if not transcript_path:
+        return None
+    session = Path(transcript_path)
+    latest = _last_located(session, cwd, subagent=False)
+    for transcript in sorted(session.with_suffix("").glob("subagents/**/agent-*.jsonl")):
+        if latest is not None and not _written_after(transcript, latest[0]):
+            continue
+        located = _last_located(transcript, cwd, subagent=True)
+        if located is not None and (latest is None or located[0] > latest[0]):
+            latest = located
+    return latest[1] if latest is not None else None
+
+
+def work_in_project(cwd: str, transcript_path: str) -> bool:
+    """True unless the session's most recent located call is outside `cwd`. A transcript that
+    cannot be read keeps the answer True: the marker's project is then the only evidence."""
+    try:
+        location = last_work_location(transcript_path, cwd)
+        return location is None or _inside(location, cwd)
+    except UNREADABLE:
+        return True
 
 
 # Paired code fences, either ``` or ~~~ (a fence closes only with its own marker, per CommonMark).

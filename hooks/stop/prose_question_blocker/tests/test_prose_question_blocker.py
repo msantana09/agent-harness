@@ -554,17 +554,18 @@ def folders(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, Path]:
     with HOME at the project), so a call there reads as inside the project unless skipped, and
     another project beside it.
 
-    tmp_path itself sits under a system temp folder, so the fixed temp roots are cleared and
-    TMPDIR points at the project's temp folder instead.
+    tmp_path itself sits under a system temp folder, so the fixed temp roots are replaced by one
+    inside the project and TMPDIR points at the project's temp folder.
     """
     docs = tmp_path / "docs"
     docs.mkdir()
     opt_out_project(docs)
     paths = {"docs": docs, "other": tmp_path / "other", "scratch": docs / "scratch"}
     paths["config"] = docs / ".claude"
+    paths["fixed_temp"] = docs / "fixed-temp"
     paths["other"].mkdir()
     paths["scratch"].mkdir()
-    monkeypatch.setattr(hook, "SYSTEM_TEMP_DIRS", ())
+    monkeypatch.setattr(hook, "SYSTEM_TEMP_DIRS", (str(paths["fixed_temp"]),))
     monkeypatch.setenv("TMPDIR", str(paths["scratch"]))
     monkeypatch.setenv("HOME", str(docs))
     monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
@@ -572,7 +573,11 @@ def folders(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, Path]:
 
 
 def tool_call(
-    name: str, sidechain: bool = False, shell_folder: Path | None = None, **tool_input: str
+    name: str,
+    sidechain: bool = False,
+    shell_folder: Path | None = None,
+    timestamp: str | None = None,
+    **tool_input: str,
 ) -> str:
     content = [{"type": "tool_use", "id": "call", "name": name, "input": tool_input}]
     record = {
@@ -582,6 +587,8 @@ def tool_call(
     }
     if shell_folder is not None:
         record["cwd"] = str(shell_folder)
+    if timestamp is not None:
+        record["timestamp"] = timestamp
     return json.dumps(record)
 
 
@@ -614,9 +621,128 @@ def test_the_opt_out_applies_when_the_last_located_call_is_in_the_project(
         monkeypatch,
         folders,
         tool_call("Edit", file_path=str(folders["other"] / "main.py")),
-        tool_call("Bash", command=f"cd {folders['docs']} && git status"),
+        tool_call("Edit", file_path=str(folders["docs"] / "guide.md")),
         tool_call("Read", file_path=str(folders["other"] / "main.py")),
     )
+
+    assert printed(capsys) == {}
+
+
+def test_a_command_run_in_the_project_does_not_bring_the_opt_out_back(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["other"] / "main.py")),
+        tool_call("Bash", command=f"git -C {folders['docs']} status --short"),
+    )
+
+    assert printed(capsys)["decision"] == "block"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git grep -C 3 word",
+        "grep -C 2 word notes.md",
+        "git commit -F - <<'EOF'\ndocs: setup\n\ncd /opt/app && make\nEOF",
+        "cat > notes.md <<EOF\ncd /opt/app\nEOF\ngit status",
+    ],
+    ids=["git-grep-context", "grep-context", "quoted-heredoc", "plain-heredoc"],
+)
+def test_text_that_only_looks_like_a_move_names_no_location(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    folders: dict[str, Path],
+    command: str,
+) -> None:
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["docs"] / "guide.md")),
+        tool_call("Bash", command=command),
+    )
+
+    assert printed(capsys) == {}
+
+
+def subagent_transcript(folders: dict[str, Path], *lines: str) -> None:
+    transcript = folders["scratch"] / "session" / "subagents" / "workflows" / "agent-one.jsonl"
+    transcript.parent.mkdir(parents=True)
+    transcript.write_text("\n".join(lines) + "\n")
+
+
+def test_the_opt_out_does_not_apply_when_a_subagent_works_in_another_project(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    other = str(folders["other"] / "main.py")
+    stamp = "2026-01-02T10:00:00.000Z"
+    subagent_transcript(
+        folders, tool_call("Edit", sidechain=True, timestamp=stamp, file_path=other)
+    )
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call(
+            "Edit", timestamp="2026-01-02T09:00:00.000Z", file_path=str(folders["docs"] / "a.md")
+        ),
+    )
+
+    assert printed(capsys)["decision"] == "block"
+
+
+def test_the_opt_out_applies_when_the_session_edits_the_project_after_its_subagent(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    other = str(folders["other"] / "main.py")
+    stamp = "2026-01-02T08:00:00.000Z"
+    subagent_transcript(
+        folders, tool_call("Edit", sidechain=True, timestamp=stamp, file_path=other)
+    )
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call(
+            "Edit", timestamp="2026-01-02T09:00:00.000Z", file_path=str(folders["docs"] / "a.md")
+        ),
+    )
+
+    assert printed(capsys) == {}
+
+
+def test_a_long_transcript_is_read_across_chunks(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    monkeypatch.setattr(hook, "TRANSCRIPT_CHUNK_BYTES", 7)
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Edit", file_path=str(folders["other"] / "main.py")),
+        tool_call("Read", file_path=str(folders["docs"] / "guide.md")),
+    )
+
+    assert printed(capsys)["decision"] == "block"
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"name": ["Edit"], "input": {"file_path": "/a"}},
+        {"name": "Edit", "input": {"file_path": "/a\u0000b"}},
+        {"name": "Bash", "input": {"command": "cd /a\u0000b"}},
+    ],
+    ids=["unhashable-name", "nul-in-path", "nul-in-command"],
+)
+def test_a_record_the_hook_cannot_read_keeps_the_opt_out(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    folders: dict[str, Path],
+    record: dict,
+) -> None:
+    content = [{"type": "tool_use", "id": "call"} | record]
+    line = json.dumps({"type": "assistant", "message": {"role": "assistant", "content": content}})
+    opted_out_run(monkeypatch, folders, line)
 
     assert printed(capsys) == {}
 
@@ -628,8 +754,35 @@ def test_the_opt_out_applies_when_the_last_located_call_is_in_the_project(
         lambda other: tool_call("Bash", command=f"cd {other} && git status"),
         lambda other: tool_call("Bash", command=f"git -C '{other}' log --oneline -3"),
         lambda other: tool_call("Bash", command="(cd ../other && npm test)"),
+        lambda other: tool_call("Bash", command=f"pushd {other} && make test"),
+        lambda other: tool_call("Bash", command=f"cd -- {other} && pytest"),
+        lambda other: tool_call("Bash", command=f"GIT_PAGER=cat git -C {other} log"),
+        lambda other: tool_call("Bash", command=f'git -c "user.name=A B" -C {other} log'),
+        lambda other: tool_call("Bash", command=f"if cd {other}; then make; fi"),
+        lambda other: tool_call("Bash", command=f"make -C {other} test"),
+        lambda other: tool_call("Bash", command=f"npm --prefix={other} run build"),
+        lambda other: tool_call("Bash", command=f"npx --prefix {other} tsc"),
+        lambda other: tool_call("Bash", command=f"uv run --directory {other} pytest"),
+        lambda other: tool_call("Bash", shell_folder=other, command="pytest -q"),
+        lambda other: tool_call("Bash", command=f"cd {other} && cd scratch"),
     ],
-    ids=["edit", "cd", "git-C", "relative-cd"],
+    ids=[
+        "edit",
+        "cd",
+        "git-C",
+        "relative-cd",
+        "pushd",
+        "cd-double-dash",
+        "variable-before-git",
+        "quoted-git-setting",
+        "cd-in-if",
+        "make-C",
+        "npm-prefix-equals",
+        "npx-prefix",
+        "uv-directory",
+        "shell-already-there",
+        "two-moves",
+    ],
 )
 def test_the_opt_out_does_not_apply_when_the_work_is_in_another_project(
     monkeypatch: pytest.MonkeyPatch,
@@ -666,12 +819,20 @@ def test_a_relative_path_resolves_against_the_folder_the_shell_was_in(
     "last_line",
     [
         lambda paths: tool_call("Write", file_path=str(paths["scratch"] / "notes.md")),
+        lambda paths: tool_call("Write", file_path=str(paths["fixed_temp"] / "notes.md")),
         lambda paths: tool_call("Bash", command=f"cd {paths['config']} && ls"),
         lambda paths: tool_call("Edit", file_path="~/.claude/memory/notes.md"),
         lambda paths: '{"type": "assistant", "message": {"content": [{"type": "tool_use"',
         lambda paths: tool_call("Edit", sidechain=True, file_path=str(paths["docs"] / "a.md")),
     ],
-    ids=["temp-write", "config-cd", "home-config-edit", "malformed-line", "sidechain-call"],
+    ids=[
+        "temp-write",
+        "fixed-temp-write",
+        "config-cd",
+        "home-config-edit",
+        "malformed-line",
+        "sidechain-call",
+    ],
 )
 def test_calls_that_say_nothing_about_the_project_are_skipped(
     monkeypatch: pytest.MonkeyPatch,
