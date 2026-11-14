@@ -12,6 +12,7 @@ import pytest
 SESSION = "cccc3333-0000-0000-0000-000000000000"
 COMPACTED = "eeee5555-0000-0000-0000-000000000000"
 QUEUED = "ffff6666-0000-0000-0000-000000000000"
+RESENT = "abab7777-0000-0000-0000-000000000000"
 SCRIPT = Path(__file__).resolve().parents[3] / "skills/self-optimize/scripts/cut_session.py"
 
 type Place = Callable[..., Path]
@@ -128,6 +129,22 @@ def test_a_prompt_queued_mid_turn_can_be_cut_at(
     assert code == 0
     assert [r["uuid"] for r in history(out)] == ["q-01"]
     assert capsys.readouterr().out == "Also fix the broken links\n"
+
+
+def test_a_resend_after_an_api_error_is_not_a_second_message(
+    cut_session: ModuleType, place: Place, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = place({RESENT: "after_api_error.jsonl"})
+    out = tmp_path / "history.jsonl"
+
+    code = cut_session.main(
+        ["--session", RESENT, "--before", "Start the migration", "--root", str(root)]
+        + ["--out", str(out)]
+    )
+
+    assert code == 0
+    assert history(out) == []
+    assert capsys.readouterr().out == "Start the migration\n"
 
 
 def test_a_session_with_no_transcript_is_refused(
