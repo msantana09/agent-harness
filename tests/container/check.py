@@ -21,9 +21,11 @@ colon, a slash, a glob character or a quote joined on with + (so `and/or`, URLs,
 `dst + '/x.md'` are not paths). Two more things are text, not paths: a string that ends in an
 ellipsis and repeats the start of a longer string in the same call (a tool's preview of its own
 message, cut wherever it fell), and a word joined to a closed code span that names nothing on
-disk (`make test`/slow). The run found every file it named: a Read call that came back
-with no such file fails it, and so does a path a tool call names in the plugin's folder or the
-config folder that does not exist once the run
+disk (`make test`/slow). In a Bash command a backtick also closes a command substitution, whose
+next word is a path, so there the span must be prose: its backtick escaped, or the word inside the
+body of a heredoc with a quoted delimiter. The run found every file it named: a Read call that
+came back with no such file fails it, and so does a path a tool call names in the plugin's folder
+or the config folder that does not exist once the run
 ends, however it was opened (a shell `cat ... 2>/dev/null` reports nothing). Absence is expected,
 so not a failure, in self-optimize's folder (a first run finds no ledger), under `projects/` (a
 project may have no memory yet), at a CONFIG_PARTS location itself, which a skill may probe, and
@@ -87,6 +89,8 @@ ESCAPED = ("`", '"')
 EXPANDED = set("*?[{$")
 # What a tool ends a preview with when it cuts a longer text short.
 CUT = "…"
+# A heredoc whose delimiter is quoted, so the shell expands nothing in its body (group 3).
+HEREDOC = re.compile(r"""<<-?\s*(['"])(\w+)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)""", re.DOTALL)
 
 
 def plugin_roots(run_output: Path) -> list[Path]:
@@ -129,14 +133,14 @@ def strings(value: Any) -> Iterator[str]:
 
 def texts(tool_input: Any) -> list[str]:
     """Each string in a tool call's input, without the previews: a string that ends in CUT and
-    whose text before it starts a longer string of the same call."""
+    whose text before it starts a string of the same call that is not cut short itself."""
     found = list(strings(tool_input))
     return [
         text
         for text in found
         if not (
             text.endswith(CUT)
-            and any(other != text and other.startswith(text[:-1]) for other in found)
+            and any(not other.endswith(CUT) and other.startswith(text[:-1]) for other in found)
         )
     ]
 
@@ -237,12 +241,20 @@ def lists_names(match: re.Match[str]) -> bool:
     )
 
 
-def joined(match: re.Match[str], path: Path) -> bool:
+def joined(match: re.Match[str], path: Path, shell: bool) -> bool:
     """Whether a matched word is joined to a code span that closes just before it, and names
-    nothing on disk: the backtick before it is the second of a pair on its line."""
-    text = match.string
-    line = text[text.rfind("\n", 0, match.start(1)) + 1 : match.start(1)]
-    return line.endswith("`") and line.count("`") % 2 == 0 and not path.exists()
+    nothing on disk: the backtick before it is the second of a pair on its line. In a *shell*
+    command the backtick must be escaped or sit in a quoted heredoc's body, where it cannot close a
+    command substitution."""
+    text, at = match.string, match.start(1)
+    line = text[text.rfind("\n", 0, at) + 1 : at]
+    if not line.endswith("`") or line.count("`") % 2 or path.exists():
+        return False
+    return (
+        not shell
+        or line.endswith("\\`")
+        or any(body.start(3) <= at < body.end(3) for body in HEREDOC.finditer(text))
+    )
 
 
 def unscripted(match: re.Match[str]) -> str:
@@ -273,7 +285,7 @@ def outside(
                         continue
                     if tool == "Bash" and path == HOME / "*" and lists_names(match):
                         continue
-                    if joined(match, path):
+                    if joined(match, path, tool == "Bash"):
                         continue
                     if not allowed(config_dir, plugins, path, parts):
                         found[(tool, word)] = None

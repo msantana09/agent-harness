@@ -197,6 +197,8 @@ def test_a_preview_cut_short_and_a_word_joined_to_a_code_span_are_not_paths(tmp_
     assert found("SendMessage", {"message": full, "content": preview}) == []
     # Cut-short text with no longer field beside it is still judged.
     assert found("SendMessage", {"message": f"See {config}/…"}) == [f"{config}/…"] * 2
+    twice = {"message": f"See {config}/…", "content": f"See {config}/……"}
+    assert f"{config}/…" in found("SendMessage", twice)
 
     def bash(command: str) -> list[str]:
         return found("Bash", {"command": command})
@@ -207,6 +209,13 @@ def test_a_preview_cut_short_and_a_word_joined_to_a_code_span_are_not_paths(tmp_
     # A file that exists, or a path inside an open span, is still judged.
     assert bash("cat `true`/etc/passwd") == ["/etc/passwd"]
     assert bash("echo `/opt/elsewhere/notes.md`") == ["/opt/elsewhere/notes.md"]
+    # A command substitution closes with a backtick too, and what follows it is a path.
+    assert bash("cat `git rev-parse --show-toplevel`/../other/a.md") == ["/../other/a.md"]
+    assert bash("cat > /tmp/n.md <<EOF\n`pwd`/../other/notes.md\nEOF") == ["/../other/notes.md"]
+    assert bash("grep -c '`' a.md; V=`/opt/other/bin/tool -v`") == ["/opt/other/bin/tool"]
+    # Outside a shell there is no substitution: a file's text is prose.
+    note = {"file_path": "/tmp/n.md", "content": "The `make test`/912/4-min line"}
+    assert found("Write", note) == []
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
