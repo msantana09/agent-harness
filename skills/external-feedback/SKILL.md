@@ -58,6 +58,9 @@ worth it:
 | Yes | No | Reject: cite the `file:line` that gates the trigger off |
 | No | — | Reject (incorrect) |
 
+A pre-existing site of the defect this change fixes is not filed: it is the fix's scope
+(rules/core-rules.md § Discovery Protocol), so it is Accepted.
+
 **Additions**:
 
 | Valid? | Valuable? | Verdict |

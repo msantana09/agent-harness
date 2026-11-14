@@ -70,9 +70,12 @@ has no pre-hand-off checks beyond Step 5's.
   inside a finding are never built or filed by `/ship`: log them as declined in the round
   block, and name each one declined as "not requested" in the hand-off summary (Step 5), so
   the user decides on it. Only accepted findings get fixes, and only a verified bug outside the
-  PR is filed. A missed opportunity that names another input or shape where the defect this
-  PR fixes still occurs is not a suggestion: verify it, then ACCEPT and fix it in the PR like
-  any finding (`rules/core-rules.md` § Discovery Protocol).
+  PR is filed. The exception is another input, shape or site where the defect this PR fixes
+  still occurs, whichever section names it and whether or not the diff touches its file: it
+  is the fix's scope (`rules/core-rules.md` § Discovery Protocol), neither a suggestion nor a
+  bug to file. Verify it, rate it at the severity of the defect it leaves in place, then
+  ACCEPT and fix it in the PR like any finding. A detector PR's recorded scope decision still
+  settles the patterns it rejected.
 - **Root-cause a gate failure before editing.** A red check in Step 3 is diagnosed to its
   cause first; an edit made under a hypothesis that the rerun refuted is reverted before
   the next commit, never left in with a comment that justifies the wrong cause.
