@@ -78,21 +78,24 @@ waits for a run there.
 Re-count a `worked` entry too when any file on its Files line changed after the date of its
 newest Re-count line: a commit to it (`git log --since=<that date> -- <file>` in the repository
 that holds it), or, for a file outside a repository, a modification time after that date. A
-later edit can undo the fix, and the count is the only check that would notice. The new line
-continues from the `worked` line's count, and its verdict replaces `worked`.
+later edit can undo the fix, and the count is the only check that would notice. From then on
+the entry's count starts the day after the first such change, so the weeks the fix held do not
+dilute what came after the edit. The verdict is `too early` until that window has as many
+sessions as the baseline, and the newest verdict replaces `worked`.
 
-Each Re-count line is cumulative from the day after the apply date, so the newest line is the
-whole count and earlier lines are never summed with it:
+A count's start day is the day after the apply date, or, once a `worked` entry's files have
+changed, the day after the first change. Each Re-count line is cumulative from its start day, so
+the newest line is the whole count and earlier lines are never summed with it:
 
 ```markdown
-- Re-count <run date>: <count> in <sessions> sessions, <day after apply> through <date>; <verdict>
+- Re-count <run date>: <count> in <sessions> sessions, <start day> through <date>; <verdict>
 ```
 
-- **Corrections** are never classified twice, since step 2 is paid. The first line counts
-  this run's step 2 lines of that kind dated from the day after the apply date. A later line takes
-  the newest line's count and adds this run's step 2 lines dated after its through date.
+- **Corrections** are never classified twice, since step 2 is paid. The first line from a start
+  day counts this run's step 2 lines of that kind dated from that day. A later line takes the
+  newest line's count and adds this run's step 2 lines dated after its through date.
 - **A hook measure** comes from the scan, which is free to re-run: run `scripts/scan.py` from the
-  day after the apply date through yesterday on the baseline's folders and read the hook block by
+  start day through yesterday on the baseline's folders and read the hook block by
   its name, or that value's count in the scan's `--json` when the measure names a quoted value.
 - **Sessions** are the sessions with activity in that same scan.
 - **Add what the change created**, such as a new hook block or a new kind of correction, to the
