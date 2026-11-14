@@ -218,6 +218,26 @@ def test_a_preview_cut_short_and_a_word_joined_to_a_code_span_are_not_paths(tmp_
     assert found("Write", note) == []
 
 
+def test_the_disk_root_given_to_a_command_that_walks_folders_is_outside(tmp_path) -> None:
+    config = tmp_path / ".claude"
+    transcript = tmp_path / "session.jsonl"
+
+    def outside(command: str) -> list[str]:
+        call = {"type": "tool_use", "name": "Bash", "input": {"command": command}}
+        transcript.write_text(json.dumps({"type": "assistant", "message": {"content": [call]}}))
+        return [word for _, word in check.outside(config, [], [transcript])]
+
+    assert outside("find / -name test_orders.py 2>/dev/null | head") == ["/"]
+    assert outside("git ls-files; find -L / -name 'CLAUDE.md' -not -path '*/x/*'") == ["/"]
+    assert outside("cd /tmp && sudo du -sh / | tail -1") == ["/"]
+    assert outside("grep -rl needle /") == ["/"]
+    # A slash that divides, or sits in text a command writes, is no argument to a walk.
+    assert outside("echo $((total / 2)); python3 -c 'print(1 - pct / 100)'") == []
+    assert outside("echo 'run 1 / run 2' > /tmp/note.md") == []
+    assert outside("cat > /tmp/n.md <<'EOF'\nfind / is slow, search the project\nEOF") == []
+    assert outside("find . -name '*.py' | wc -l") == []
+
+
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
     tmp_path, capsys, monkeypatch
 ):
