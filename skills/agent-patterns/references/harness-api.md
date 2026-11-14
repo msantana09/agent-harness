@@ -55,8 +55,7 @@ recursion untested.) `Workflow` itself nests one level via `workflow()`.
 
 ## Effort tier defaults (per agent tier, either main loop)
 
-Model-tier selection and the cost-lever policy: read
-`rules/core-rules.md` § Orchestration & Execution Rules (item RESPECT AGENT MODEL CONFIG) — it
+Model-tier selection and the cost-lever policy: read `rules/automation.md` § Model Tiers — it
 binds here. Within-tier `effort:` pins:
 
 - **fable agents** — default `high`, set explicitly (an omitted effort falls to a saved per-model
