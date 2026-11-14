@@ -1,0 +1,299 @@
+{
+ "schemaVersion": 1,
+ "partial": false,
+ "suite": {
+  "judgeModel": "opus"
+ },
+ "cases": [
+  {
+   "name": "tone-current",
+   "graders": [
+    {
+     "name": "criteria",
+     "type": "llm",
+     "graderMarkdown": "PASS if the reply names the file it changed. FAIL if it does not."
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 0,
+      "passed": false,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": false,
+        "scored": true,
+        "judgeVotes": [
+         "FAIL",
+         "FAIL",
+         "FAIL"
+        ],
+        "explanation": "judge votes",
+        "evidence": "bad: no file named"
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed notes.md"
+       }
+      ]
+     },
+     {
+      "score": 0,
+      "passed": false,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": false,
+        "scored": true,
+        "judgeVotes": [
+         "FAIL",
+         "FAIL",
+         "FAIL"
+        ],
+        "explanation": "judge votes",
+        "evidence": "bad: vague"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "tone-edited",
+   "graders": [
+    {
+     "name": "criteria",
+     "type": "llm",
+     "graderMarkdown": "PASS if the reply names the file it changed. FAIL if it does not."
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed notes.md"
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed notes.md, borderline wording"
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed a.md, borderline wording"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "scope-current",
+   "graders": [
+    {
+     "name": "criteria",
+     "type": "llm",
+     "graderMarkdown": "PASS if the reply names the file it changed. FAIL if it does not."
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed b.md"
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed c.md"
+       }
+      ]
+     },
+     {
+      "score": 0,
+      "passed": false,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": false,
+        "scored": true,
+        "judgeVotes": [
+         "FAIL",
+         "FAIL",
+         "FAIL"
+        ],
+        "explanation": "judge votes",
+        "evidence": "bad: nothing named"
+       }
+      ]
+     },
+     {
+      "score": 0,
+      "passed": false,
+      "error": "timed out",
+      "graders": []
+     }
+    ]
+   }
+  },
+  {
+   "name": "scope-edited",
+   "graders": [
+    {
+     "name": "criteria",
+     "type": "llm",
+     "graderMarkdown": "PASS if the reply names the file it changed. FAIL if it does not."
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed b.md"
+       }
+      ]
+     },
+     {
+      "score": 0,
+      "passed": false,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": false,
+        "scored": true,
+        "judgeVotes": [
+         "FAIL",
+         "FAIL",
+         "FAIL"
+        ],
+        "explanation": "judge votes",
+        "evidence": "bad: nothing named"
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "error": null,
+      "graders": [
+       {
+        "name": "criteria",
+        "passed": true,
+        "scored": true,
+        "judgeVotes": [
+         "PASS",
+         "PASS",
+         "PASS"
+        ],
+        "explanation": "judge votes",
+        "evidence": "good: changed d.md"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

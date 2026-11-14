@@ -42,6 +42,7 @@ import sys
 import tempfile
 import time
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -244,8 +245,24 @@ def dollars(amount: float) -> str:
     return "under $0.01" if amount < 0.01 else f"${amount:,.2f}"
 
 
-def call_claude(stdin: str) -> tuple[dict[str, Any], Reply]:
-    """Run one classification call; return (structured output, claude's JSON reply)."""
+def has_item_list(output: dict[str, Any]) -> bool:
+    return isinstance(output.get("items"), list)
+
+
+def call_claude(
+    stdin: str,
+    *,
+    prompt: str,
+    schema: dict[str, Any],
+    model: str,
+    effort: str,
+    valid: Callable[[dict[str, Any]], bool],
+) -> tuple[dict[str, Any], Reply]:
+    """Run one isolated `claude -p` call; return (structured output, claude's JSON reply).
+
+    `valid` says whether the structured output has the shape the caller needs; one that does not
+    raises like a missing one. grader_check.py makes its calls through this function too.
+    """
     command = [
         "claude",
         "-p",
@@ -253,20 +270,20 @@ def call_claude(stdin: str) -> tuple[dict[str, Any], Reply]:
         "",
         "--disable-slash-commands",
         "--model",
-        MODEL,
+        model,
         "--effort",
-        EFFORT,
+        effort,
         "--tools",
         "",
         "--no-session-persistence",
         "--output-format",
         "json",
         "--json-schema",
-        json.dumps(SCHEMA),
-        PROMPT,
+        json.dumps(schema),
+        prompt,
     ]
     # An empty scratch directory keeps any project CLAUDE.md out of the call, and dropping the
-    # plugin variable keeps plugins from adding context to a classification.
+    # plugin variable keeps plugins from adding context to it.
     env = {key: value for key, value in os.environ.items() if key != "CLAUDE_CODE_PLUGIN_DIRS"}
     with tempfile.TemporaryDirectory() as cwd:
         try:
@@ -308,7 +325,7 @@ def call_claude(stdin: str) -> tuple[dict[str, Any], Reply]:
             reported,
         )
     output = reply.get("structured_output")
-    if not isinstance(output, dict) or not isinstance(output.get("items"), list):
+    if not isinstance(output, dict) or not valid(output):
         raise ClassificationError(
             f"no structured output in the reply (stop_reason {reply.get('stop_reason')}); "
             f"result={str(reply.get('result'))[:500]!r}; stderr: {stderr!r}",
@@ -332,7 +349,14 @@ def classify(chunk: list[Message]) -> tuple[list[Flagged], Reply, int]:
 
     An id the model returns more than once keeps its first item; the repeats count as unusable.
     """
-    output, reply = call_claude(fenced_input(chunk))
+    output, reply = call_claude(
+        fenced_input(chunk),
+        prompt=PROMPT,
+        schema=SCHEMA,
+        model=MODEL,
+        effort=EFFORT,
+        valid=has_item_list,
+    )
     by_id = {m.id: m for m in chunk}
     flagged: dict[int, Flagged] = {}
     for item in output["items"]:

@@ -62,7 +62,7 @@ Set `reverted` when the user says they undid the changes.
 
 | Verdict | When |
 |---|---|
-| `worked` | The rate is at most half the baseline even with one more correction counted, over at least as many sessions, and the previous Re-count line reads `on track`. Final |
+| `worked` | The rate is at most half the baseline even with one more correction counted, over at least as many sessions, and the previous Re-count line reads `on track`. Final until its files change |
 | `on track` | The rate is at most half the baseline, over at least as many sessions, but `worked` does not hold yet |
 | `did not work` | The rate is above half the baseline, over at least as many sessions |
 | `too early` | Fewer sessions than the baseline window |
@@ -74,6 +74,12 @@ Set `reverted` when the user says they undid the changes.
 Re-count every `applied` entry whose newest Re-count line is missing, `on track`, `did not work`
 or `too early`. Count on the machine and folders of its baseline; an entry from another machine
 waits for a run there.
+
+Re-count a `worked` entry too when any file on its Files line changed after the date of its
+newest Re-count line: a commit to it (`git log --since=<that date> -- <file>` in the repository
+that holds it), or, for a file outside a repository, a modification time after that date. A
+later edit can undo the fix, and the count is the only check that would notice. The new line
+continues from the `worked` line's count, and its verdict replaces `worked`.
 
 Each Re-count line is cumulative from the day after the apply date, so the newest line is the
 whole count and earlier lines are never summed with it:

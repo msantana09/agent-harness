@@ -40,9 +40,11 @@ flowchart TD
    script says roughly what this costs as it starts; a week of heavy use is about $0.15 at list
    price.
 3. **Re-count** each change applied on an earlier run, per session, against the count from
-   before it.
+   before it. A change that already worked is counted again whenever its files are edited, since
+   a later edit can undo it.
 4. **Pick, diagnose and test** one pattern. The cases that score the change come from sessions
-   the diagnosis did not use.
+   the diagnosis did not use. A second model re-grades every run; when the two graders disagree
+   on whether the change wins, the result is "too close to call", not a recommendation.
 5. **Propose**: the quotes, the change, its score and a review by a second agent. Nothing changes
    until you say yes.
 
@@ -77,3 +79,5 @@ quote your messages.
   characters of the agent's reply, question or rejected command that came before it.
 - "Worked" means the correction came up less often afterward. It does not prove the change was
   the reason.
+- The second grader catches a grading call the two models make differently. A mistake both make
+  passes unseen.

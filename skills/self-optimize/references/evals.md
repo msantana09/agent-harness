@@ -2,8 +2,8 @@
 
 An edit is tested by running the same cases twice, once with the file as it is and once with the
 edit, using `claude plugin eval`. The edit is worth applying when the edited version scores
-higher on cases it was not written from. A script or hook edit is replayed on real input instead:
-see Script and hook edits below.
+higher in total on cases it was not written from, under the eval's grader and a second one. A
+script or hook edit is replayed on real input instead: see Script and hook edits below.
 
 ## What the eval sandbox does
 
@@ -92,11 +92,31 @@ claude plugin eval . --eval-dir <date>-evals --runs 5 -j 4 \
 - Add `--allow-tools` grants when a case reads files outside its folder.
 
 Compare scores between the `-current` and `-edited` cases, not the exit code: one miss fails the
-default threshold.
+default threshold. A second attempt at the edit goes in its own suite folder, with cases named
+`<case>-edited2`; its `-current` cases stay in the first folder.
+
+## Checking the grader
+
+One judge model grades every run, and a judge misreads some replies. Most of those misreadings
+fall on runs where all its votes agree, so its split votes do not reveal them. After the eval,
+re-grade the round with a second model:
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/grader_check.py <date>-evals [<date>-evals-r2 ...]
+```
+
+Pass every suite folder of the round. The script sends each graded run's reply and its criteria
+to Sonnet, blind to the case, the version and the first verdict, one call per run. It prints each
+version's total under both graders, each case's win, tie or loss against `-current`, and the runs
+the graders disagree on. When the two graders reach different outcomes for an edit, its verdict
+is "too close to call".
 
 ## Reading the result
 
-- Edited higher on most pairs: recommend applying, and name the sessions each case came from.
+- Edited higher in total under both graders: recommend applying, and name the sessions each case
+  came from. Show each case's win, tie or loss beside the totals.
+- Too close to call: the graders disagree on the outcome. Do not recommend it; show both totals
+  and the runs they disagree on, and let the user decide.
 - Both versions at or near full marks: the suite cannot separate them, usually because the real
   failure appears late in a long session, which a short case does not reproduce. Say so.
 - Edited lower: do not recommend it. The diagnosis or the wording is wrong; go back to step 6.
