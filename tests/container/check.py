@@ -43,7 +43,6 @@ session.
 import json
 import os
 import re
-import shlex
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -129,10 +128,19 @@ PATTERN_OPTIONS = {
 FOLDER_OPTIONS = {"fd": frozenset({"--search-path", "--base-directory"})}
 # Words before a command that run it rather than name it.
 WRAPPERS = frozenset({"sudo", "env", "command", "exec", "time", "nohup", "nice", "xargs"})
+# Per wrapper, the options whose value is the next word.
+WRAPPER_VALUED = {
+    "sudo": frozenset({"-u", "-g", "-C", "-D", "-h", "-p", "-r", "-t", "-U"}),
+    "xargs": frozenset({"-I", "-n", "-L", "-P", "-s", "-E", "-d", "-a"}),
+    "env": frozenset({"-u", "-C", "-S"}),
+    "nice": frozenset({"-n"}),
+}
 KEYWORDS = frozenset({"if", "then", "elif", "else", "while", "until", "do", "!", "{"})
 ASSIGNMENT = re.compile(r"\w+=")
-# Any heredoc with its body (group 3): the body is text the command passes on, not commands.
-ANY_HEREDOC = re.compile(r"""<<-?\s*(['"]?)(\w+)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)""", re.DOTALL)
+# Characters that make up the shell's unquoted operators; a backtick opens or closes a command.
+OPERATORS = set(";&|()<>`")
+# A command substitution inside an unquoted heredoc body, which the shell runs.
+SUBSTITUTION = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
 # A heredoc whose delimiter is quoted, so the shell expands nothing in its body (group 3).
 HEREDOC = re.compile(r"""<<-?\s*(['"])(\w+)\1[^\n]*\n(.*?)\n\s*\2\s*(?:\n|$)""", re.DOTALL)
 
@@ -301,51 +309,99 @@ def joined(match: re.Match[str], path: Path, shell: bool) -> bool:
     )
 
 
-def end_unquoted_lines(command: str) -> str:
-    """The command with each newline outside quotes turned into `;`, so that it ends a command
-    the way the shell ends one, and each backslash-newline continuation joined into one line."""
-    out, quote, escaped = [], "", False
-    for char in command:
-        if escaped:
-            out.append(" " if char == "\n" else "\\" + char)
-            escaped = False
-        elif char == "\\" and quote != "'":
-            escaped = True
-        elif quote:
-            quote = "" if char == quote else quote
-            out.append(char)
+def shell_tokens(command: str) -> list[tuple[str, bool]]:
+    """A Bash command's words with their quotes removed, each paired with False, and its unquoted
+    operators (`;`, `&&`, `|`, `(`, `>` and the like; a newline as `;`) paired with True. Comments
+    end at their line. A heredoc body is left out, except the command substitutions an unquoted
+    one runs."""
+    tokens: list[tuple[str, bool]] = []
+    heredocs: list[tuple[str, bool]] = []
+    word: list[str] = []
+    started = quoted = delimiter_next = False
+
+    def end_word() -> None:
+        nonlocal word, started, quoted, delimiter_next
+        if started:
+            if delimiter_next:
+                heredocs.append(("".join(word).lstrip("-"), quoted))
+                delimiter_next = False
+            else:
+                tokens.append(("".join(word), False))
+        word, started, quoted = [], False, False
+
+    at = 0
+    while at < len(command):
+        char = command[at]
+        if char == "\\":
+            if command[at + 1 : at + 2] not in ("\n", ""):
+                word.append(command[at + 1])
+                started = quoted = True
+            at += 2
         elif char in "'\"":
-            quote = char
-            out.append(char)
+            close = command.find(char, at + 1)
+            close = len(command) if close < 0 else close
+            word.append(command[at + 1 : close])
+            started = quoted = True
+            at = close + 1
+        elif char == "#" and not started:
+            close = command.find("\n", at)
+            at = len(command) if close < 0 else close
+        elif char == "\n":
+            end_word()
+            tokens.append((";", True))
+            at += 1
+            for delimiter, literal in heredocs:
+                body = []
+                while at < len(command):
+                    close = command.find("\n", at)
+                    close = len(command) if close < 0 else close
+                    line = command[at:close]
+                    at = close + 1
+                    if line.strip() == delimiter:
+                        break
+                    body.append(line)
+                if not literal:
+                    for found in SUBSTITUTION.finditer("\n".join(body)):
+                        inner = found.group(1) or found.group(2) or ""
+                        tokens += [(";", True), *shell_tokens(inner), (";", True)]
+            heredocs.clear()
+        elif char in OPERATORS:
+            end_word()
+            close = at
+            while close < len(command) and command[close] in OPERATORS:
+                close += 1
+            operator = command[at:close]
+            tokens.append((operator, True))
+            delimiter_next = operator.startswith("<<") and not operator.startswith("<<<")
+            at = close
+        elif char in " \t":
+            end_word()
+            at += 1
         else:
-            out.append(";" if char == "\n" else char)
-    return "".join(out)
+            word.append(char)
+            started = True
+            at += 1
+    end_word()
+    return tokens
 
 
 def simple_commands(command: str) -> Iterator[list[str]]:
     """The words of each command in a Bash call as the shell reads them, command substitutions
-    included, with heredoc bodies, comments and redirection targets left out."""
-    command = ANY_HEREDOC.sub(lambda body: body.group(0).split("\n", 1)[0], command)
-    command = end_unquoted_lines(command).replace("$(", "; (").replace("`", " ; ")
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
-    lexer.whitespace_split = True
-    try:
-        tokens = list(lexer)
-    except ValueError:
-        tokens = command.split()
+    included, with comments, heredoc bodies and redirection targets left out."""
     words: list[str] = []
     redirected = False
-    for token in tokens:
-        if redirected:
-            redirected = False
-        elif token and set(token) <= set("<>&") and set(token) & set("<>"):
-            redirected = True
-        elif token and set(token) <= set(";&|()"):
+    for token, operator in shell_tokens(command):
+        if not operator:
+            if redirected:
+                redirected = False
+            else:
+                words.append(token)
+        elif "<" in token or ">" in token:
+            redirected = not token.startswith("<<") or token.startswith("<<<")
+        else:
             if words:
                 yield words
             words = []
-        else:
-            words.append(token)
     if words:
         yield words
 
@@ -376,6 +432,12 @@ def starting_folders(walker: str, args: list[str]) -> list[str]:
             operands.append(word)
             continue
         name, has_value, value = word.partition("=")
+        if not word.startswith("--"):
+            # A cluster of short options; the first that takes a value takes the rest of the word.
+            for place, letter in enumerate(word[1:], start=2):
+                if "-" + letter in VALUED[walker]:
+                    name, has_value, value = "-" + letter, bool(word[place:]), word[place:]
+                    break
         if not has_value and name in VALUED[walker]:
             value = next(words, "")
         pattern_given = pattern_given or name in PATTERN_OPTIONS.get(walker, ())
@@ -394,7 +456,8 @@ def walks_the_disk(command: str) -> bool:
         ):
             wrapper = words.pop(0)
             while wrapper in WRAPPERS and words and words[0].startswith("-"):
-                words.pop(0)
+                if words.pop(0) in WRAPPER_VALUED.get(wrapper, ()) and words:
+                    words.pop(0)
         if words and os.path.basename(words[0]) in WALKERS:
             if "/" in starting_folders(os.path.basename(words[0]), words[1:]):
                 return True
