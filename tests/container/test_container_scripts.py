@@ -125,28 +125,32 @@ def test_a_sed_script_and_one_missing_name_at_the_disk_root_are_not_paths(tmp_pa
     assert found == [("Bash", name) for name in names]
 
 
-def test_a_backslash_escaping_the_character_after_a_path_is_not_part_of_it(tmp_path) -> None:
+def test_only_the_backslash_of_an_escaped_delimiter_around_a_path_is_dropped(tmp_path) -> None:
     config = tmp_path / ".claude"
     transcript = tmp_path / "session.jsonl"
-    commands = [
-        "cat > prompt.md <<EOF\nRepo layout (\\`/home/dev/shop\\`, a small app)\nEOF",
-        'echo "run \\"/home/dev/shop/test_shipping.py\\" first"',
-        "echo \\`/home/dev/notes.md\\`",
-        "cat /home/dev/shop\\ notes.md",
-        "cat '/home/dev/shop\\'",
-    ]
-    calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
-    record = {"type": "assistant", "message": {"content": calls}}
-    transcript.write_text(json.dumps(record) + "\n")
-    found = check.outside(config, [], [transcript])
-    assert found == [("Bash", "/home/dev/notes.md\\"), ("Bash", "/home/dev/shop\\")]
     readme = tmp_path / "plugin" / "README.md"
     readme.parent.mkdir()
     readme.write_text("x")
-    commands = [f"echo \\`{readme}\\`", f"cat {readme}\\ old"]
-    calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
-    transcript.write_text(json.dumps({"type": "assistant", "message": {"content": calls}}) + "\n")
-    assert check.absent(config, [readme.parent], [transcript]) == [f"{readme}\\"]
+
+    def checked(command: str) -> tuple[list[tuple[str, str]], list[str]]:
+        call = {"type": "tool_use", "name": "Bash", "input": {"command": command}}
+        transcript.write_text(json.dumps({"type": "assistant", "message": {"content": [call]}}))
+        return (
+            check.outside(config, [readme.parent], [transcript]),
+            check.absent(config, [readme.parent], [transcript]),
+        )
+
+    # Prose wrapping an allowed folder or an existing file in escaped backticks or quotes.
+    assert checked("cat > p.md <<EOF\nRepo (\\`/home/dev/shop\\`, an app)\nEOF") == ([], [])
+    assert checked('echo "run \\"/home/dev/shop\\" first"') == ([], [])
+    assert checked(f"echo \\`{readme}\\`") == ([], [])
+    # The same wrapping around a path outside the install.
+    assert checked("echo \\`/home/dev/notes.md\\`")[0] == [("Bash", "/home/dev/notes.md\\")]
+    # A backslash that is part of the name: an escaped space, quote or backtick, a literal one.
+    for tail in ("\\ notes.md", '\\"', "\\`", "\\'"):
+        assert checked(f"cat /home/dev/shop{tail}")[0] == [("Bash", "/home/dev/shop\\")]
+        assert checked(f"cat {readme}{tail}")[1] == [f"{readme}\\"]
+    assert checked("cat '/home/dev/shop\\'")[0] == [("Bash", "/home/dev/shop\\")]
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(

@@ -71,10 +71,11 @@ CONFIG_PARTS = (
 # The config folder parts a plugin run may use: Claude Code's own and self-optimize's folder.
 PLUGIN_PARTS = (*CONFIG_PARTS, "self-optimize")
 MISSING = ("does not exist", "no such file")
-# The characters a backslash escapes when it ends a path word: the backslash is then the shell's,
-# not the path's (a heredoc writing \`/home/dev/shop\` into a file). Before anything else (a
-# space, a single quote) it stays, since there it can be part of the name.
-ESCAPED = ('`', '"')
+# The delimiters prose wraps a path in. Written into a heredoc or a double-quoted string each is
+# escaped (\`/home/dev/shop\`), and the backslash before the closing one is then the shell's, not
+# the path's. A backslash with no such pair around the word stays: it can be part of the name
+# (an escaped space, or an escaped quote that the file's name ends with).
+ESCAPED = ("`", '"')
 # Characters a shell expands, so a path holding one names no single file.
 EXPANDED = set("*?[{$")
 
@@ -185,10 +186,13 @@ def resolve(word: str) -> Path:
 
 
 def named(match: re.Match[str]) -> str:
-    """The path a matched word names: without the backslash escaping the backtick or double quote
-    after it, and without the sentence punctuation that ends it."""
-    word = match.group(1)
-    if word.endswith("\\") and match.string.startswith(ESCAPED, match.end()):
+    """The path a matched word names: without the backslash of the escaped delimiter that closes
+    it, when the same escaped delimiter opens it, and without the sentence punctuation that ends
+    it."""
+    word, text = match.group(1), match.string
+    closing = text[match.end() : match.end() + 1]
+    wrapped = closing in ESCAPED and text[: match.start(1)].endswith("\\" + closing)
+    if wrapped and word.endswith("\\"):
         word = word[:-1]
     return word.rstrip(".:")
 
