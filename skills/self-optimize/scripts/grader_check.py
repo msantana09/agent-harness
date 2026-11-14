@@ -240,8 +240,7 @@ def render(runs: list[Run], comparisons: list[dict[str, Any]], cost: float) -> s
             f"{comp['first_verdict']}",
             f"- {MODEL}: {totals['second']['current']} vs {totals['second'][version]}, "
             f"{comp['second_verdict']}",
-            f"- Cases, eval grader: {comp['wins']} won, {comp['ties']} tied, "
-            f"{comp['losses']} lost",
+            f"- Cases, eval grader: {comp['wins']} won, {comp['ties']} tied, {comp['losses']} lost",
             "",
             f"| Case | current (eval / {MODEL}) | {version} (eval / {MODEL}) |",
             "|---|---|---|",
