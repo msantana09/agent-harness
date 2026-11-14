@@ -6,7 +6,7 @@
 > launch and announce): the script holds the loop and intermediate results so you don't need the
 > registry/polling below.
 > See `../SKILL.md` § Choosing an Orchestration Tier and the "Dynamic Workflows" section below.
-> Tool names/limits are in `harness-api.md`.
+> Tool names/limits are in `claude-code-api.md`.
 
 Pure orchestration pattern for managing 10s-100s of agents over extended sessions without
 context accumulation, with all state in files so the work survives compaction.
@@ -56,7 +56,7 @@ independently skeptical of its own findings):
 - **Loop-until-dry:** for unknown-size discovery, keep spawning finders until K rounds return
   nothing new; dedup against everything seen, not just confirmed.
 
-See `harness-api.md` for the `Workflow` primitives, limits, and gating. The "Example: Large
+See `claude-code-api.md` for the `Workflow` primitives, limits, and gating. The "Example: Large
 Product Build" phase plan at the end of this file is exactly the kind of job that becomes a single
 `pipeline`/`parallel` script under Tier 2.
 
@@ -346,13 +346,13 @@ If an agent returns incomplete work or flags scope issues:
 
 Agents always run in the background; there is no foreground mode. Results return clean and
 summarized via the completion notification's `<result>` — read that, not any transcript file.
-(Do not call `TaskOutput`; it's deprecated — see `harness-api.md`.) <!-- drift-allow -->
+(Do not call `TaskOutput`; it's deprecated — see `claude-code-api.md`.) <!-- drift-allow -->
 When a result gates the next decision, end the turn and act on the notification; never poll.
 
 **Two different files — don't confuse them.**
 - The agent's **deliberate deliverable** (e.g. `<work-dir>/outputs/{agent}-{task}.md`,
   which you instructed it to write): `Read` this freely.
-- The harness **`output_file`** surfaced in the launch response / completion notification
+- Claude Code's **`output_file`** surfaced in the launch response / completion notification
   (`/private/tmp/.../tasks/{id}.output`): **never `Read` or tail it.** It is the full sub-agent
   JSONL transcript (~20× the summary) and reading it overflows your context — the autocompact
   thrashing of claude-code #44703. The summarized `<result>` in the completion notification is

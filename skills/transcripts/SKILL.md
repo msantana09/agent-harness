@@ -19,7 +19,7 @@ of history can take a few minutes. `read.py index` builds it ahead of time.
 ## Find messages and tool calls
 
 - `messages --typed --search 'word*'`: what the user typed. `--typed` drops skill text, hook
-  feedback, compaction summaries and other text the harness added; without it those rows print
+  feedback, compaction summaries and other text Claude Code added; without it those rows print
   with their label (`user (meta)`). `--role assistant` gives the agent's replies.
 - `tools --tool Bash --match 'pytest'`: tool calls. `--results` adds each call's result and
   marks errors. `--tool` is a full match on the name (`Edit|Write`).

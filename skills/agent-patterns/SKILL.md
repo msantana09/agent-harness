@@ -11,16 +11,16 @@ Unified patterns for agent selection, coordination, and multi-agent orchestratio
 
 | Topic | Reference File |
 |-------|----------------|
-| **Tool names, limits, deprecations, gated features** | `references/harness-api.md` |
-| Per-tier `effort:` pins | `references/harness-api.md` § Effort tier defaults (per agent tier, either main loop) |
+| **Tool names, limits, deprecations, gated features** | `references/claude-code-api.md` |
+| Per-tier `effort:` pins | `references/claude-code-api.md` § Effort tier defaults (per agent tier, either main loop) |
 | Handoffs, briefs and coordination | `references/coordination-patterns.md` |
 | Fresh-context reviews | `references/coordination-patterns.md` § Fresh-Context Reviews |
 | Phase-contract template (multi-phase handoffs, GO/NO-GO gates) | `references/orchestration-examples.md` |
 | **Tier 3: durable-file fallback** (state survives compaction) | `references/orchestrator-protocol.md` |
 
 > **Tool names change.** This skill states orchestration capabilities *behaviorally*; concrete
-> tool names, parameters, limits, and deprecations live in `references/harness-api.md` (the single
-> source of truth). If a tool reference here looks stale, that file is authoritative.
+> tool names, parameters, limits, and deprecations live in `references/claude-code-api.md` (the
+> single source of truth). If a tool reference here looks stale, that file is authoritative.
 
 ## Coordination Defaults
 
@@ -78,7 +78,7 @@ Count is only a tiebreaker.
 | Fan-out-then-verify · loops · unknown-size discovery · multi-phase · migrations · audits | **2 — Dynamic Workflow** *(on the user's standing authorization — launch and announce)* | `Workflow` script — `pipeline`/`parallel`/`agent(schema)`/`budget`/`workflow()`. The script holds the loop and results, so they never touch your context |
 | State must survive across sessions/compaction | **3 — Durable-file fallback** | Manual loop + `agents.md` + file-first output (see Tier 3 below). Long-running coordinated peers → agent teams (gated) |
 
-See `references/harness-api.md` for each mechanism's exact API, limits, and gating.
+See `references/claude-code-api.md` for each mechanism's exact API, limits, and gating.
 
 The Workflow tool runs only on the user's opt-in. Keeping the standing authorization paragraph
 in `rules/automation.md` § Orchestrator Mode is that opt-in, and the paragraph holds the

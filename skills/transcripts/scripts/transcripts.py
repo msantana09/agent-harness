@@ -175,7 +175,7 @@ def queued_prompt_as_user_record(record: Record) -> Record:
 
 
 def local_command_reply(record: Record) -> bool:
-    """True for the "No response requested." row the harness appends after a local command.
+    """True for the "No response requested." row Claude Code appends after a local command.
 
     It shares the model name "<synthetic>" with API-error rows, which carry isApiErrorMessage.
     """
@@ -191,7 +191,7 @@ def local_command_reply(record: Record) -> bool:
 def injected_reason(record: Record) -> str | None:
     """Why this user record was not typed by a person, or None when it may have been.
 
-    Skill bodies, command expansions and harness notices are isMeta records; the other flags
+    Skill bodies, command expansions and Claude Code notices are isMeta records; the other flags
     cover compaction summaries, subagent prompts and traffic from SDK callers, other sessions and
     plugins. A side agent's note carries the flags of a typed prompt, so only its words tell it
     apart: a record holding nothing but notes is not typed, and one that also holds typed words is.
