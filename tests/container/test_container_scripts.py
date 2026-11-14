@@ -132,12 +132,21 @@ def test_a_backslash_escaping_the_character_after_a_path_is_not_part_of_it(tmp_p
         "cat > prompt.md <<EOF\nRepo layout (\\`/home/dev/shop\\`, a small app)\nEOF",
         'echo "run \\"/home/dev/shop/test_shipping.py\\" first"',
         "echo \\`/home/dev/notes.md\\`",
+        "cat /home/dev/shop\\ notes.md",
+        "cat '/home/dev/shop\\'",
     ]
     calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
     record = {"type": "assistant", "message": {"content": calls}}
     transcript.write_text(json.dumps(record) + "\n")
     found = check.outside(config, [], [transcript])
-    assert found == [("Bash", "/home/dev/notes.md\\")]
+    assert found == [("Bash", "/home/dev/notes.md\\"), ("Bash", "/home/dev/shop\\")]
+    readme = tmp_path / "plugin" / "README.md"
+    readme.parent.mkdir()
+    readme.write_text("x")
+    commands = [f"echo \\`{readme}\\`", f"cat {readme}\\ old"]
+    calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
+    transcript.write_text(json.dumps({"type": "assistant", "message": {"content": calls}}) + "\n")
+    assert check.absent(config, [readme.parent], [transcript]) == [f"{readme}\\"]
 
 
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
