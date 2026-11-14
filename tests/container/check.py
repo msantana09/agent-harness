@@ -71,6 +71,9 @@ CONFIG_PARTS = (
 # The config folder parts a plugin run may use: Claude Code's own and self-optimize's folder.
 PLUGIN_PARTS = (*CONFIG_PARTS, "self-optimize")
 MISSING = ("does not exist", "no such file")
+# What can end a path word without being part of it: sentence punctuation, and the backslash
+# that escapes the character after the path (a backtick or quote written into a heredoc).
+TRAILING = ".:\\"
 # Characters a shell expands, so a path holding one names no single file.
 EXPANDED = set("*?[{$")
 
@@ -159,7 +162,7 @@ def absent(config_dir: Path, plugins: list[Path], transcripts: list[Path]) -> li
         for _, tool_input in tool_calls(transcript):
             for text in strings(tool_input):
                 for word in PATH.findall(text):
-                    path = resolve(word.rstrip(".:"))
+                    path = resolve(word.rstrip(TRAILING))
                     in_config = config_dir in path.parents and path not in probed
                     in_plugin = any(root in path.parents for root in plugins)
                     if (
@@ -202,7 +205,7 @@ def outside(
                     tagged = text.startswith("</", match.end())
                     if tool != "Bash" and not tagged and PLACEHOLDER.search(text, 0, match.start()):
                         continue
-                    path = resolve(word.rstrip(".:"))
+                    path = resolve(word.rstrip(TRAILING))
                     if path.parent == ROOT and not EXPANDED & set(word) and not path.exists():
                         continue
                     if not allowed(config_dir, plugins, path, parts):
