@@ -199,25 +199,6 @@
      {
       "score": 0,
       "passed": false,
-      "error": null,
-      "graders": [
-       {
-        "name": "criteria",
-        "passed": false,
-        "scored": true,
-        "judgeVotes": [
-         "FAIL",
-         "FAIL",
-         "FAIL"
-        ],
-        "explanation": "judge votes",
-        "evidence": "bad: nothing named"
-       }
-      ]
-     },
-     {
-      "score": 0,
-      "passed": false,
       "error": "timed out",
       "graders": []
      }
