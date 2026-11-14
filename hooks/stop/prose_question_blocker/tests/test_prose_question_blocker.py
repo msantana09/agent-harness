@@ -571,15 +571,18 @@ def folders(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, Path]:
     return paths
 
 
-def tool_call(name: str, sidechain: bool = False, **tool_input: str) -> str:
+def tool_call(
+    name: str, sidechain: bool = False, shell_folder: Path | None = None, **tool_input: str
+) -> str:
     content = [{"type": "tool_use", "id": "call", "name": name, "input": tool_input}]
-    return json.dumps(
-        {
-            "type": "assistant",
-            "isSidechain": sidechain,
-            "message": {"role": "assistant", "content": content},
-        }
-    )
+    record = {
+        "type": "assistant",
+        "isSidechain": sidechain,
+        "message": {"role": "assistant", "content": content},
+    }
+    if shell_folder is not None:
+        record["cwd"] = str(shell_folder)
+    return json.dumps(record)
 
 
 def opted_out_run(monkeypatch: pytest.MonkeyPatch, folders: dict[str, Path], *lines: str) -> None:
@@ -644,6 +647,19 @@ def test_the_opt_out_does_not_apply_when_the_work_is_in_another_project(
     result = printed(capsys)
     assert result["decision"] == "block"
     assert "Prose question" in result["reason"]
+
+
+def test_a_relative_path_resolves_against_the_folder_the_shell_was_in(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], folders: dict[str, Path]
+) -> None:
+    opted_out_run(
+        monkeypatch,
+        folders,
+        tool_call("Bash", command=f"cd {folders['other']}"),
+        tool_call("Bash", shell_folder=folders["other"], command="git -C src status"),
+    )
+
+    assert printed(capsys)["decision"] == "block"
 
 
 @pytest.mark.parametrize(
