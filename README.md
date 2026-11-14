@@ -105,7 +105,7 @@ the install above. Its skills take a prefix, as in `/agent-harness:self-optimize
 
 ```text
 /plugin marketplace add msantana09/agent-harness
-/plugin install agent-harness@agent-harness
+/plugin install agent-harness@msantana09
 ```
 
 ## Requirements

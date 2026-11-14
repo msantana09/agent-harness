@@ -24,5 +24,5 @@ ENTRYPOINT ["/home/dev/agent-harness/tests/container/clone_inside.sh"]
 
 FROM base AS plugin
 RUN claude plugin marketplace add /home/dev/agent-harness \
-    && claude plugin install agent-harness@agent-harness
+    && claude plugin install agent-harness@msantana09
 ENTRYPOINT ["/home/dev/agent-harness/tests/container/inside.sh"]
