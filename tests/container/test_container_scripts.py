@@ -153,6 +153,23 @@ def test_only_the_backslash_of_an_escaped_delimiter_around_a_path_is_dropped(tmp
     assert checked("cat '/home/dev/shop\\'")[0] == [("Bash", "/home/dev/shop\\")]
 
 
+def test_listing_the_home_folders_own_folders_is_inside_and_reading_one_is_not(tmp_path) -> None:
+    config = tmp_path / ".claude"
+    transcript = tmp_path / "session.jsonl"
+    commands = [
+        "ls -d /home/dev/*/",
+        "ls -d ~/*/ $HOME/*",
+        "ls /home/dev/*/src",
+        "cat ~/*/notes.md",
+        "ls -d /home/*/",
+    ]
+    calls = [{"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]
+    record = {"type": "assistant", "message": {"content": calls}}
+    transcript.write_text(json.dumps(record) + "\n")
+    found = check.outside(config, [], [transcript])
+    assert found == [("Bash", w) for w in ("/home/dev/*/src", "~/*/notes.md", "/home/*/")]
+
+
 def test_a_file_of_the_authors_own_layout_in_the_config_folder_fails_the_run(
     tmp_path, capsys, monkeypatch
 ):
