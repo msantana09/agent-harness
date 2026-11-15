@@ -25,13 +25,13 @@ def load_hook() -> ModuleType:
 
 
 @pytest.fixture
-def home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    monkeypatch.setenv("HOME", str(tmp_path))
+def config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
     return tmp_path
 
 
-def flag(home: Path, session: str = SESSION) -> Path:
-    return home / ".claude" / "state" / "stop" / session
+def flag(config: Path, session: str = SESSION) -> Path:
+    return config / "state" / "stop" / session
 
 
 def submit(
@@ -50,28 +50,28 @@ def submit(
 @pytest.mark.parametrize(
     "text", ["stop", "Stop", "STOP!", "stop.", "  stop \n", "stop stop", "stop, stop!!", "STOP?"]
 )
-def test_a_bare_stop_sets_the_flag_and_tells_the_model_to_stop(text, home, monkeypatch, capsys):
+def test_a_bare_stop_sets_the_flag_and_tells_the_model_to_stop(text, config, monkeypatch, capsys):
     out = submit(text, monkeypatch, capsys)
     assert out is not None
     assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
     assert "make no tool calls" in out["hookSpecificOutput"]["additionalContext"].lower()
-    assert json.loads(flag(home).read_text())["session_id"] == SESSION
+    assert json.loads(flag(config).read_text())["session_id"] == SESSION
 
 
 @pytest.mark.parametrize(
     "text",
     ["stop the monitor", "don't stop", "please stop", "stopwatch", "stopstop", "stop it now", ""],
 )
-def test_a_prompt_that_only_contains_stop_sets_nothing(text, home, monkeypatch, capsys):
+def test_a_prompt_that_only_contains_stop_sets_nothing(text, config, monkeypatch, capsys):
     assert submit(text, monkeypatch, capsys) is None
-    assert not flag(home).exists()
+    assert not flag(config).exists()
 
 
-def test_the_next_human_prompt_clears_the_flag(home, monkeypatch, capsys):
+def test_the_next_human_prompt_clears_the_flag(config, monkeypatch, capsys):
     submit("stop", monkeypatch, capsys)
-    assert flag(home).exists()
+    assert flag(config).exists()
     assert submit("ok, go ahead and run the tests", monkeypatch, capsys) is None
-    assert not flag(home).exists()
+    assert not flag(config).exists()
 
 
 @pytest.mark.parametrize(
@@ -91,31 +91,31 @@ def test_the_next_human_prompt_clears_the_flag(home, monkeypatch, capsys):
         "  \n<task-notification>",
     ],
 )
-def test_a_machine_submitted_prompt_does_not_clear_the_flag(text, home, monkeypatch, capsys):
+def test_a_machine_submitted_prompt_does_not_clear_the_flag(text, config, monkeypatch, capsys):
     submit("stop", monkeypatch, capsys)
     assert submit(text, monkeypatch, capsys) is None
-    assert flag(home).exists()
+    assert flag(config).exists()
 
 
-def test_flags_are_per_session(home, monkeypatch, capsys):
+def test_flags_are_per_session(config, monkeypatch, capsys):
     submit("stop", monkeypatch, capsys, session=SESSION)
     submit("carry on", monkeypatch, capsys, session=OTHER_SESSION)
-    assert flag(home, SESSION).exists()
-    assert not flag(home, OTHER_SESSION).exists()
+    assert flag(config, SESSION).exists()
+    assert not flag(config, OTHER_SESSION).exists()
 
 
-def test_a_session_id_that_is_not_a_filename_sets_nothing(home, monkeypatch, capsys):
+def test_a_session_id_that_is_not_a_filename_sets_nothing(config, monkeypatch, capsys):
     assert submit("stop", monkeypatch, capsys, session="../../escape") is None
-    assert not (home / ".claude" / "state").exists()
+    assert not (config / "state").exists()
 
 
-def test_a_payload_without_a_text_prompt_is_ignored(home, monkeypatch, capsys):
+def test_a_payload_without_a_text_prompt_is_ignored(config, monkeypatch, capsys):
     submit("stop", monkeypatch, capsys)
     payload = {"session_id": SESSION, "prompt": ["stop"]}
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
     load_hook().main()
     assert capsys.readouterr().out == ""
-    assert flag(home).exists()
+    assert flag(config).exists()
 
 
 def test_the_script_run_as_a_process_sets_the_flag_on_stop_and_clears_it_on_the_next_prompt(
@@ -129,7 +129,7 @@ def test_the_script_run_as_a_process_sets_the_flag_on_stop_and_clears_it_on_the_
             capture_output=True,
             text=True,
             timeout=10,
-            env={**os.environ, "HOME": str(tmp_path)},
+            env={**os.environ, "CLAUDE_CONFIG_DIR": str(tmp_path)},
         )
 
     stopped = launch("stop")

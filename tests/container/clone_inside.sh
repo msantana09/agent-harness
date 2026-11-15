@@ -61,7 +61,7 @@ ending with a question mark."
 
 stop=$(python3 -c 'import uuid; print(uuid.uuid4())')
 printf '{"stop": "%s"}\n' "$stop" > /out/sessions.json
-flags() { ls "$HOME/.claude/state/stop/" > "/out/flag_after_$1.txt" 2> /dev/null; }
+flags() { ls "$CLAUDE_CONFIG_DIR/state/stop/" > "/out/flag_after_$1.txt" 2> /dev/null; }
 probe stop1 "stop" --session-id "$stop"
 flags stop
 probe stop2 '<task-notification>

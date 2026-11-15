@@ -16,8 +16,8 @@ it reads as human and clears the flag.
 Usage: registered as a UserPromptSubmit command hook; Claude Code pipes the payload to stdin.
 Input: JSON with `session_id` and `prompt`.
 Output: nothing, or on a bare stop an `additionalContext` JSON object telling the model to make
-no tool calls. The flag is a file under ~/.claude/state/stop/ named by the session id
-(hooks/lib_shared/stop_flag.py).
+no tool calls. The flag is a file under <config dir>/state/stop/ ($CLAUDE_CONFIG_DIR, else
+~/.claude) named by the session id (hooks/lib_shared/stop_flag.py).
 Exit code: 0 always; a failure is written to stderr and the prompt goes through.
 """
 

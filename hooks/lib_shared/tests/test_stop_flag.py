@@ -14,8 +14,15 @@ from lib_shared.stop_flag import DENY_REASON, flag_is_set, flag_path  # noqa: E4
 SESSION = "11111111-aaaa-4bbb-8ccc-000000000001"
 
 
-def test_flag_path_is_one_file_per_session_under_the_home_folder(monkeypatch, tmp_path):
+def test_flag_path_is_one_file_per_session_under_the_config_folder(monkeypatch, tmp_path):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "config"))
+    assert flag_path(SESSION) == tmp_path / "config" / "state" / "stop" / SESSION
+
+
+def test_flag_path_falls_back_to_the_home_folder_without_a_config_folder(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
     assert flag_path(SESSION) == tmp_path / ".claude" / "state" / "stop" / SESSION
 
 

@@ -1,12 +1,14 @@
 """Per-session stop flag, shared by the stop_flag and stop_gate hooks.
 
-A bare "stop" from the user leaves one file per session under ~/.claude/state/stop/; the
-PreToolUse stop_gate hook denies every tool call of that session, except the one a subagent or
-workflow stage uses to hand back its result, until the next human prompt removes it. Stdlib
-only: stop_gate imports this on every tool call in every session.
+A bare "stop" from the user leaves one file per session under <config dir>/state/stop/, where
+the config dir is $CLAUDE_CONFIG_DIR, else ~/.claude; the PreToolUse stop_gate hook denies every
+tool call of that session, except the one a subagent or workflow stage uses to hand back its
+result, until the next human prompt removes it. Stdlib only: stop_gate imports this on every
+tool call in every session.
 """
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -22,7 +24,9 @@ def flag_path(session_id: object) -> Path | None:
     """The flag file of a session, or None when the id cannot be a filename."""
     if not isinstance(session_id, str) or not SESSION_ID.fullmatch(session_id):
         return None
-    return Path.home() / ".claude" / "state" / "stop" / session_id
+    configured = os.environ.get("CLAUDE_CONFIG_DIR")
+    config_dir = Path(configured).expanduser() if configured else Path.home() / ".claude"
+    return config_dir / "state" / "stop" / session_id
 
 
 def flag_is_set(path: Path, session_id: str) -> bool:
