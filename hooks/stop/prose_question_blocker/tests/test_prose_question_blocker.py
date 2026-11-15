@@ -51,8 +51,9 @@ def opt_out_project(tmp_path: Path) -> Path:
 
 
 def set_stop_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, session_id: str) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
-    flag_dir = tmp_path / ".claude" / "state" / "stop"
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "config"))
+    flag_dir = tmp_path / "config" / "state" / "stop"
     flag_dir.mkdir(parents=True)
     (flag_dir / session_id).write_text(json.dumps({"session_id": session_id}))
 
