@@ -100,5 +100,6 @@ LANG, TERM and SHELL.
 
 - Admission is the service's job: at most `max_concurrent_jobs` (4) jobs run at once on this Mac
   and the rest wait in `queued`; before each turn the job reads Codex's live usage and refuses past
-  the reserve (15%) with `FAILURE: usage limit (resets <time>)`. Submit a whole batch at once.
+  the reserve (15%) with `FAILURE: usage limit (resets <time>)`. Submit a whole batch at once; do
+  not count usage or walk `~/.codex/sessions/**/rollout-*.jsonl` yourself.
   `codex-jobs capabilities` shows the live numbers.
