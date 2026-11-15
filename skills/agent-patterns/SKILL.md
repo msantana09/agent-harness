@@ -11,16 +11,12 @@ Unified patterns for agent selection, coordination, and multi-agent orchestratio
 
 | Topic | Reference File |
 |-------|----------------|
-| **Tool names, limits, deprecations, gated features** | `references/claude-code-api.md` |
+| **Observed tool behavior, limits, gated features** | `references/claude-code-api.md` |
 | Per-tier `effort:` pins | `references/claude-code-api.md` § Effort tier defaults (per agent tier, either main loop) |
 | Handoffs, briefs and coordination | `references/coordination-patterns.md` |
 | Fresh-context reviews | `references/coordination-patterns.md` § Fresh-Context Reviews |
 | Phase-contract template (multi-phase handoffs, GO/NO-GO gates) | `references/orchestration-examples.md` |
 | **Tier 3: durable-file fallback** (state survives compaction) | `references/orchestrator-protocol.md` |
-
-> **Tool names change.** This skill states orchestration capabilities *behaviorally*; concrete
-> tool names, parameters, limits, and deprecations live in `references/claude-code-api.md` (the
-> single source of truth). If a tool reference here looks stale, that file is authoritative.
 
 ## Coordination Defaults
 
