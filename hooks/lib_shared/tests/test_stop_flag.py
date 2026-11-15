@@ -20,9 +20,15 @@ def test_flag_path_is_one_file_per_session_under_the_config_folder(monkeypatch, 
     assert flag_path(SESSION) == tmp_path / "config" / "state" / "stop" / SESSION
 
 
-def test_flag_path_falls_back_to_the_home_folder_without_a_config_folder(monkeypatch, tmp_path):
+@pytest.mark.parametrize("configured", [None, ""])
+def test_flag_path_falls_back_to_the_home_folder_without_a_config_folder(
+    monkeypatch, tmp_path, configured
+):
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    if configured is None:
+        monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    else:
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", configured)
     assert flag_path(SESSION) == tmp_path / ".claude" / "state" / "stop" / SESSION
 
 

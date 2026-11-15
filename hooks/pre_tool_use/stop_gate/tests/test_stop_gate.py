@@ -25,6 +25,7 @@ def load_hook() -> ModuleType:
 
 @pytest.fixture
 def config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
     return tmp_path
 
@@ -121,7 +122,7 @@ def test_the_script_run_as_a_process_denies_a_stopped_session_and_allows_otherwi
             capture_output=True,
             text=True,
             timeout=10,
-            env={**os.environ, "CLAUDE_CONFIG_DIR": str(tmp_path)},
+            env={**os.environ, "HOME": str(tmp_path / "home"), "CLAUDE_CONFIG_DIR": str(tmp_path)},
         )
 
     payload = json.dumps({"session_id": SESSION, "tool_name": "Read", "tool_input": {}})

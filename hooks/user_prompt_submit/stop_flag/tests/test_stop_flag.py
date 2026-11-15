@@ -26,6 +26,7 @@ def load_hook() -> ModuleType:
 
 @pytest.fixture
 def config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
     return tmp_path
 
@@ -129,7 +130,7 @@ def test_the_script_run_as_a_process_sets_the_flag_on_stop_and_clears_it_on_the_
             capture_output=True,
             text=True,
             timeout=10,
-            env={**os.environ, "CLAUDE_CONFIG_DIR": str(tmp_path)},
+            env={**os.environ, "HOME": str(tmp_path / "home"), "CLAUDE_CONFIG_DIR": str(tmp_path)},
         )
 
     stopped = launch("stop")
