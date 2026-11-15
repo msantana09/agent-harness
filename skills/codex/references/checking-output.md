@@ -29,5 +29,4 @@ Document as: **Confirmed**, **Corrected**, **Refuted**, or **Unable to Verify**.
 it reads the PRODUCER to find flag combinations the UI or a test never exercises. It also reliably
 catches incomplete sweeps: the one surface a "fixed everywhere" claim missed. Still verify each
 finding at the producer before accepting, but a `Request changes` verdict from it is worth a full
-pass before merge. It also checks external premises: a code-only refutation of an industry
-definition it raised can be wrong, and a primary source settles it.
+pass before merge.

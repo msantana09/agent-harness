@@ -149,8 +149,7 @@ Pass every suite folder of the round. The script sends each graded run's reply a
 to Sonnet, blind to the case, the version and the first verdict, one call per run. It prints the
 runs each version passed out of the runs it had under both graders, and compares pass rates, so an
 attempt run more times does not score higher for that. It also prints each case's win, tie or
-loss against `-current`, and the runs the graders disagree on. When the two graders reach different outcomes for an edit, its verdict
-is "too close to call".
+loss against `-current`, and the runs the graders disagree on.
 
 ## Reading the result
 

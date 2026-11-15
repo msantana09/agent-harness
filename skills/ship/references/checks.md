@@ -1,7 +1,5 @@
 # Step 3 - checks
 
-**Checks: PR CI runs the static gates; you run only the branch's own tests.**
-
 - **Static**: read PR CI with `gh pr checks <N>`, and run a lint or type check locally
   only to reproduce a red one.
 - **Tests** (the tests line): the test files the branch adds or changes, plus the

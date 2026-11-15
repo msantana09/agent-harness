@@ -26,7 +26,8 @@ orchestrator↔subagent communication is the native mode:
 - **Parallel dispatch is dependable — don't over-prompt fan-out.** When the work is
   independent, state the independent units once; fan-out happens without "spawn N agents in
   parallel" repetition. Over-prescriptive prior-generation steering degrades output here.
-- **Async by construction.** Agents always run in the background; read each summarized
+- **Async by construction.** Agents run in the background (a few built-in types, such as
+  web-fetch, run in the foreground); read each summarized
   `<result>` as its notification arrives rather than polling. Prefer long-lived subagents
   (continue via `SendMessage`) over re-spawning per subtask — kept context means cache-read
   savings and no bottleneck on the slowest subagent. Only block when a result gates the

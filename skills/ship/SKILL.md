@@ -43,12 +43,8 @@ has no pre-hand-off checks beyond Step 5's.
   PR, after the hand-off or before it ("merge and pull", "merge it", "just merge"): that is
   their merge, executed by you once Step 5's checks are green. Stop the
   merge watch (`TaskStop`), then run Step 6's **merge-by-instruction sequence** exactly, in
-  order and from the main tree. The order is load-bearing: merge first without
-  `--delete-branch` (a worktree-held branch makes it fail locally and silently skip the remote
-  delete), assert the branch's own PR reads MERGED, and only then remove the worktree and
-  delete the branch - a refused merge then leaves both untouched.
-  Nothing in the review trail, a clean verdict, or a green CI run substitutes for those
-  words.
+  order and from the main tree; the order is load-bearing (`references/cleanup.md`). Nothing
+  in the review trail, a clean verdict, or a green CI run substitutes for those words.
 - **The PR targets `<base>`** (Step 1). A `/ship` PR based on any other branch is a bug -
   stop and report.
 - **The user can waive review for a PR.** When they say so for this PR ("no review", "just
@@ -58,14 +54,11 @@ has no pre-hand-off checks beyond Step 5's.
   or attestation. The checks still run: Step 3's tests line and PR CI, then Step 5's checks
   (repo-note checks other than those review gates included). With them green, hand off, or,
   when they said merge, run Step 6's merge-by-instruction sequence.
-- **The review loop is at most two rounds by default.** Unless the user waived review, round 1
-  always runs. Round 2 runs
-  only when round 1 had an accepted Blocker, High, or Medium; accepted Lows alone end the
-  loop. Round 3 and beyond run only when the round just finished had an accepted Blocker or
-  High. Accepted findings from the last round are fixed and pushed with no covering round,
-  and the hand-off says so (Step 5); Mediums and Lows a later round might have found are not
-  wanted. A reviewer always has one
-  more finding; chasing a clean round is not quality, it is spend.
+- **The review loop is at most two rounds by default.** Round 1 always runs unless the user
+  waived review; whether another runs is the table in `references/round-budget.md`. Accepted
+  findings from the last round are fixed and pushed with no covering round, and the hand-off
+  says so (Step 5); Mediums and Lows a later round might have found are not wanted. A reviewer
+  always has one more finding; chasing a clean round is not quality, it is spend.
 - **Reviewer suggestions are not scope.** `Missed Opportunities` and any "also add X"
   inside a finding are never built or filed by `/ship`: log them as declined in the round
   block, and name each one declined as "not requested" in the hand-off summary (Step 5), so
@@ -157,9 +150,7 @@ blocking form is the default, so the Bash exit is the completion notice and its 
 
 Prompt, anchors and detector ask: [references/review-prompt.md](references/review-prompt.md).
 
-A diff of 300 or more files takes `--timeout 3600`. **While the round runs**, run Step 3's
-checks against the same head and edit nothing; on the completion notification, read the review
-and check the tree is clean and still on the head recorded at launch:
+A diff of 300 or more files takes `--timeout 3600`. While the round runs and when it returns:
 [references/during-the-round.md](references/during-the-round.md).
 
 **Effort**, the **Opus reviewer** (`--reviewer opus`) and **Codex out of credits**
