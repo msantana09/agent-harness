@@ -54,8 +54,7 @@ Ask whether the same outcome could use an existing abstraction, delete obsolete 
 duplication, or avoid a new compatibility layer. Identify adjacent improvements only when the PR
 uniquely enables them and the value is disproportionate to the scope.
 
-Keep ordinary cleanup, subjective design alternatives, speculative scaling, and broad refactors
-out of merge findings. Apply the repository's architectural decision framework when the PR adds
+Apply the repository's architectural decision framework when the PR adds
 meaningful complexity, and the repository's stage constraints when it does not: the Company Stage
 section of the root `CLAUDE.md` (or the nearest equivalent) is authoritative on what
 infrastructure and generality a change may recommend. Never propose scale infrastructure, queues,

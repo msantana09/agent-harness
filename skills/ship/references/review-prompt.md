@@ -23,7 +23,7 @@ PR body under "### Codex review round", "### Opus review round" or "### Fable re
 ANCHOR FILES:
 <the changed files, from `git diff --name-only origin/<base>...HEAD`, plus the one or two
 unchanged files a reviewer must read to judge them (the caller, the test file), plus the
-workstream's `plan.md` when the branch belongs to one, so inspect-pr grades its criteria>
+plan document the branch was built from, when it has one, so inspect-pr grades its criteria>
 
 STOP RULES: An anchor path that does not resolve is noted in your answer and the review
 continues. If the diff is empty or the PR is not reachable with `gh`, say exactly what

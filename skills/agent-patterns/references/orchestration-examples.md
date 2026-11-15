@@ -9,8 +9,7 @@ here.
 
 ```markdown
 Phase N — <name>
-- Agents: <role(s)>. Every generic spawn (no named role) states a `model=` tier explicitly;
-  every Workflow `agent()` stage passes an explicit `effort`.
+- Agents: <role(s)>
 - Input: <what this phase consumes — prior phase deliverables, specialist recommendations>
 - Expected Output: <the artifact or decision this phase produces>
 - Deliverables:

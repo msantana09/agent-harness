@@ -12,13 +12,8 @@ Once step 2 has finished, append one line for the machine, named as `hostname -s
 Scanned <run date>: <machine>; <each transcript folder>; through <yesterday>
 ```
 
-The line stops at yesterday because today's messages are still coming in. A folder whose scan or
-correction pass failed is left off the line, so its days are scanned next time. A run that stops
-before step 2 finishes writes no line.
-
-A folder's next window starts the day after the through date on the newest Scanned line that names
-it on that machine, which is the run date of that line.
-Folders with different start dates are scanned in separate runs of steps 1 and 2.
+A folder whose scan or correction pass failed is left off the line, so its days are scanned next
+time. A run that stops before step 2 finishes writes no line.
 
 ## Entries
 
@@ -28,9 +23,8 @@ One entry per proposal, whether or not it was applied:
 ## <date>: <the behavior, in one line>
 - Files: <path> (edit), <path> (new file), <path> (delete)
 - Change: <one line on what the proposal does>
-- Measure: <the kind of correction, or the hook block by its name in the scan; when the change
-  targets one pattern the hook checks, that pattern's quoted value as the scan's `--json` prints it>
-- Baseline: <count> in <sessions with activity> sessions, <window>, <machine>, <transcript folders>
+- Measure: <as the report's "How we will know">
+- Baseline: <as the report's "How we will know">
 - Eval: <current score> vs <edited score>, <number of held-out cases>
 - Status: applied <date>
 ```
@@ -71,18 +65,15 @@ Set `reverted` when the user says they undid the changes.
 
 ## Re-counting
 
-Re-count every `applied` entry whose newest Re-count line is missing, `on track`, `did not work`
-or `too early`. Count on the machine and folders of its baseline; an entry from another machine
-waits for a run there.
+SKILL.md step 4 lists which entries are re-counted; one whose baseline was counted on another
+machine waits for a run there.
 
 Re-count a `worked` entry too when any file on its Files line changed after the date of its
 newest Re-count line: a commit to it (`git log --since=<that date> -- <file>` in the repository
 that holds it), an edit not yet committed (`git status --porcelain -- <file>` lists it; its
 modification time dates the change), or, for a file outside a repository, a modification time
-after that date. A later edit can undo the fix, and the count is the only check that would
-notice. From then on the entry's count starts the day after the first such change, so the weeks
-the fix held do not dilute what came after the edit. The verdict is `too early` until that window has as many
-sessions as the baseline, and the newest verdict replaces `worked`.
+after that date. The verdict is `too early` until the window from the first such change has as
+many sessions as the baseline, and the newest verdict replaces `worked`.
 
 A count's start day is the day after the apply date, or, once a `worked` entry's files have
 changed, the day after the first change. Each Re-count line is cumulative from its start day, so

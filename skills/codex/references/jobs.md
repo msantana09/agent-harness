@@ -53,12 +53,12 @@ in one with no commit yet, or in one without `origin/HEAD`, runs and is never at
 instead (no prompt file, no `--image`): `review.md` is its prose message, `findings.json` and
 `findings.md` are absent, `review_approved` is null, and `attestation.json` is written as above.
 Only a `base:<branch>` review whose merge base with HEAD is the repo's default-branch merge base
-(`base:origin/dev` in a repo whose `origin/HEAD` is dev) is attested `ok`; `uncommitted`, `commit:`
-and any other base cover less than the branch's diff, so the attestation says `not attestable` and
-a push gate rejects it. Codex's reviewer diffs the working tree, so a `base:` review is also
-`not attestable` when tracked files have staged or unstaged changes at launch (commit or discard
-them first), and fails with `tracked files changed during review` when they change before it
-ends. `--target` is required with `--native` and refused without it; the
+(`base:origin/main` in a repo whose `origin/HEAD` is main) is attested `ok`; `uncommitted`,
+`commit:` and any other base cover less than the branch's diff, so the attestation says
+`not attestable` and a push gate rejects it. Codex's reviewer diffs the working tree, so a
+`base:` review is also `not attestable` when tracked files have staged or unstaged changes at
+launch (commit or discard them first), and fails with `tracked files changed during review` when
+they change before it ends. `--target` is required with `--native` and refused without it; the
 MCP `codex_review` tool takes `native` and `target`.
 
 ## Writing Jobs
@@ -71,8 +71,9 @@ MCP `codex_review` tool takes `native` and `target`.
 ```
 
 - `--model` and `--effort` are required: `run` has no defaults.
-- The job writes only inside its worktree, never a main checkout or a `dev`/`uat`/`main` branch,
-  and one job holds a worktree at a time (a second gets `FAILURE: … is leased by <job-id>`).
+- The job writes only inside its worktree, never a main checkout, a protected branch (`dev`,
+  `uat`, `main`) or the repo's default branch, and one job holds a worktree at a time (a second
+  gets `FAILURE: … is leased by <job-id>`).
 - Codex does not commit unless `--allow-commit` is given; the caller reviews and commits.
 - The sandbox makes only the job's worktree writable. With `--allow-commit` it also opens what a
   commit from a linked worktree writes in the main repo's `.git`: the worktree's own git dir,
@@ -99,8 +100,5 @@ LANG, TERM and SHELL.
 
 - Admission is the service's job: at most `max_concurrent_jobs` (4) jobs run at once on this Mac
   and the rest wait in `queued`; before each turn the job reads Codex's live usage and refuses past
-  the reserve (15%) with `FAILURE: usage limit (resets <time>)`. Submit a whole batch at once; do
-  not count usage or walk `~/.codex/sessions/**/rollout-*.jsonl` yourself.
+  the reserve (15%) with `FAILURE: usage limit (resets <time>)`. Submit a whole batch at once.
   `codex-jobs capabilities` shows the live numbers.
-- Resubmit with the same `--idempotency-key` after an unclear submission: it returns the first
-  job's id and starts nothing.

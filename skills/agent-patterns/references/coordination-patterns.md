@@ -17,9 +17,8 @@ Just commit and move on. Over-coordination is waste.
 
 ## Standard Output Format
 
-An agent that returns its result inline ends its final response with coordination
-recommendations. A Tier-3 agent returns the compact summary of `orchestrator-protocol.md`
-§ Agent Output Protocol (File-First) instead, and a Workflow stage returns its schema.
+An agent that returns its result inline ends its final response with this block (`../SKILL.md`
+§ Coordination Patterns says when a Tier-3 summary or a Workflow schema replaces it):
 
 ```markdown
 ## Recommended Next Steps
@@ -134,7 +133,6 @@ most code changes owns it: its implementer goes first and hands the next one a s
 | Permission or policy denial (the user or a hook rejected the call) | Denial text in Agent result | Neither retry it nor route around it on your own: follow `rules/core-rules.md` ACT BY DEFAULT on denials. |
 | Agent returns empty/malformed output | Missing expected files or status markers | Treat as failure. Retry once with simplified prompt. |
 | Agent appears hung | User reports it, or its completion notification never arrives | Stop it with `TaskStop`. Do the work directly if feasible, otherwise retry once with a smaller assignment or escalate. |
-| Conflicting recommendations | Multiple agents disagree | Surface both with tradeoffs |
 | Specialist unavailable | Agent type not found | Use general-purpose with domain prompt from agent definition |
 
 **Platform Error Recovery Protocol.** When an `Agent()` call returns a platform error or an empty
@@ -165,21 +163,18 @@ compaction, and a re-run Workflow stage has no artifact to diff against.
   a brief when it names the files and the acceptance check. The check is of the claim's own
   kind: a code fact at file:line, a data inference by the query that measures it, a domain
   definition by a primary source.
-- **Inline payloads stall.** Stages whose prompt inlines tens of KB of JSON hit "no progress for
-  180000ms" and exhaust their retries; the same work as short prompts pointing at a scratchpad
-  file (`<scratchpad>/<stage>.json`) finishes first try. A stall kill loses the stage's work and
-  leaves a half-edited file for the retry. A Workflow script has no fs access: write bulky
-  inputs to scratchpad files first, keep inline payloads to a few KB.
+- **Inline payloads stall.** A stage whose prompt inlines tens of KB stalls, and a stall kill
+  loses the stage's work and can leave a half-edited file for the retry. Write bulky inputs to
+  scratchpad files and point at them; a Workflow script has no fs access, so write them first.
+  Keep inline payloads to a few KB.
 - **Per-stage output paths in shared briefs.** Parallel stages following one brief write test/run
   logs to templated paths (`runs/full-suite-<branch>-<stage>.txt`), never one fixed filename: a
   concurrent run overwrites another stage's log end to end, and the stage notices only when its
   counts do not match. When reading a stage's result, check the log it cites is its own.
-- **A brief's helper convention is a premise.** Before handing N agents a shared helper as "the
-  convention" (`toResult()`), run it once against each real response shape the sites will see
-  (2xx with body, 204 empty, 4xx/5xx with and without body, no response); mocks copy the client's
-  real shape, not the helper's assumption; mark unverified premises "verify first". Untested, a
-  helper that treats an empty body as an error calls every successful 204 DELETE a failure, and
-  agents then diverge into hand-rolled checks of their own.
+- **A brief's helper convention is a premise.** Before handing N agents a shared helper as the
+  convention, run it once against each real response shape the sites will see (a success with a
+  body, an empty success, errors with and without a body, no response); mocks copy the client's
+  real shape, not the helper's assumption; mark unverified premises "verify first".
 - **UI briefs carry a design reference.** A screen dispatch names an approved mockup or a
   screenshot (none: design it first); audit rendered screenshots against it before hand-off.
 - **Investigation briefs carry onboarding context.** A debugging, root-cause, or data-investigation
@@ -197,10 +192,6 @@ compaction, and a re-run Workflow stage has no artifact to diff against.
 ---
 
 ## Agent Resumption Patterns
-
-Agents can be **continued** with `SendMessage` (by agent id or name) to preserve their previous
-context — `Explore` included. A new `Agent` call always starts fresh. (Tool names: see
-`claude-code-api.md`.)
 
 **When to Continue vs Spawn Fresh.**
 
@@ -225,7 +216,7 @@ Agent:
 ## After the investigation - continue the same agent
 SendMessage:
   to: "<agent id or name>"
-  prompt: "Implement the lock you proposed for the race condition"
+  message: "Implement the lock you proposed for the race condition"
 # Agent remembers: original symptoms, files examined, root cause
 # The orchestrator then runs the flaky test itself to verify the fix
 ```
@@ -257,23 +248,6 @@ Agent:
     Implement the fix and report the files changed.
 # The orchestrator then runs the flaky test itself to verify the fix
 ```
-
-**Context Consumption Heuristics.**
-
-**Low context** (safe to continue via `SendMessage`):
-
-- Quick lookups (grep, glob returning paths only)
-- Single file reads < 200 lines
-- Status checks and verification
-- Total content read < 500 lines
-
-**High context** (spawn fresh + summary):
-
-- Read 5+ files over 100 lines each
-- Large file analysis (> 500 lines per file)
-- Full-file reads of multiple modules
-- Investigation that pivoted or expanded scope
-- Total content read > 2000 lines
 
 ---
 
@@ -352,9 +326,6 @@ zero classified actionable means the reconcile step is rubber-stamping — escal
 
 **Anti-Patterns.**
 
-- **Resuming the same agent**: Defeats the purpose - same context, same blind spots
 - **Asking implementer to "review your own work"**: Self-review is weak validation
 - **Skipping for "simple" changes**: Simple changes can have non-obvious security implications
-- **Passing the claim**: Decision Log or rationale in the reviewer prompt biases agreement
-- **Prompting "is this good?"**: A balanced ask gets a balanced answer; ask for issues only
 - **Re-spawning the same unchanged artifact**: Stalling, not reviewing

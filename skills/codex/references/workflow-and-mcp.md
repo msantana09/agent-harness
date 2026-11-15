@@ -9,9 +9,7 @@ engineer when the task needs Claude skills, hooks, `AskUserQuestion`, MCP tools 
 back-and-forth. A stage that writes code through Codex uses `run` with `--branch`
 (`jobs.md` § Writing Jobs).
 
-The stage dispatches an agent (Haiku, `low` effort, Bash and Read only). It runs the brief's
-command, loops `wait` until a terminal state, and returns `result.json` and the deliverable
-verbatim; when the submit prints `FAILURE:`, it returns that line unchanged:
+The stage dispatches an agent (Haiku, `low` effort, Bash and Read only) with this brief:
 
 ```js
 const result = await agent(
