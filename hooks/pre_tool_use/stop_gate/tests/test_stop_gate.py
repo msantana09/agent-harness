@@ -24,19 +24,19 @@ def load_hook() -> ModuleType:
 
 
 @pytest.fixture
-def home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    monkeypatch.setenv("HOME", str(tmp_path))
+def config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
     return tmp_path
 
 
-def flag_file(home: Path, session: str = SESSION) -> Path:
-    path = home / ".claude" / "state" / "stop" / session
+def flag_file(config: Path, session: str = SESSION) -> Path:
+    path = config / "state" / "stop" / session
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def set_flag(home: Path, session: str = SESSION) -> None:
-    flag_file(home, session).write_text(json.dumps({"session_id": session, "at": 1.0}))
+def set_flag(config: Path, session: str = SESSION) -> None:
+    flag_file(config, session).write_text(json.dumps({"session_id": session, "at": 1.0}))
 
 
 def call(
@@ -65,36 +65,36 @@ def assert_denied(out: dict | None) -> None:
     assert "The user typed stop" in hook_output["permissionDecisionReason"]
 
 
-def test_allows_when_no_flag_exists(home, monkeypatch, capsys):
+def test_allows_when_no_flag_exists(config, monkeypatch, capsys):
     assert call(monkeypatch, capsys) is None
 
 
-def test_denies_while_the_session_flag_is_readable(home, monkeypatch, capsys):
-    set_flag(home)
+def test_denies_while_the_session_flag_is_readable(config, monkeypatch, capsys):
+    set_flag(config)
     assert_denied(call(monkeypatch, capsys))
 
 
-def test_a_flag_stops_only_its_own_session(home, monkeypatch, capsys):
-    set_flag(home)
+def test_a_flag_stops_only_its_own_session(config, monkeypatch, capsys):
+    set_flag(config)
     assert call(monkeypatch, capsys, session="22222222-aaaa-4bbb-8ccc-000000000002") is None
 
 
 @pytest.mark.parametrize("tool", ["SubagentHandback", "StructuredOutput"])
-def test_a_stopped_agent_can_still_return_its_result(tool, home, monkeypatch, capsys):
-    set_flag(home)
+def test_a_stopped_agent_can_still_return_its_result(tool, config, monkeypatch, capsys):
+    set_flag(config)
     assert call(monkeypatch, capsys, tool=tool) is None
 
 
 @pytest.mark.parametrize(
     "content", ["", "not json", "[]", '{"session_id": "someone-else"}', "\xff"]
 )
-def test_malformed_flag_allows(content, home, monkeypatch, capsys):
-    flag_file(home).write_text(content, encoding="latin-1")
+def test_malformed_flag_allows(content, config, monkeypatch, capsys):
+    flag_file(config).write_text(content, encoding="latin-1")
     assert call(monkeypatch, capsys) is None
 
 
-def test_unreadable_flag_allows(home, monkeypatch, capsys):
-    path = flag_file(home)
+def test_unreadable_flag_allows(config, monkeypatch, capsys):
+    path = flag_file(config)
     path.write_text(json.dumps({"session_id": SESSION}))
     path.chmod(0)
     try:
@@ -103,13 +103,13 @@ def test_unreadable_flag_allows(home, monkeypatch, capsys):
         path.chmod(0o600)
 
 
-def test_flag_that_is_a_directory_allows(home, monkeypatch, capsys):
-    flag_file(home).mkdir()
+def test_flag_that_is_a_directory_allows(config, monkeypatch, capsys):
+    flag_file(config).mkdir()
     assert call(monkeypatch, capsys) is None
 
 
-def test_a_session_id_that_is_not_a_filename_allows(home, monkeypatch, capsys):
-    set_flag(home)
+def test_a_session_id_that_is_not_a_filename_allows(config, monkeypatch, capsys):
+    set_flag(config)
     assert call(monkeypatch, capsys, session="../../escape") is None
 
 
@@ -121,7 +121,7 @@ def test_the_script_run_as_a_process_denies_a_stopped_session_and_allows_otherwi
             capture_output=True,
             text=True,
             timeout=10,
-            env={**os.environ, "HOME": str(tmp_path)},
+            env={**os.environ, "CLAUDE_CONFIG_DIR": str(tmp_path)},
         )
 
     payload = json.dumps({"session_id": SESSION, "tool_name": "Read", "tool_input": {}})

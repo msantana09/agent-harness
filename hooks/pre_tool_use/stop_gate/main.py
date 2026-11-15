@@ -5,7 +5,7 @@ Usage: PreToolUse hook, matcher `*`, registered first; paired with user_prompt_s
 which sets the flag on a bare "stop" and clears it on the next human prompt. Claude Code passes
 the call as JSON on stdin.
 Input: `tool_name` and `session_id`; the flag is the file named by the session id under
-~/.claude/state/stop/ (hooks/lib_shared/stop_flag.py).
+<config dir>/state/stop/ ($CLAUDE_CONFIG_DIR, else ~/.claude; hooks/lib_shared/stop_flag.py).
 Output: nothing to allow, or a `permissionDecision: deny` JSON object on stdout.
 Exit code: 0 always.
 
