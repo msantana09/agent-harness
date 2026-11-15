@@ -1,49 +1,20 @@
-# Claude Code API — single source of truth
+# Claude Code orchestration facts
 
-Facts that name a build were observed on that build; the rest were checked on earlier builds
-and not re-run.
-
-This file is the **one place** that names Claude Code's orchestration tools, their parameters,
-deprecations, and gated features. Everything else (skills, hooks, rules) should state capabilities
-**behaviorally** and link here for the concrete names/versions. When Claude Code renames a tool or
-deprecates a primitive, fix it **here** and the rest of the layer points at the corrected fact.
-
-> **Why this file exists:** the `Task`→`Agent` rename silently broke hooks because the tool
-> name was hard-coded across skills, hooks, rules, and `settings.json` matchers with no central
-> fact. The denylist table below is the one list of stale names to check for.
+What Claude Code's own tool descriptions leave out: observed behavior of agents, Workflows and
+hooks. Facts that name a build were observed on that build; the rest were checked on earlier
+builds and not re-run.
 
 ---
 
-## Spawning agents — `Agent` (formerly `Task`)
+## Spawning agents — `Agent`
 
-The agent-spawn tool is **`Agent`**. It was previously named `Task`; any `Task(...)` <!-- drift-allow -->
-reference in docs/hooks/settings is stale.
-
-Key parameters:
-
-| Param | Meaning |
-|-------|---------|
-| `subagent_type` | Which specialist (e.g. a custom agent, `Explore`, `Plan`, `general-purpose`), or **`fork`** — forks the caller with its full conversation context, always on the caller's model (`model` is ignored). Omitted = `general-purpose`. |
-| `description` | Short (3-5 word) label for the task, shown in the agent list. |
-| `prompt` | The task. The agent's final message is returned to the caller as the result. |
-| `model` | Optional bare tier token only: `fable` / `opus` / `sonnet` / `haiku` (enum-enforced; no full model IDs, no `inherit`). Takes precedence over the agent definition's `model:` frontmatter. Omitted = the definition's pin, else the `CLAUDE_CODE_SUBAGENT_MODEL` default, else the session model. **Generic types (`Explore`, `Plan`, `general-purpose`, `claude`) must pass one** — `rules/core-rules.md` § Orchestration & Execution Rules requires it. |
-| `isolation` | `"worktree"` runs the agent in its own git worktree (auto-cleaned if unchanged); `"remote"` runs it in a cloud environment (availability gated). |
-
-Agent-definition `model:` frontmatter follows the same rule: bare tier tokens only (`fable`, not
+`model` takes a bare tier token only (`fable`, `opus`, `sonnet`, `haiku`): no full model IDs, no
+`inherit`. Agent-definition `model:` frontmatter follows the same rule (`fable`, not
 `claude-fable-5`).
-
-Agents **always run in the background**; the completion notification carries the result. There
-is no foreground mode and no `run_in_background` parameter — passing one is silently ignored. <!-- drift-allow -->
-
-**Continuing an agent:** use **`SendMessage`** (by agent id or name) to continue a previously
-spawned agent with its context intact — this includes `Explore`. A **new `Agent` call starts
-fresh** — it does not resume.
 
 **Reading background results:** read the summarized `<result>` in the completion notification.
 **Do not** read Claude Code's `output_file` (a `…/tasks/{id}.output` path) — it is the full
 sub-agent JSONL transcript (~20× the summary) and overflows context.
-
-- **`TaskOutput` is deprecated (v2.1.83).** Do not call it; do not match it in hook matchers. <!-- drift-allow -->
 
 **Nesting** *(verified empirically)*: a subagent **can** spawn its own sub-subagents via `Agent`,
 including parallel fan-out (multiple `Agent` calls in one message) — **if it holds the `Agent`
@@ -55,8 +26,7 @@ recursion untested.) `Workflow` itself nests one level via `workflow()`.
 
 ## Effort tier defaults (per agent tier, either main loop)
 
-Model-tier selection and the cost-lever policy: read `rules/automation.md` § Model Tiers — it
-binds here. Within-tier `effort:` pins:
+Within-tier `effort:` pins:
 
 - **fable agents** — default `high`, set explicitly (an omitted effort falls to a saved per-model
   level or the model's default, which is why it is set); pin `xhigh` only where a measured gain
@@ -81,18 +51,6 @@ binds here. Within-tier `effort:` pins:
 
 ## Orchestrating at scale — `Workflow` (dynamic workflows)
 
-A JS-scripted orchestration runtime. The **script** holds the loop and intermediate results, so
-they never touch the main context. Use for fan-out-then-verify, loops, unknown-size discovery,
-multi-phase work, migrations, and audits.
-
-- **Standing authorization.** The built-in tool text (as of 2.1.296) says "ONLY call this tool
-  when the user has explicitly opted in...". Keeping the standing-authorization paragraph in
-  `rules/automation.md` § Orchestrator Mode is that opt-in: with it kept, launch Tier-2-shaped
-  work directly and announce a one-line scale note. A user who deletes that paragraph opts in run
-  by run, so ask before each launch.
-- **Script header:** every script begins with `export const meta = { name, description, phases? }`
-  as a pure literal (no variables, calls, or interpolation); `name` and `description` are
-  required, `phases` optional. Plain JavaScript, not TypeScript.
 - **Primitives:** `agent(prompt, {schema, label, phase, model, effort, isolation, agentType})`,
   `parallel(thunks)` (barrier), `pipeline(items, ...stages)` (no barrier — default for multi-stage),
   `phase(title)`, `log(msg)`, `workflow(nameOrRef, args)` (one level of nesting), `budget`.
@@ -144,24 +102,9 @@ multi-phase work, migrations, and audits.
 | Parallel lanes once the main session sits in a worktree | Every `Agent` spawn and `Workflow` agent is pinned to that worktree: writes and git (`-C`, `cd`) into any other worktree are refused, and named agent types have no `ToolSearch` to load `EnterWorktree`. Per-lane worktrees made outside the session are unreachable. Parallelize inside the one worktree: agents edit disjoint files and make no git writes; the main loop commits per issue afterwards (`git apply --cached` splits a shared file's hunks). Never let parallel agents commit: pre-commit stashes every unstaged edit while its hooks run. The pin is live: a parent `EnterWorktree` or a top-level `cd` mid-run re-pins agents already running, so a probe must prove a Bash `pwd` ran inside the target worktree before trusting it. |
 | Coordinated long-running peers (shared task list, cross-agent messaging) | **Agent teams** — gated behind `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Shared task list via `TaskCreate`/`TaskList`/`TaskGet`/`TaskUpdate`; `SendMessage` between teammates. (`TaskStop` is general, not team-gated — see the row above.) Under this flag, a **named** subagent launches as a teammate: the spawn returns at once and the teammate's final answer arrives later in its idle notice (the `result` field), not as the `Agent` call's result, so a loop that waits on the call's result gets nothing. A long answer arrives cut off, ending in a `result truncated` marker, so a teammate whose report matters writes it to a file, or the lead asks for the rest via `SendMessage`. Teammates ignore the definition's `skills:` frontmatter. A team needs an interactive lead session: under `-p` a named subagent stays an ordinary subagent, and teammates cannot spawn teammates. |
 | Code review from a worktree, subagent or workflow | Claude Code's built-in code-review skill forks from the **main session's cwd**, not the caller's worktree, and its result lands in the MAIN session as a background-task notification — a workflow agent never receives it and polls forever. A relative target (a branch name such as the integration branch, or none) reviews that branch against itself or the main tree's `HEAD~1`. Pass a PR number or `--path /abs/worktree`; never invoke it inside a workflow agent — review inline in the stage (schema carries the reviewed commit sha) and run the skill from the main loop after the workflow returns. "Self-reviewed manually instead" in an agent report = not reviewed. |
-| Subagent tool denylist | `AskUserQuestion`, `Workflow`, `EnterPlanMode`, `ExitPlanMode` (unless `permissionMode: plan`), `ScheduleWakeup`, `TaskOutput`, `EndConversation`, `WaitForMcpServers` — removed from a subagent's tool surface even when listed in its `tools:` frontmatter. | <!-- drift-allow -->
+| Subagent tool denylist | `AskUserQuestion`, `Workflow`, `EnterPlanMode`, `ExitPlanMode` (unless `permissionMode: plan`), `ScheduleWakeup`, `EndConversation`, `WaitForMcpServers` — removed from a subagent's tool surface even when listed in its `tools:` frontmatter. |
 
 ---
-
-## Deprecated / renamed tokens (drift denylist)
-
-When Claude Code renames or deprecates a primitive, add the old token here. A drift check can
-parse this table: the first backticked span of each row is the stale token to grep for.
-
-| Stale token | Replaced by | Notes |
-|-------------|-------------|-------|
-| `Task(` (tool call) | `Agent(` | Tool renamed. Hooks that matched `tool_name == "Task"` stopped firing. <!-- drift-allow --> |
-| `"Task"` (hook matcher / `tool_name` check) | `"Agent"` | `settings.json` matchers + internal `tool_name` checks must both say `Agent`. <!-- drift-allow --> |
-| `TaskOutput` | (none) | Deprecated. Read the completion notification's `<result>` instead. <!-- drift-allow --> |
-| `run_in_background` (on `Agent`) | (none — always background) | Parameter removed; silently ignored if passed. Still valid on `Bash` — mark those lines `drift-allow`. <!-- drift-allow --> |
-
-Not a denylist token (the word is legitimate in hook payloads): reading Claude Code's `output_file`
-transcript path is also stale practice — read the `<result>` summary instead (see above).
 
 ## Hook payload shapes (for hooks that match agent calls)
 

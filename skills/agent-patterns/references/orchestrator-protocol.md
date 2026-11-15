@@ -346,7 +346,6 @@ If an agent returns incomplete work or flags scope issues:
 
 Agents always run in the background; there is no foreground mode. Results return clean and
 summarized via the completion notification's `<result>` — read that, not any transcript file.
-(Do not call `TaskOutput`; it's deprecated — see `claude-code-api.md`.) <!-- drift-allow -->
 When a result gates the next decision, end the turn and act on the notification; never poll.
 
 **Two different files — don't confuse them.**
