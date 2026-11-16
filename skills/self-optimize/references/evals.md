@@ -1,9 +1,8 @@
 # Testing an instruction edit
 
 An edit is tested by running the same cases twice, once with the file as it is and once with the
-edit, using `claude plugin eval`. The edit is worth applying when the edited version scores
-higher in total on cases it was not written from, under the eval's grader and a second one. A
-script or hook edit is replayed on real input instead: see Script and hook edits below.
+edit, using `claude plugin eval`; Reading the result below says when the edit is worth applying.
+A script or hook edit is replayed on real input instead: see Script and hook edits below.
 
 ## What the eval sandbox does
 
@@ -108,8 +107,10 @@ execution:
 
 ## Writing held-out cases
 
-A fresh subagent writes them, never the agent that diagnosed the problem. Give it one sentence
-naming the behavior and the session ids to skip. It finds other sessions where the same
+A fresh subagent writes them, never the agent that diagnosed the problem, and it never sees the
+changes. Give it one sentence naming the behavior and the ids of every session read on the way to
+the changes, in any step, as ones to skip: the ones the changes were written from, not every
+session in the window. It finds other sessions where the same
 situation came up with the transcripts skill (`Skill("transcripts")`): `messages --typed` with
 `--search` or `--match`, and one `--skip-session` per session to skip. It reads each one around
 the moment with `around` and `since-reply`, and writes one case pair per instance, naming the
@@ -159,7 +160,10 @@ loss against `-current`, and the runs the graders disagree on.
   and the runs they disagree on, and let the user decide.
 - Both versions at or near full marks: the suite cannot separate them, usually because the real
   failure appears late in a long session, which a short case does not reproduce. Rewrite those
-  cases as replays and run them again; if they still tie, say so.
+  cases as replays and run them again; if they still tie, say so and let the user decide on the
+  evidence alone.
+- Any other tie in total: the suite cannot tell them apart. Do not recommend it; say it is a tie
+  and let the user decide on the evidence alone.
 - Edited lower: do not recommend it. The diagnosis or the wording is wrong; go back to step 6.
 
 ## Script and hook edits
