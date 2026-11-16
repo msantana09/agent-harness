@@ -93,11 +93,9 @@ ended.
 
 Read `~/.claude/self-optimize/ledger.md`. Re-count every entry marked `applied` whose newest
 Re-count line is missing, `on track`, `did not work` or `too early`, and every `worked` entry
-whose files changed after its newest Re-count line, since a later edit can undo a fix. Count on
-the same machine and transcript folders as its baseline and per session with activity. A
-correction measure carries the last count forward and adds only the days since, from this run's
-step 2 output; a hook measure is read again from the scan. Each Re-count line replaces the numbers on the ones before it. The
-line, the verdicts and the statuses are in `references/ledger.md`.
+whose files changed after its newest Re-count line, since a later edit can undo a fix. How to
+count each one and the Re-count line it gets: `references/ledger.md`, Re-counting; the verdicts
+and statuses are under States in the same file.
 
 A `did not work` entry is a candidate for this run: the first fix missed, so start from why.
 Reverting is the user's call, and a `reverted` entry is not re-counted.
@@ -135,15 +133,12 @@ How to write the cases and run them, including replaying a changed script or hoo
 `references/evals.md`.
 
 - **Held-out cases.** The cases that judge the changes are never written from the sessions that
-  produced them. Give a fresh subagent one sentence naming the behavior under test and the ids of
-  every session read on the way to the changes, in any step, as ones to skip: the ones the
-  changes were written from, not every session in the window. It never sees the changes. It
-  finds real instances in other sessions and writes the cases from them.
+  produced them: a fresh subagent that never sees the changes writes them from other sessions
+  (`references/evals.md`, Writing held-out cases).
 - **Recommend applying only when the edited text scores higher in total** on those cases, under
-  the eval's grader and under a second grader: `scripts/grader_check.py` re-grades the round
-  (`references/evals.md`, Checking the grader). A tie means the suite cannot tell them apart, and
-  "too close to call" means the two graders disagree on the outcome: say which, and let the user
-  decide on the evidence alone.
+  the eval's grader and under a second grader (`references/evals.md`, Checking the grader). A tie
+  or "too close to call" (the two graders disagree on the outcome) is not a recommendation; what
+  to report instead: `references/evals.md`, Reading the result.
 - A behavior that only appears late in a long session is tested by replaying the real session up
   to the user's message. When no case can set it up, not even a replay (it appears only after a
   tool call, say), say so in the report and name what to watch for on the next run instead.

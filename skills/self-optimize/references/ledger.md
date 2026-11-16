@@ -65,11 +65,12 @@ Set `reverted` when the user says they undid the changes.
 
 ## Re-counting
 
-SKILL.md step 4 lists which entries are re-counted; one whose baseline was counted on another
-machine waits for a run there.
+SKILL.md step 4 lists which entries are re-counted. Each is counted on the same machine and
+transcript folders as its baseline; one whose baseline was counted on another machine waits for a
+run there.
 
-Re-count a `worked` entry too when any file on its Files line changed after the date of its
-newest Re-count line: a commit to it (`git log --since=<that date> -- <file>` in the repository
+A `worked` entry's files have changed when any file on its Files line changed after the date of
+its newest Re-count line: a commit to it (`git log --since=<that date> -- <file>` in the repository
 that holds it), an edit not yet committed (`git status --porcelain -- <file>` lists it; its
 modification time dates the change), or, for a file outside a repository, a modification time
 after that date. The verdict is `too early` until the window from the first such change has as
