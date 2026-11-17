@@ -11,11 +11,16 @@ A script or hook edit is replayed on real input instead: see Script and hook edi
   test itself.
 - `append_system_prompt` in a case's frontmatter adds text to the system prompt. That is how a
   rule, memory or `CLAUDE.md` edit is tested: carry the whole file, not the changed paragraph,
-  since a rule read alone can look stronger than it is among the rest.
+  since a rule read alone can look stronger than it is among the rest. A `---` anywhere in the
+  frontmatter ends it, even mid-line inside that block, and the rest of the file lands in the
+  prompt: reword such a line the same way in both versions ("a `---` divider" becomes "a
+  three-dash divider").
 - A command or skill body arrives as the user's message, so it goes in the prompt instead.
 - Reads outside the run's folder are denied unless granted with `--allow-tools`, and a grant
   needs an absolute path written with `//` (`Read(//home/me/notes/**)`). A `~/` grant points at
-  the temporary home.
+  the temporary home. Files a case reads go outside `~/.claude`, where reads were refused even
+  with a grant, and outside any public repository. Grant `Read`, `Glob` and `Grep` on their
+  folder: an agent often lists a folder before it reads a file.
 
 ## Layout
 
