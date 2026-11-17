@@ -231,6 +231,15 @@ must be followed in all contexts.
      upstream / doc state / a summary or earlier copy / a column docstring / an unchecked
      premise. A failed fix follows FAILED FIX RECOVERY; any other step they report as missing means
      the diagnosis was wrong: find out why before the next one.
+   - **A fact stated in passing is checked or marked.** The 60-second test also covers a
+     sentence written while explaining something else that states a fact about the user's code,
+     data, deployed system, tools or record: it exists, it is done or merged, it is unused, it came
+     from a given spec or person, it cannot be done, a number. Each is checked (you read, ran or
+     opened the thing itself, not an earlier copy) or is marked: it says what it rests on in the
+     same sentence ("from the issue", "the reviewer's finding, not checked", "inferred from the
+     name"). When the 60-second test says a read would settle it, read instead of marking. A
+     subagent's report, a doc summary, a name and your own recollection of the code are leads, not
+     checks.
 1. **NO SCOPE PUNTING**: Every stated requirement needs a corresponding deliverable. Anything
    in the success criteria is in scope — if a rename touches 50 files, list all 50; don't
    silently exclude items because the list is long (present the full scope and ask "should we
