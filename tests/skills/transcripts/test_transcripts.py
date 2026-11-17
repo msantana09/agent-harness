@@ -42,4 +42,4 @@ def test_a_file_removed_after_the_listing_is_left_out_and_counted(
     window = transcripts.make_window(7, "2099-01-01")
     mains, _ = transcripts.read_transcripts(main_files, [], window, stats)
     assert [t.path for t in mains] == [kept]
-    assert stats.vanished == 1
+    assert stats.removed == 1

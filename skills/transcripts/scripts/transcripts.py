@@ -499,6 +499,7 @@ class Stats:
 
     bad_lines: int = 0  # lines that were not valid JSON
     unreadable: int = 0  # user or assistant records with no usable timestamp or message
+    removed: int = 0  # files deleted between the folder listing and their read
     dropped: Counter[str] = field(default_factory=Counter)  # untyped user turns, by reason
 
 
@@ -700,20 +701,46 @@ def note_request(transcript: Transcript, record: Record, in_window: bool) -> Non
 def read_transcripts(
     main_files: list[Path], subagent_files: list[Path], window: Window, stats: Stats
 ) -> tuple[list[Transcript], list[Transcript]]:
-    """(main transcripts in reading order, subagent transcripts) that may hold window records."""
+    """(main transcripts in reading order, subagent transcripts) that may hold window records.
+
+    A file deleted after the listing (a worktree removed with its sessions) is left out and
+    counted in `stats.removed`."""
 
     def possible(files: list[Path]) -> list[Path]:
-        return [f for f in files if f.stat().st_mtime >= window.start]
+        kept = []
+        for path in files:
+            try:
+                if path.stat().st_mtime >= window.start:
+                    kept.append(path)
+            except FileNotFoundError:
+                stats.removed += 1
+        return kept
 
+    def read(path: Path, seen: set[str], subagent: bool = False) -> Transcript | None:
+        try:
+            return read_transcript(path, window, seen, stats, subagent=subagent)
+        except FileNotFoundError:
+            stats.removed += 1
+            return None
+
+    starts = {}
+    for path in possible(main_files):
+        try:
+            starts[path] = first_epoch(path)
+        except FileNotFoundError:
+            stats.removed += 1
     seen: set[str] = set()
     mains = []
-    for path in sorted(possible(main_files), key=lambda p: (first_epoch(p), str(p))):
-        transcript = read_transcript(path, window, seen, stats)
-        seen |= transcript.uuids
-        mains.append(transcript)
-    subs = [
-        read_transcript(p, window, set(), stats, subagent=True) for p in possible(subagent_files)
-    ]
+    for path in sorted(starts, key=lambda p: (starts[p], str(p))):
+        transcript = read(path, seen)
+        if transcript is not None:
+            seen |= transcript.uuids
+            mains.append(transcript)
+    subs = []
+    for path in possible(subagent_files):
+        transcript = read(path, set(), subagent=True)
+        if transcript is not None:
+            subs.append(transcript)
     return mains, subs
 
 
@@ -811,6 +838,11 @@ def load(args: argparse.Namespace, program: str, subagents: bool) -> Loaded | No
         print(
             f"{program}: skipped {stats.bad_lines} lines that were not valid JSON and "
             f"{stats.unreadable} user or assistant records with no readable timestamp or message",
+            file=sys.stderr,
+        )
+    if stats.removed:
+        print(
+            f"{program}: left out {stats.removed} transcript files deleted while they were read",
             file=sys.stderr,
         )
     return Loaded(roots, window, mains, subs, stats)
