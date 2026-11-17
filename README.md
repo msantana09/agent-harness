@@ -15,9 +15,10 @@ Start with:
 - The agent takes clear, in-scope steps and asks for the user's decisions.
   [Decide or ask](docs/decide-or-ask.md)
 - A bug gets a failing test, a fix at its cause and verification in use.
-  [Engineering](rules/engineering.md#test-first-bug-fixes)
+  [Engineering](rules/engineering.md#test-first-bug-fixes), [core rules](rules/core-rules.md)
 - Changes stay within the request; review suggestions do not expand it.
-  [Scope](rules/communication.md#surface--scope-in)
+  [Changes](rules/engineering.md#surgical-changes),
+  [review suggestions](rules/communication.md#surface--scope-in)
 - Edits use worktrees, and the user decides every merge. [Worktrees](rules/core-rules.md#worktrees)
 - A second model reviews each PR; its findings are verified before acceptance.
   [Review](skills/ship/SKILL.md), [verification](skills/external-feedback/SKILL.md)
