@@ -1,7 +1,13 @@
 """Tests for the record rules in transcripts.py that other scripts share."""
 
+from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from types import ModuleType
+
+import pytest
+
+type Place = Callable[..., Path]
 
 
 def test_paste_markers_are_removed_from_the_typed_words(transcripts: ModuleType) -> None:
@@ -16,3 +22,24 @@ def test_days_with_until_counts_whole_days_ending_on_that_date(transcripts: Modu
     assert window.start == datetime.fromisoformat("2099-06-01").timestamp()
     assert window.end == datetime.fromisoformat("2099-06-03").timestamp()
     assert window.label == "2 days through 2099-06-02"
+
+
+def test_a_file_removed_after_the_listing_is_left_out_and_counted(
+    transcripts: ModuleType, place: Place, root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kept = place("kept", "correction.jsonl")
+    removed = place("removed", "other.jsonl")
+    main_files, _ = transcripts.find_transcripts([root])
+    first_epoch = transcripts.first_epoch
+
+    def removed_before_its_read(path: Path) -> float:
+        if path == removed:
+            path.unlink()
+        return first_epoch(path)
+
+    monkeypatch.setattr(transcripts, "first_epoch", removed_before_its_read)
+    stats = transcripts.Stats()
+    window = transcripts.make_window(7, "2099-01-01")
+    mains, _ = transcripts.read_transcripts(main_files, [], window, stats)
+    assert [t.path for t in mains] == [kept]
+    assert stats.vanished == 1
