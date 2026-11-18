@@ -438,6 +438,57 @@ def test_dead_socket_recovers_from_the_rollout_or_is_outcome_unknown(lab, with_r
         assert (result["ran"], result["task_succeeded"]) == (True, None)
 
 
+REFUSED = [{"type": "input_text", "text": "touch: x: Operation not permitted\n"}]
+
+
+def test_the_turns_code_mode_calls_are_journaled_once_from_the_rollout(
+    lab, write_rollout, exec_call
+):
+    # the server sends no item for a command the sandbox refused inside a code-mode script
+    write_rollout(
+        "12-00-00",
+        "thr-fake-1",
+        [
+            {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-earlier"}},
+            *exec_call("c0", "await tools.exec_command({cmd: 'ls'})", "earlier turn"),
+            {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-fake-1"}},
+            *exec_call("c1", "await tools.exec_command({cmd: 'touch x'})", REFUSED),
+            *exec_call("c2", "*** Begin Patch", "applied", name="apply_patch"),
+            {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": "turn-fake-1"}},
+        ],
+    )
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    lab.crash(job_dir, "before-deliver")
+    assert lab.reconcile(job_dir)["state"] == "succeeded"  # settles the job a second time
+    assert lab.events(job_dir, "code_mode_calls") == [
+        {
+            "turn_id": "turn-fake-1",
+            "calls": [
+                {
+                    "thread_id": "thr-fake-1",
+                    "call_id": "c1",
+                    "code": "await tools.exec_command({cmd: 'touch x'})",
+                    "output": REFUSED,
+                }
+            ],
+        }
+    ]
+
+
+def test_a_turn_without_a_rollout_journals_that_its_code_mode_calls_are_unknown(lab):
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    assert lab.run(job_dir) == 0
+    assert lab.events(job_dir, "code_mode_calls") == [
+        {
+            "turn_id": "turn-fake-1",
+            "calls": [],
+            "error": f"no rollout for thread thr-fake-1 in {lab.sessions}",
+        }
+    ]
+
+
 @pytest.mark.parametrize("runner_pid", [None, os.getpid()], ids=["runner starting", "runner alive"])
 def test_reconcile_leaves_a_job_alone_while_its_runner_may_be_alive(lab, runner_pid):
     job_dir = lab.job()

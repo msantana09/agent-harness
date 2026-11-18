@@ -129,6 +129,45 @@ def test_native_review_leaves_the_message_as_review_md_and_no_findings(env, revi
     assert sent == [{"thread_id": job["thread_id"], "prior_turn_ids": []}]
 
 
+def test_native_review_journals_the_code_mode_calls_of_its_review_sub_thread(
+    env, review_repo, write_rollout, exec_call
+):
+    # the reviewer runs its commands in a sub-thread whose rollout is its own file
+    write_rollout(
+        "12-00-00",
+        "thr-fake-1",
+        [{"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-fake-1"}}],
+    )
+    write_rollout(
+        "12-00-01",
+        "thr-review",
+        exec_call("c1", "await tools.exec_command({cmd: 'git diff'})", "diff --git"),
+        source={"subagent": "review"},
+        parent_thread_id="thr-fake-1",
+    )
+    env.script(final_answer=NATIVE_REVIEW)
+    assert native(env, review_repo, "--target", "uncommitted")[0] == 0
+    (job,) = env.jobs()
+    journaled = [
+        e["data"]
+        for e in records.read_events(env.root / job["job_id"])
+        if e["kind"] == "code_mode_calls"
+    ]
+    assert journaled == [
+        {
+            "turn_id": "turn-fake-1",
+            "calls": [
+                {
+                    "thread_id": "thr-review",
+                    "call_id": "c1",
+                    "code": "await tools.exec_command({cmd: 'git diff'})",
+                    "output": "diff --git",
+                }
+            ],
+        }
+    ]
+
+
 @pytest.mark.parametrize(
     "target, wire",
     [

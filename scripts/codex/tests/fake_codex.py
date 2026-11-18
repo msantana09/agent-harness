@@ -52,7 +52,8 @@ Script (JSON object; every key optional):
                       starts with
 
 Built-in methods (a "responses" entry replaces the built-in result):
-  initialize          {"userAgent", "codexHome", "platformFamily", "platformOs"}
+  initialize          {"userAgent", "codexHome", "platformFamily", "platformOs"}; codexHome is the
+                      folder of FAKE_CODEX_SCRIPT, so a test's rollouts go in its `sessions` folder
   thread/start        {"thread": {"id": thread_id}, "model": params.model, "reasoningEffort":
                       params.config.model_reasoning_effort (null without it)}
   thread/resume       {"thread": {"id": params.threadId}, "model": params.model}; an unknown thread
@@ -439,7 +440,7 @@ class Server:
         if method == "initialize":
             return {
                 "userAgent": "fake-codex/0.0.0",
-                "codexHome": os.path.expanduser("~/.codex"),
+                "codexHome": os.path.dirname(os.environ["FAKE_CODEX_SCRIPT"]),
                 "platformFamily": "unix",
                 "platformOs": "macos",
             }
