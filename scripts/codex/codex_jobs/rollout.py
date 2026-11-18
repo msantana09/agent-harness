@@ -19,6 +19,8 @@ STAMP_LENGTH = len("rollout-") + len("2026-11-08T12-00-00")
 CODE_MODE_TOOL = "exec"
 CODE_MODE_WAIT = "wait"
 TURN_ENDS = ("task_complete", "turn_aborted")
+# The rows of a tool call and of its output, paired by `call_id`.
+CALL_ROWS = ("custom_tool_call", "function_call", "custom_tool_call_output", "function_call_output")
 
 
 def _row(line: str) -> dict[str, Any] | None:
@@ -33,9 +35,12 @@ def _row(line: str) -> dict[str, Any] | None:
 
 
 def rows(path: Path) -> Iterator[dict[str, Any]]:
-    for line in path.read_text().splitlines():
-        if (row := _row(line)) is not None:
-            yield row
+    """The file's rows, one per physical line: Codex writes a row's text unescaped, so a Unicode
+    line separator inside a row does not end it."""
+    with path.open() as handle:
+        for line in handle:
+            if (row := _row(line)) is not None:
+                yield row
 
 
 def _session_meta(path: Path) -> dict[str, Any]:
@@ -47,8 +52,15 @@ def _session_meta(path: Path) -> dict[str, Any]:
 
 
 def thread_rollouts(sessions_dir: Path, thread_id: str) -> list[Path]:
-    """The thread's rollout files, oldest first."""
-    return sorted(Path(sessions_dir).rglob(f"rollout-*-{thread_id}.jsonl"))
+    """The thread's rollout files, oldest first: `<thread id>.jsonl`, and the
+    `<thread id>_<rollout id>.jsonl` that replaces it when the thread is reverted."""
+    sessions = Path(sessions_dir)
+    return sorted(
+        [
+            *sessions.rglob(f"rollout-*-{thread_id}.jsonl"),
+            *sessions.rglob(f"rollout-*-{thread_id}_*.jsonl"),
+        ]
+    )
 
 
 def review_subthreads(sessions_dir: Path, thread_id: str, parent: Path) -> list[Path]:
@@ -58,7 +70,10 @@ def review_subthreads(sessions_dir: Path, thread_id: str, parent: Path) -> list[
     for path in sorted(Path(sessions_dir).rglob("rollout-*.jsonl")):
         if path.name[:STAMP_LENGTH] < parent.name[:STAMP_LENGTH]:
             continue
-        meta = _session_meta(path)
+        try:
+            meta = _session_meta(path)
+        except FileNotFoundError:  # Codex archives a rollout by moving it
+            continue
         if (
             meta.get("source") == {"subagent": "review"}
             and meta.get("parent_thread_id") == thread_id
@@ -89,14 +104,20 @@ def _ended(items: list[dict[str, Any]], turn_id: str | None) -> bool:
     )
 
 
-def _code_mode_calls(thread_id: str | None, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _code_mode_calls(
+    thread_id: str | None, items: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], int]:
     """Each code-mode script and `wait` in `items`, in order, with its output (null while it had
-    none)."""
+    none); and how many tool call or output rows had no string call id, so could not be paired."""
     calls: dict[str, dict[str, Any]] = {}
+    unusable = 0
     for row in items:
         payload = row.get("payload") or {}
         kind, call_id = payload.get("type"), payload.get("call_id")
-        if call_id is None:
+        if kind not in CALL_ROWS:
+            continue
+        if not isinstance(call_id, str):
+            unusable += 1
             continue
         if (kind, payload.get("name")) in (
             ("custom_tool_call", CODE_MODE_TOOL),
@@ -111,15 +132,15 @@ def _code_mode_calls(thread_id: str | None, items: list[dict[str, Any]]) -> list
             }
         elif kind in ("custom_tool_call_output", "function_call_output") and call_id in calls:
             calls[call_id]["output"] = payload.get("output")
-    return list(calls.values())
+    return list(calls.values()), unusable
 
 
 def turn_code_mode_calls(
     sessions_dir: Path, thread_id: str, turn_id: str, *, native_review: bool
 ) -> dict[str, Any]:
     """The `code_mode_calls` journal entry for a turn: `{"turn_id", "calls"}`, plus `"error"` when
-    the calls may be incomplete: no rollout, not exactly one review sub-thread, or a rollout that
-    does not show the turn's end yet.
+    the calls may be incomplete: no rollout, not exactly one review sub-thread, tool call rows
+    without a usable call id, or a rollout that does not show the turn's end yet.
 
     A native review runs its commands in its review sub-thread, which has its own rollout; the
     parent's rollout holds none of them.
@@ -136,14 +157,17 @@ def turn_code_mode_calls(
                 "error": f"{len(subthreads)} review sub-thread rollouts for thread {thread_id}",
             }
         items = list(rows(subthreads[0]))
-        entry["calls"] = _code_mode_calls(_session_meta(subthreads[0]).get("id"), items)
+        entry["calls"], unusable = _code_mode_calls(_session_meta(subthreads[0]).get("id"), items)
         ended = _ended(items, None)
     else:
         items = [row for path in found for row in _turn_rows(rows(path), turn_id)]
-        entry["calls"] = _code_mode_calls(thread_id, items)
+        entry["calls"], unusable = _code_mode_calls(thread_id, items)
         ended = _ended(items, turn_id)
+    notes = []
+    if unusable:
+        notes.append(f"{unusable} rollout rows of the turn have no usable call id")
     if not ended:
-        entry["error"] = (
-            f"the rollout does not show the end of turn {turn_id}; calls may be missing"
-        )
+        notes.append(f"the rollout does not show the end of turn {turn_id}")
+    if notes:
+        entry["error"] = "; ".join(notes) + "; calls may be missing"
     return entry

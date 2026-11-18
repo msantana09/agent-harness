@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from codex_jobs import appserver, cli, mcp_server, reconcile, records, review, runner
+from codex_jobs import rollout as rollouts
 
 NATIVE_REVIEW = "The patch makes `add` subtract.\n\n- [P1] Keep addition in `add`"
 TARGET = {"type": "baseBranch", "branch": "origin/trunk"}
@@ -175,6 +176,26 @@ def test_native_review_journals_the_code_mode_calls_of_its_review_sub_thread(
             ],
         }
     ]
+
+
+def test_a_rollout_archived_while_sub_threads_are_scanned_is_skipped(
+    tmp_path, write_rollout, monkeypatch
+):
+    # Codex archives a rollout by moving it, so a file listed a moment ago can be gone
+    parent = write_rollout("12-00-00", "thr-fake-1", [])
+    archived = write_rollout("12-00-00", "thr-other", [])
+    sub = write_rollout(
+        "12-00-01", "thr-review", [], source={"subagent": "review"}, parent_thread_id="thr-fake-1"
+    )
+    read_meta = rollouts._session_meta
+
+    def archived_meanwhile(path):
+        if path == archived:
+            path.unlink()
+        return read_meta(path)
+
+    monkeypatch.setattr(rollouts, "_session_meta", archived_meanwhile)
+    assert rollouts.review_subthreads(tmp_path / "sessions", "thr-fake-1", parent) == [sub]
 
 
 @pytest.mark.parametrize(
