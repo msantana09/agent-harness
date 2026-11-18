@@ -447,8 +447,10 @@ def test_stdio_loop_frames_lines_and_serves_requests_while_a_wait_blocks(env):
         def flush(self):
             pass
 
+    # A daemon thread: a failed assertion before stdin closes must not leave the interpreter
+    # waiting on a loop that blocks reading it.
     loop = threading.Thread(
-        target=mcp_server.serve_stdio, args=(env.server, os.fdopen(stdin_read), Out())
+        target=mcp_server.serve_stdio, args=(env.server, os.fdopen(stdin_read), Out()), daemon=True
     )
     loop.start()
 
