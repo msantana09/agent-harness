@@ -170,8 +170,10 @@ Goal: every finding adjudicated on evidence, accepted ones and red checks fixed,
    finding,priority:<level>`) and the issue number on its line. This log is the deliverable
    of the round; it goes on the PR in Step 4.
 1. **Fix the accepted findings** and every red from Step 2's checks in the worktree. A
-   finding that reports a behavioral bug gets a failing test first, then the fix. Stay
-   surgical - a review finding is not a licence to refactor adjacent code, and a
+   finding that reports a behavioral bug gets a failing test first, then the fix; a finding
+   that reports only missing coverage adds a test only where
+   `rules/engineering.md` § Tests and Docs Ship with the Change keeps one. Stay surgical - a
+   review finding is not a licence to refactor adjacent code, and a
    suggestion to "also add X" is never built here (hard rules).
 1. **Checks: PR CI runs the static gates; you run only the branch's own tests.** The static
    line, the tests line and the rerun after a fix pass:

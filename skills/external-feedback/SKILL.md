@@ -34,7 +34,9 @@ For each suggestion:
 1. **Verify against codebase** - Read actual files, search patterns (`Grep`/`Glob`), confirm
    the claim matches what the code actually does today.
 1. **Classify it** - a **bug claim** says the code does the wrong thing; an **addition**
-   proposes something new (an "also add X", a refactor, a safeguard, an optimization).
+   proposes something new (an "also add X", a refactor, a safeguard, an optimization, a test
+   for a behavior with no bug shown). A missing test is valuable only where
+   `rules/engineering.md` § Tests and Docs Ship with the Change keeps one.
 1. **Settle who introduced a bug** - a diff locates changes; it does not prove cause. A
    changed caller, config or dependency can break code the diff never touches. Trace the
    failure's trigger: if this change adds or alters it, the bug is introduced; if the trigger
@@ -88,7 +90,8 @@ rejected as not worth it rests on the fit check above instead. "I can't verify t
 looks fine to me", "I wouldn't have raised it", and "the citation is slightly off" are not
 disproof - judge the claim, not the quote. A claim that reading cannot settle is settled by
 running: a failing test that reproduces it accepts it, and a passing test that exercises its
-trigger disproves it; a reversible experiment works the same way. Only a check that needs
+trigger disproves it; a reversible experiment works the same way. The failing test is committed
+with the fix; the passing one is scratch and is deleted. Only a check that needs
 something out of reach (an environment, a third party) stays open, named with what would settle it
 and who owns it, and it never counts as accepted. When the feedback reviews code you wrote, this
 bias is strongest; hold the bar harder. Hold it hardest on memory/bounds safety, concurrency and

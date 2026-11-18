@@ -43,7 +43,8 @@ FABRICATED VALUES.
 
 When the user reports a bug or shares an error log, first write a failing test that reproduces
 it, then fix the code and confirm the test passes. The reproducing test comes before the fix,
-not after.
+not after. It is committed with the fix (a bug that happened passes the keep rule in § Tests and
+Docs Ship with the Change), at the highest cheap layer that reproduces the bug.
 
 ### Clean-Room Reference Designs
 
@@ -65,10 +66,10 @@ reproduced in ours. Reading a dependency's source to debug or learn its API is n
   § Discovery Protocol and leave the code in place
 - A pre-existing bug or hazard found while working: route it per
   core-rules § Discovery Protocol; never bury the fix in the diff unflagged
-- Tests are sized like the neighboring test files — roughly one focused test per stated
-  behavior. Scratch scripts and quick checks used to verify are not turned into permanent
-  test files. This is about extras only: every behavior the task asks for is implemented
-  completely
+- Tests are sized by § Tests and Docs Ship with the Change — one focused test per kept
+  behavior, at one layer; neighboring test files are no guide to size. Scratch scripts and
+  quick checks used to verify are deleted, not committed. This is about extras only: every
+  behavior the task asks for is implemented completely
 
 **Orphan cleanup rule**:
 
@@ -124,6 +125,23 @@ what it assumes of its environment, never the review that shaped it.
 
 ### Tests and Docs Ship with the Change
 
-- Code changes must include corresponding updates to:
-  - **Tests**: Add or update tests covering the changed functionality
-  - **Documentation**: Update docstrings, READMEs, and inline comments
+A code change ships with its documentation (docstrings, READMEs, inline comments) and with the
+tests these rules keep, no more:
+
+- **Keep rule**: commit a test only when it pins something a user, an API client, security or the
+  domain's calculations depend on, or a bug that happened. A test written only to check a change
+  while building it is scratch: run it, then delete it.
+- **One layer per behavior**: test a behavior once, at the highest layer that can observe it and
+  still runs cheaply, not at the unit and the integration layer both. An endpoint's cases scale
+  with its risk; each endpoint keeps its unauthenticated, role or ownership denial and (in a
+  multi-tenant app) cross-tenant denial cases.
+- **Removal counterpart**: a change that adds a stronger test names the tests whose assertions
+  it now makes and deletes them in the same change.
+- **Break → delete or justify**: when an existing test fails because the change set out to
+  alter that behavior (its PR or plan says so), delete the test or rewrite it to the new
+  behavior; never patch it until it passes. A test that guards a contract or a past bug is the
+  exception: the change keeps that behavior, or states why the contract changes. A break the
+  change did not intend is a bug in the code: fix the code, not the test.
+- **Deleted tests are listed**: the PR body names every test the change deletes, with its reason.
+- **Review findings**: a finding becomes a test only when it reports a real bug. Missing coverage
+  alone adds no test.
