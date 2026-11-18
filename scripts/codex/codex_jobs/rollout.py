@@ -37,15 +37,24 @@ def _row(line: str) -> dict[str, Any] | None:
 
 
 def _open(path: Path) -> TextIO:
-    """The rollout for reading, decompressed when it is `.zst`, and read from its `.zst` when Codex
-    compressed it after it was listed. A crash can cut a row inside a multi-byte character, so
-    bytes that are not UTF-8 read as U+FFFD and leave only that row unparseable."""
+    """The rollout for reading, decompressed when it is `.zst`. A rollout can change form after it
+    was listed: Codex compresses a cold one and writes the plain file back when the thread resumes,
+    each time removing the other form, so a listed form that is gone is read as the other one.
+    A crash can cut a row inside a multi-byte character, so bytes that are not UTF-8 read as U+FFFD
+    and leave only that row unparseable."""
+    try:
+        return _open_form(path)
+    except FileNotFoundError:
+        if path.suffix == ".zst":
+            return _open_form(path.with_suffix(""))
+        return _open_form(path.with_name(f"{path.name}.zst"))
+
+
+def _open_form(path: Path) -> TextIO:
+    """The file at `path` for reading as text, decompressed when it is `.zst`."""
     if path.suffix == ".zst":
         return zstd.open(path, "rt", encoding="utf-8", errors="replace")
-    try:
-        return path.open(encoding="utf-8", errors="replace")
-    except FileNotFoundError:
-        return _open(path.with_name(f"{path.name}.zst"))
+    return path.open(encoding="utf-8", errors="replace")
 
 
 def _rollouts(sessions_dir: Path, stem: str) -> list[Path]:

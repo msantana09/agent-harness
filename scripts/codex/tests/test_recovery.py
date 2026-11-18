@@ -560,6 +560,17 @@ def test_a_rollout_compressed_after_it_was_listed_is_read_from_its_zst(tmp_path,
     assert [row["type"] for row in rollout.rows(listed)] == ["session_meta", "event_msg"]
 
 
+def test_a_rollout_restored_after_it_was_listed_is_read_from_its_plain_file(
+    tmp_path, write_rollout
+):
+    compressed = write_rollout("12-00-00", "thr-fake-1", [STARTED], compressed=True)
+    (listed,) = rollout.thread_rollouts(tmp_path / "sessions", "thr-fake-1")
+    # resuming the thread, Codex writes the plain file back and removes the `.zst`
+    write_rollout("12-00-00", "thr-fake-1", [STARTED])
+    compressed.unlink()
+    assert [row["type"] for row in rollout.rows(listed)] == ["session_meta", "event_msg"]
+
+
 def test_a_turn_without_a_rollout_journals_that_its_code_mode_calls_are_unknown(lab):
     lab.fake.set_script({"turn": TURN})
     job_dir = lab.job()
