@@ -65,7 +65,8 @@ def _rollouts(sessions_dir: Path, stem: str) -> list[Path]:
     return sorted(
         path
         for path in found
-        if path.suffix == ".jsonl" or (path.suffix == ".zst" and path.with_suffix("") not in found)
+        if path.suffix == ".jsonl"
+        or (path.suffixes[-2:] == [".jsonl", ".zst"] and path.with_suffix("") not in found)
     )
 
 
