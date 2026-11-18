@@ -110,8 +110,8 @@ def _native_review_outcome(job: dict[str, Any], sessions_dir: Path, parent: Path
 
 
 def _outcome_from_rollout(job: dict[str, Any], sessions_dir: Path) -> TurnOutcome | None:
-    """The end of the job's turn as Codex wrote it to `rollout-*-<thread id>.jsonl`, or None if it
-    never ended there."""
+    """The end of the job's turn as Codex wrote it to `rollout-*-<thread id>.jsonl` (or its
+    `.jsonl.zst`), or None if it never ended there."""
     for path in rollout.thread_rollouts(sessions_dir, job["thread_id"]):
         for row in rollout.rows(path):
             payload = row.get("payload") or {}
