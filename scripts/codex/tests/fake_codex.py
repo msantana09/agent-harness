@@ -747,7 +747,7 @@ def listen(path: str, log: Log) -> tuple[socket.socket, Any]:
     bound = path
     short_dir = None
     if len(os.fsencode(path)) >= SUN_PATH_LIMIT:
-        short_dir = tempfile.mkdtemp(prefix="fc-", dir="/tmp")
+        short_dir = tempfile.mkdtemp(prefix="fc-")
         bound = os.path.join(short_dir, "s")
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     listener.bind(bound)

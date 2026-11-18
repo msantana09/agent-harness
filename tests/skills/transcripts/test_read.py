@@ -329,6 +329,10 @@ def test_plain_text_names_the_session_once_and_shows_each_row_in_full(
 def test_the_index_command_indexes_every_transcript_through_worker_processes(
     tmp_path: Path, config_dir: Path, index: ModuleType
 ) -> None:
+    try:
+        os.sysconf("SC_SEM_NSEMS_MAX")  # a process pool queries this limit before it starts
+    except PermissionError:
+        pytest.skip("this sandbox refuses the semaphore limit query a process pool starts with")
     root = tmp_path / "projects" / "-home-ada-demo"
     root.mkdir(parents=True)
     for n in range(index.POOL_THRESHOLD + 1):

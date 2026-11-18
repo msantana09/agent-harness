@@ -7,6 +7,7 @@ documented at the top of fake_codex.py.
 """
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -22,6 +23,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from codex_jobs import appserver, records
 
 FAKE_CODEX = Path(__file__).resolve().parent / "fake_codex.py"
+PS_STANDIN = Path(__file__).resolve().parent / "ps_standin.py"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ps_where_refused(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """The runner reads a process group leader's state with `ps`. Where running `ps` is refused
+    (a sandbox that denies the binary), put ps_standin.py first on PATH for this process and the
+    runners it starts; elsewhere the real `ps` answers."""
+    probe = ["ps", "-ww", "-o", "stat=,command=", "-p", str(os.getpid())]
+    try:
+        subprocess.run(probe, capture_output=True, check=False)
+    except PermissionError:
+        shim = tmp_path_factory.mktemp("ps-bin") / "ps"
+        shim.write_text(
+            f'#!/bin/sh\nexec {shlex.quote(sys.executable)} {shlex.quote(str(PS_STANDIN))} "$@"\n'
+        )
+        shim.chmod(0o755)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setenv("PATH", f"{shim.parent}{os.pathsep}{os.environ['PATH']}")
+            yield
+        return
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -103,7 +126,7 @@ class FakeCodex:
         for pgid in pgids:
             appserver.stop_app_server(pgid, grace=1.0)
         for row in self.records("listen"):
-            if row["bound"] != row["path"]:  # a killed fake leaves its short socket dir in /tmp
+            if row["bound"] != row["path"]:  # a killed fake leaves its short socket dir behind
                 shutil.rmtree(Path(row["bound"]).parent, ignore_errors=True)
 
 
