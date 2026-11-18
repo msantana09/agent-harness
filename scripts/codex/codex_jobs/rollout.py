@@ -21,22 +21,28 @@ CODE_MODE_WAIT = "wait"
 TURN_ENDS = ("task_complete", "turn_aborted")
 
 
+def _row(line: str) -> dict[str, Any] | None:
+    """The line as a row: an object whose `payload`, when present, is an object; else None."""
+    try:
+        row = json.loads(line)
+    except json.JSONDecodeError:  # a line cut off by a crash
+        return None
+    if not isinstance(row, dict) or not isinstance(row.get("payload", {}), dict):
+        return None
+    return row
+
+
 def rows(path: Path) -> Iterator[dict[str, Any]]:
     for line in path.read_text().splitlines():
-        try:
-            yield json.loads(line)
-        except json.JSONDecodeError:  # a line cut off by a crash
-            continue
+        if (row := _row(line)) is not None:
+            yield row
 
 
 def _session_meta(path: Path) -> dict[str, Any]:
     """The payload of the rollout's first row when it is `session_meta`, else {}; reads only
     that line."""
     with path.open() as handle:
-        try:
-            first = json.loads(handle.readline())
-        except json.JSONDecodeError:
-            return {}
+        first = _row(handle.readline()) or {}
     return (first.get("type") == "session_meta" and first.get("payload")) or {}
 
 
@@ -83,7 +89,7 @@ def _ended(items: list[dict[str, Any]], turn_id: str | None) -> bool:
     )
 
 
-def _code_mode_calls(thread_id: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _code_mode_calls(thread_id: str | None, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Each code-mode script and `wait` in `items`, in order, with its output (null while it had
     none)."""
     calls: dict[str, dict[str, Any]] = {}
@@ -130,7 +136,7 @@ def turn_code_mode_calls(
                 "error": f"{len(subthreads)} review sub-thread rollouts for thread {thread_id}",
             }
         items = list(rows(subthreads[0]))
-        entry["calls"] = _code_mode_calls(_session_meta(subthreads[0])["id"], items)
+        entry["calls"] = _code_mode_calls(_session_meta(subthreads[0]).get("id"), items)
         ended = _ended(items, None)
     else:
         items = [row for path in found for row in _turn_rows(rows(path), turn_id)]
