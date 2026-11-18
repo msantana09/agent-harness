@@ -37,24 +37,27 @@ def _row(line: str) -> dict[str, Any] | None:
 
 
 def _open(path: Path) -> TextIO:
-    """The rollout for reading, decompressed when it is `.zst`. A crash can cut a row inside a
-    multi-byte character, so bytes that are not UTF-8 read as U+FFFD and leave only that row
-    unparseable."""
+    """The rollout for reading, decompressed when it is `.zst`, and read from its `.zst` when Codex
+    compressed it after it was listed. A crash can cut a row inside a multi-byte character, so
+    bytes that are not UTF-8 read as U+FFFD and leave only that row unparseable."""
     if path.suffix == ".zst":
         return zstd.open(path, "rt", encoding="utf-8", errors="replace")
-    return path.open(encoding="utf-8", errors="replace")
+    try:
+        return path.open(encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        return _open(path.with_name(f"{path.name}.zst"))
 
 
 def _rollouts(sessions_dir: Path, stem: str) -> list[Path]:
     """The rollouts under `sessions_dir` whose name matches `<stem>.jsonl` or `<stem>.jsonl.zst`,
     sorted. A `.zst` is left out while its plain file is still there: Codex writes it beside the
     plain file before removing that one."""
-    sessions = Path(sessions_dir)
-    plain = set(sessions.rglob(f"{stem}.jsonl"))
-    compressed = {
-        path for path in sessions.rglob(f"{stem}.jsonl.zst") if path.with_suffix("") not in plain
-    }
-    return sorted(plain | compressed)
+    found = set(Path(sessions_dir).rglob(f"{stem}.jsonl*"))
+    return sorted(
+        path
+        for path in found
+        if path.suffix == ".jsonl" or (path.suffix == ".zst" and path.with_suffix("") not in found)
+    )
 
 
 def rows(path: Path) -> Iterator[dict[str, Any]]:
@@ -85,7 +88,8 @@ def _meta(first: dict[str, Any] | None) -> dict[str, Any]:
 
 def thread_rollouts(sessions_dir: Path, thread_id: str) -> list[Path]:
     """The thread's rollout files, oldest first: `<thread id>.jsonl`, and the
-    `<thread id>_<rollout id>.jsonl` that replaces it when the thread is reverted."""
+    `<thread id>_<rollout id>.jsonl` that replaces it when the thread is reverted; either as
+    `.jsonl.zst` once Codex has compressed it."""
     return sorted(
         [
             *_rollouts(sessions_dir, f"rollout-*-{thread_id}"),
