@@ -10,7 +10,7 @@ app-server stream, so the rollout is the only record of it.
 import json
 from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 # the filename prefix that orders rollouts in time
 STAMP_LENGTH = len("rollout-") + len("2026-11-08T12-00-00")
@@ -34,10 +34,20 @@ def _row(line: str) -> dict[str, Any] | None:
     return row
 
 
+def _open(path: Path) -> TextIO:
+    """The rollout for reading. A crash can cut a row inside a multi-byte character, so bytes that
+    are not UTF-8 read as U+FFFD and leave only that row unparseable."""
+    return path.open(encoding="utf-8", errors="replace")
+
+
 def rows(path: Path) -> Iterator[dict[str, Any]]:
     """The file's rows, one per physical line: Codex writes a row's text unescaped, so a Unicode
-    line separator inside a row does not end it."""
-    with path.open() as handle:
+    line separator inside a row does not end it. A file moved since it was listed has none."""
+    try:
+        handle = _open(path)
+    except FileNotFoundError:  # Codex archives a rollout by moving it
+        return
+    with handle:
         for line in handle:
             if (row := _row(line)) is not None:
                 yield row
@@ -46,7 +56,7 @@ def rows(path: Path) -> Iterator[dict[str, Any]]:
 def _session_meta(path: Path) -> dict[str, Any]:
     """The payload of the rollout's first row when it is `session_meta`, else {}; reads only
     that line."""
-    with path.open() as handle:
+    with _open(path) as handle:
         first = _row(handle.readline()) or {}
     return (first.get("type") == "session_meta" and first.get("payload")) or {}
 

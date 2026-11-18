@@ -389,14 +389,21 @@ def test_a_turn_and_its_final_answer_are_found_on_a_later_page(lab):
         assert runner.read_turn(client, thread_id, "turn-nobody") is None
 
 
-@pytest.mark.parametrize("with_rollout", [True, False], ids=["rollout present", "both routes cut"])
-def test_dead_socket_recovers_from_the_rollout_or_is_outcome_unknown(lab, with_rollout):
+@pytest.mark.parametrize(
+    "rollout_state",
+    ["present", "moved", "absent"],
+    ids=["rollout present", "rollout moved", "both routes cut"],
+)
+def test_dead_socket_recovers_from_the_rollout_or_is_outcome_unknown(
+    lab, rollout_state, monkeypatch
+):
     lab.fake.set_script({"turn": {"hang": True}})
     job_dir = lab.job()
     crashed = lab.crash(job_dir, "after-accept")
     os.killpg(crashed["pgid"], signal.SIGKILL)
     wait_until(lambda: group_gone(crashed["pgid"]), 10, "the fake app-server to die")
-    if with_rollout:
+    with_rollout = rollout_state == "present"
+    if rollout_state != "absent":
         day = lab.sessions / "2026" / "11" / "08"
         day.mkdir(parents=True)
         rows = [
@@ -422,9 +429,15 @@ def test_dead_socket_recovers_from_the_rollout_or_is_outcome_unknown(lab, with_r
                 },
             },
         ]
-        (day / f"rollout-2026-11-08T12-00-00-{crashed['thread_id']}.jsonl").write_text(
-            "\n".join(json.dumps(row) for row in rows) + '\n{"type": "event_ms'
-        )
+        # The thread was reverted: a crash cut its first rollout inside a multi-byte character,
+        # and `<thread id>_<rollout id>` replaced it
+        cut = f'{json.dumps(rows[0])}\n{{"type": "event_msg", "text": "é'.encode()[:-1]
+        (day / f"rollout-2026-11-08T11-00-00-{crashed['thread_id']}.jsonl").write_bytes(cut)
+        path = day / f"rollout-2026-11-08T12-00-00-{crashed['thread_id']}_rlt-2.jsonl"
+        path.write_text("\n".join(json.dumps(row) for row in rows) + '\n{"type": "event_ms')
+        if rollout_state == "moved":  # Codex archives a rollout by moving it
+            monkeypatch.setattr(rollout, "thread_rollouts", lambda *args: [path])
+            path.unlink()
     job = lab.reconcile(job_dir)
     result = json.loads((job_dir / "result.json").read_text())
     assert job["appserver_stopped_at"] is not None
@@ -528,15 +541,19 @@ def test_a_rollout_without_the_turns_end_journals_its_calls_as_possibly_incomple
     )
 
 
-def test_an_unreadable_rollout_is_journaled_and_the_job_still_settles(lab, write_rollout):
-    path = write_rollout("12-00-00", "thr-fake-1", [STARTED, COMPLETE])
-    path.write_bytes(path.read_bytes() + b"\xff\xfe\n")  # cut inside a multibyte character
+def test_a_row_cut_inside_a_character_is_skipped_and_the_rest_is_read(
+    lab, write_rollout, exec_call
+):
+    path = write_rollout(
+        "12-00-00", "thr-fake-1", [STARTED, *exec_call("c1", TOUCH, REFUSED), COMPLETE]
+    )
+    path.write_bytes(path.read_bytes() + b'{"type": "\xc3\n')  # a crash cut it mid-character
     lab.fake.set_script({"turn": TURN})
     job_dir = lab.job()
     assert lab.run(job_dir) == 0
     assert lab.load(job_dir)["state"] == "succeeded"
     (entry,) = lab.events(job_dir, "code_mode_calls")
-    assert (entry["calls"], entry["error"].startswith("rollout unreadable: ")) == ([], True)
+    assert ([call["call_id"] for call in entry["calls"]], "error" in entry) == (["c1"], False)
 
 
 def test_rollout_rows_that_are_not_objects_are_skipped(lab, write_rollout, exec_call):
