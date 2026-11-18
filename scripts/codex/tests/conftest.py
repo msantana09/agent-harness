@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Iterator
+from compression import zstd
 from pathlib import Path
 from typing import Any
 
@@ -201,15 +202,27 @@ def exec_call() -> Callable[..., list[dict[str, Any]]]:
 
 @pytest.fixture
 def write_rollout(tmp_path: Path) -> Callable[..., Path]:
-    """`write(stamp, thread_id, rows, **meta)`: a rollout file under `<tmp>/sessions`, the sessions
-    folder of the fake's `codexHome`, opening with a `session_meta` row that carries `meta`."""
+    """`write(stamp, thread_id, rows, compressed=False, **meta)`: a rollout file under
+    `<tmp>/sessions`, the sessions folder of the fake's `codexHome`, opening with a `session_meta`
+    row that carries `meta`; `compressed` writes it as Codex compresses a cold one, `.jsonl.zst`."""
 
-    def write(stamp: str, thread_id: str, rows: list[dict[str, Any]], **meta: Any) -> Path:
+    def write(
+        stamp: str,
+        thread_id: str,
+        rows: list[dict[str, Any]],
+        compressed: bool = False,
+        **meta: Any,
+    ) -> Path:
         day = tmp_path / "sessions" / "2026" / "11" / "08"
         day.mkdir(parents=True, exist_ok=True)
         path = day / f"rollout-2026-11-08T{stamp}-{thread_id}.jsonl"
         head = {"type": "session_meta", "payload": {"id": thread_id, **meta}}
-        path.write_text("".join(json.dumps(row) + "\n" for row in [head, *rows]))
+        text = "".join(json.dumps(row) + "\n" for row in [head, *rows])
+        if compressed:
+            path = path.with_name(f"{path.name}.zst")
+            path.write_bytes(zstd.compress(text.encode()))
+        else:
+            path.write_text(text)
         return path
 
     return write

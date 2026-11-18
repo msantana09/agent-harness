@@ -514,6 +514,44 @@ def test_the_turns_code_mode_calls_are_journaled_once_from_the_rollout(
     ]
 
 
+def test_a_dead_runners_job_settles_from_a_rollout_codex_compressed(lab, write_rollout, exec_call):
+    # Codex compresses a rollout to `.jsonl.zst` once it has been cold for a week
+    lab.fake.set_script({"turn": {"hang": True}})
+    job_dir = lab.job()
+    crashed = lab.crash(job_dir, "after-accept")
+    os.killpg(crashed["pgid"], signal.SIGKILL)
+    wait_until(lambda: group_gone(crashed["pgid"]), 10, "the fake app-server to die")
+    turn_id = crashed["turn_id"]
+    write_rollout(
+        "12-00-00",
+        crashed["thread_id"],
+        [
+            {"type": "event_msg", "payload": {"type": "task_started", "turn_id": turn_id}},
+            *exec_call("c1", TOUCH, REFUSED),
+            {
+                "type": "event_msg",
+                "payload": {
+                    "type": "task_complete",
+                    "turn_id": turn_id,
+                    "last_agent_message": TURN["final_answer"],
+                },
+            },
+        ],
+        compressed=True,
+    )
+    job = lab.reconcile(job_dir)
+    assert (job["state"], job["recovered_via"]) == ("succeeded", "rollout")
+    (entry,) = lab.events(job_dir, "code_mode_calls")
+    assert ([call["output"] for call in entry["calls"]], "error" in entry) == ([REFUSED], False)
+
+
+def test_a_rollout_being_compressed_is_read_from_its_plain_file(tmp_path, write_rollout):
+    # Codex writes the `.zst` beside the plain file before removing it
+    plain = write_rollout("12-00-00", "thr-fake-1", [])
+    write_rollout("12-00-00", "thr-fake-1", [], compressed=True)
+    assert rollout.thread_rollouts(tmp_path / "sessions", "thr-fake-1") == [plain]
+
+
 def test_a_turn_without_a_rollout_journals_that_its_code_mode_calls_are_unknown(lab):
     lab.fake.set_script({"turn": TURN})
     job_dir = lab.job()
