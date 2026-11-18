@@ -50,8 +50,8 @@ Role names in angle brackets stand for whichever agent covers that role in your 
 3. **Security Validation** (if state-changing operations)
    - Spawn `<security reviewer>` for OWASP validation
 
-4. **Test Enhancement** (if coverage < 80%)
-   - Spawn `<test author>` for comprehensive test suite
+4. **Test Check** (if the change adds tests)
+   - Keep only what `rules/engineering.md` § Tests and Docs Ship with the Change keeps
 ```
 
 **After Frontend Implementation.**

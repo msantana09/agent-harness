@@ -161,8 +161,10 @@ must be followed in all contexts.
 1. **EXHAUSTIVE INVESTIGATION**: Finding a cause is not finding the root cause. After
    identifying a bug, grep for the same class across the whole codebase and count every
    instance before declaring the root cause found, then prefer systemic prevention (a conftest
-   guardrail or lint rule) over a per-instance patch. One instance means it's a pattern, and
-   fixing 1 of 5 is a patch, not a fix. An accepted review finding counts as an identified bug:
+   guardrail or lint rule) over a per-instance patch. The guardrail replaces per-instance tests
+   of that class rather than joining them (the removal counterpart in
+   `engineering.md` § Tests and Docs Ship with the Change). One instance means it's a pattern,
+   and fixing 1 of 5 is a patch, not a fix. An accepted review finding counts as an identified bug:
    sweep its class before pushing the fix, not only the line it cites. Every other site showing
    the same defect (the same wrong output, the same pattern the fix replaces) ships in the same
    PR, not as a follow-up.
@@ -358,8 +360,8 @@ future issue read what is below it. Applies to every PR, whatever the size or wh
 **Below the divider** — everything an agent would need to debug this change later, as much as is
 useful: mechanism and design, `Decision:` / `Instead of:` pairs, migrations and their chains,
 validation runs with counts, bugs fixed along the way, known baseline/tooling issues, explicitly
-out-of-scope items, review entry points. The user will not read this section; write it for the
-agent.
+out-of-scope items, every deleted test with its reason, review entry points. The user will not
+read this section; write it for the agent.
 
 ### Hook Instructions Are Authoritative
 

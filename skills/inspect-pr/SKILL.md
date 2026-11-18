@@ -99,7 +99,8 @@ Validation section's criteria ledger:
 6. Compare against the base version when intent or regression ownership is unclear.
 
 Create a mental coverage matrix of changed behavior versus tests, contracts, data effects,
-operations, and user-visible states. Use gaps in that matrix to drive the review.
+operations, and user-visible states. Use gaps in that matrix to choose what to trace by hand; a
+gap is not a finding by itself (exceptions: `references/review-passes.md` § 4.4 Tests and CI).
 
 Run Phase 4, the independent review passes, from `references/review-passes.md`.
 
@@ -129,7 +130,8 @@ Reject candidates based only on:
 - style or naming preference;
 - a pre-existing problem unchanged by the PR;
 - hypothetical misuse with no reachable call path;
-- a generic request for more tests without an uncovered behavior;
+- a request for more tests where no defect was found, outside the missing-test findings that
+  `references/review-passes.md` § 4.4 Tests and CI names;
 - an alternative architecture with no concrete advantage;
 - tool output that has not been tied to the PR.
 
