@@ -140,7 +140,8 @@ tests these rules keep, no more:
 - **Break → delete or justify**: when an existing test fails because the change set out to
   alter that behavior (its PR or plan says so), delete the test or rewrite it to the new
   behavior; never patch it until it passes. A test that guards a contract or a past bug is the
-  exception: the change keeps that behavior, or states why the contract changes. A break the
+  exception: the change keeps that behavior, or states why the contract changes or why the bug
+  can no longer occur, and only then deletes or rewrites the test. A break the
   change did not intend is a bug in the code: fix the code, not the test.
 - **Deleted tests are listed**: the PR body names every test the change deletes, with its reason.
 - **Review findings**: a finding becomes a test only when it reports a real bug. Missing coverage

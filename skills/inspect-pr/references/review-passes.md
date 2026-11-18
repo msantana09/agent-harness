@@ -39,8 +39,8 @@ tested once, at any layer, is covered. A missing test is a finding only when:
 
 - an endpoint or access path the PR adds or changes has no test, at any layer, of its
   unauthenticated, role or ownership denial, or (in a multi-tenant app) cross-tenant denial case;
-- the PR fixes a bug and no test it adds or changes fails on the base code for that bug and
-  passes with the fix.
+- the PR fixes a bug and no committed test (added, changed or already present) fails on the base
+  code for that bug and passes with the fix.
 
 Treat every edit to an existing test or check in the same diff as a code change as a claim that the
 old expectation was wrong, and verify that claim. A green suite can be gamed: assertions deleted or

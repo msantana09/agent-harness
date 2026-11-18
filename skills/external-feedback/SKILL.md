@@ -36,11 +36,11 @@ For each suggestion:
 1. **Classify it** - a **bug claim** says the code does the wrong thing; an **addition**
    proposes something new (an "also add X", a refactor, a safeguard, an optimization, a test
    for a behavior with no bug shown). A missing test the change was required to carry is
-   already requested, so it is Accepted, not weighed as an addition: an endpoint's
-   unauthenticated, role or ownership and cross-tenant denial cases, or a reproducing test for
-   the bug the change fixes (`rules/engineering.md` § Tests and Docs Ship with the Change). Any
-   other missing test, with no bug shown, is Rejected: a review finding becomes a test only
-   when it reports a real bug.
+   already requested, so it is Accepted for the paths the change adds or alters, not weighed as
+   an addition: an endpoint's unauthenticated, role or ownership and cross-tenant denial
+   cases, or a reproducing test for the bug the change fixes
+   (`rules/engineering.md` § Tests and Docs Ship with the Change). Any other missing test, with
+   no bug shown, is Rejected: a review finding becomes a test only when it reports a real bug.
 1. **Settle who introduced a bug** - a diff locates changes; it does not prove cause. A
    changed caller, config or dependency can break code the diff never touches. Trace the
    failure's trigger: if this change adds or alters it, the bug is introduced; if the trigger

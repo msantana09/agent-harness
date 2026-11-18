@@ -164,8 +164,9 @@ must be followed in all contexts.
    guardrail or lint rule) over a per-instance patch. The guardrail replaces the per-instance
    tests whose assertions it makes, rather than joining them (the removal counterpart in
    `engineering.md` § Tests and Docs Ship with the Change). One instance means it's a pattern,
-   and fixing 1 of 5 is a patch, not a fix. An accepted review finding counts as an identified bug:
-   sweep its class before pushing the fix, not only the line it cites. Every other site showing
+   and fixing 1 of 5 is a patch, not a fix. An accepted review finding that reports a defect
+   counts as an identified bug: sweep its class before pushing the fix, not only the line it
+   cites; a required test it adds covers only the paths the change touches. Every other site showing
    the same defect (the same wrong output, the same pattern the fix replaces) ships in the same
    PR, not as a follow-up.
 1. **VERIFY AT THE BINDING SURFACE**: When declaring a fix done, accepting a config value,
