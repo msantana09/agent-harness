@@ -198,6 +198,19 @@ def test_a_rollout_archived_while_sub_threads_are_scanned_is_skipped(
     assert rollouts.review_subthreads(tmp_path / "sessions", "thr-fake-1", parent) == [sub]
 
 
+def test_a_compressed_review_sub_thread_rollout_is_found(tmp_path, write_rollout):
+    parent = write_rollout("12-00-00", "thr-fake-1", [], compressed=True)
+    sub = write_rollout(
+        "12-00-01",
+        "thr-review",
+        [],
+        compressed=True,
+        source={"subagent": "review"},
+        parent_thread_id="thr-fake-1",
+    )
+    assert rollouts.review_subthreads(tmp_path / "sessions", "thr-fake-1", parent) == [sub]
+
+
 def test_a_rollout_cut_inside_a_character_does_not_hide_the_review_sub_thread(
     tmp_path, write_rollout
 ):

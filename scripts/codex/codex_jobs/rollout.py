@@ -1,5 +1,6 @@
 """Read Codex's rollout files: `<sessions>/YYYY/MM/DD/rollout-<stamp>-<thread id>.jsonl`, one JSON
-row per line, which Codex writes for every thread it runs.
+row per line, which Codex writes for every thread it runs. Codex compresses a rollout that has
+been cold for a week to `.jsonl.zst`; both forms are read.
 
 Reconcile reads a turn's end from them when the app-server is gone. The runner copies a turn's
 code-mode calls from them into the job's journal: a command Codex runs from a code-mode script
@@ -9,6 +10,7 @@ app-server stream, so the rollout is the only record of it.
 
 import json
 from collections.abc import Iterable, Iterator
+from compression import zstd
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -35,9 +37,24 @@ def _row(line: str) -> dict[str, Any] | None:
 
 
 def _open(path: Path) -> TextIO:
-    """The rollout for reading. A crash can cut a row inside a multi-byte character, so bytes that
-    are not UTF-8 read as U+FFFD and leave only that row unparseable."""
+    """The rollout for reading, decompressed when it is `.zst`. A crash can cut a row inside a
+    multi-byte character, so bytes that are not UTF-8 read as U+FFFD and leave only that row
+    unparseable."""
+    if path.suffix == ".zst":
+        return zstd.open(path, "rt", encoding="utf-8", errors="replace")
     return path.open(encoding="utf-8", errors="replace")
+
+
+def _rollouts(sessions_dir: Path, stem: str) -> list[Path]:
+    """The rollouts under `sessions_dir` whose name matches `<stem>.jsonl` or `<stem>.jsonl.zst`,
+    sorted. A `.zst` is left out while its plain file is still there: Codex writes it beside the
+    plain file before removing that one."""
+    sessions = Path(sessions_dir)
+    plain = set(sessions.rglob(f"{stem}.jsonl"))
+    compressed = {
+        path for path in sessions.rglob(f"{stem}.jsonl.zst") if path.with_suffix("") not in plain
+    }
+    return sorted(plain | compressed)
 
 
 def rows(path: Path) -> Iterator[dict[str, Any]]:
@@ -69,11 +86,10 @@ def _meta(first: dict[str, Any] | None) -> dict[str, Any]:
 def thread_rollouts(sessions_dir: Path, thread_id: str) -> list[Path]:
     """The thread's rollout files, oldest first: `<thread id>.jsonl`, and the
     `<thread id>_<rollout id>.jsonl` that replaces it when the thread is reverted."""
-    sessions = Path(sessions_dir)
     return sorted(
         [
-            *sessions.rglob(f"rollout-*-{thread_id}.jsonl"),
-            *sessions.rglob(f"rollout-*-{thread_id}_*.jsonl"),
+            *_rollouts(sessions_dir, f"rollout-*-{thread_id}"),
+            *_rollouts(sessions_dir, f"rollout-*-{thread_id}_*"),
         ]
     )
 
@@ -82,7 +98,7 @@ def review_subthreads(sessions_dir: Path, thread_id: str, parent: Path) -> list[
     """The rollouts of review sub-agent threads of `thread_id` that started after `parent`, the
     thread's own rollout, did."""
     found = []
-    for path in sorted(Path(sessions_dir).rglob("rollout-*.jsonl")):
+    for path in _rollouts(sessions_dir, "rollout-*"):
         if path.name[:STAMP_LENGTH] < parent.name[:STAMP_LENGTH]:
             continue
         try:
