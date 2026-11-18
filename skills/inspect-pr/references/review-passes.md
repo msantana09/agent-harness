@@ -39,7 +39,8 @@ tested once, at any layer, is covered. A missing test is a finding only when:
 
 - an endpoint or access path the PR adds or changes has no test, at any layer, of its
   unauthenticated, role or ownership denial, or (in a multi-tenant app) cross-tenant denial case;
-- the PR fixes a bug and no test it adds fails on the base code.
+- the PR fixes a bug and no test it adds or changes fails on the base code for that bug and
+  passes with the fix.
 
 Treat every edit to an existing test or check in the same diff as a code change as a claim that the
 old expectation was wrong, and verify that claim. A green suite can be gamed: assertions deleted or
@@ -48,12 +49,15 @@ xfail, or `.only` added, the unit under test mocked, production code branching o
 or an exception swallowed so the failure path never reaches the assertion. Each one with no stated
 reason is a finding at the severity of the behavior it now hides.
 
-Two removals are not findings once checked. A test or assertion removed because a stronger test
-the PR names (`file::test`) still makes that assertion: read the named test and confirm it does.
-A test deleted or rewritten because the PR set out to change that behavior, listed in the PR body
-with its reason. Either removal is a finding when the named test does not make the assertion, when
-no reason is listed, or when the test guarded a contract or a past bug the PR does not say it
-changes.
+Two kinds of removal are not findings once checked; judge each on its own check, and expect
+every deleted test listed in the PR body with its reason:
+
+- **Redundant**: a test or assertion removed because a stronger test the PR names (`file::test`)
+  still makes that assertion. Read the named test and confirm it does; the behavior itself is
+  unchanged, so a contract or past-bug test qualifies like any other.
+- **Intended change**: a test deleted or rewritten because the PR set out to change that behavior
+  (its body or plan says so). When the test guarded a contract or a past bug, the PR also states
+  why that contract changes or that bug can no longer occur.
 
 Inspect CI conclusions and failure logs. Distinguish a PR-caused failure from flaky or
 infrastructure noise, and distinguish a passing suite from actual coverage of the risky behavior.
