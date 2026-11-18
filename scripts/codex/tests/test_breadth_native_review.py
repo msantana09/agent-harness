@@ -132,16 +132,24 @@ def test_native_review_leaves_the_message_as_review_md_and_no_findings(env, revi
 def test_native_review_journals_the_code_mode_calls_of_its_review_sub_thread(
     env, review_repo, write_rollout, exec_call
 ):
-    # the reviewer runs its commands in a sub-thread whose rollout is its own file
+    # the reviewer runs its commands in a sub-thread whose rollout is its own file; the parent's
+    # rollout starts the sub-thread's turn and ends its own, as Codex writes them
     write_rollout(
         "12-00-00",
         "thr-fake-1",
-        [{"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-fake-1"}}],
+        [
+            {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-review"}},
+            {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": "turn-fake-1"}},
+        ],
     )
     write_rollout(
         "12-00-01",
         "thr-review",
-        exec_call("c1", "await tools.exec_command({cmd: 'git diff'})", "diff --git"),
+        [
+            {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-review"}},
+            *exec_call("c1", "await tools.exec_command({cmd: 'git diff'})", "diff --git"),
+            {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": "turn-review"}},
+        ],
         source={"subagent": "review"},
         parent_thread_id="thr-fake-1",
     )
@@ -160,6 +168,7 @@ def test_native_review_journals_the_code_mode_calls_of_its_review_sub_thread(
                 {
                     "thread_id": "thr-review",
                     "call_id": "c1",
+                    "tool": "exec",
                     "code": "await tools.exec_command({cmd: 'git diff'})",
                     "output": "diff --git",
                 }

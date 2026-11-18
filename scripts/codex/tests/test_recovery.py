@@ -439,22 +439,39 @@ def test_dead_socket_recovers_from_the_rollout_or_is_outcome_unknown(lab, with_r
 
 
 REFUSED = [{"type": "input_text", "text": "touch: x: Operation not permitted\n"}]
+TOUCH = "await tools.exec_command({cmd: 'touch x'})"
+STARTED = {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-fake-1"}}
+COMPLETE = {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": "turn-fake-1"}}
 
 
 def test_the_turns_code_mode_calls_are_journaled_once_from_the_rollout(
     lab, write_rollout, exec_call
 ):
-    # the server sends no item for a command the sandbox refused inside a code-mode script
+    # the server sends no item for a command the sandbox refused inside a code-mode script; a
+    # script still running when `exec` returns hands the rest of its output to a `wait` call
     write_rollout(
         "12-00-00",
         "thr-fake-1",
         [
             {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-earlier"}},
             *exec_call("c0", "await tools.exec_command({cmd: 'ls'})", "earlier turn"),
-            {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-fake-1"}},
-            *exec_call("c1", "await tools.exec_command({cmd: 'touch x'})", REFUSED),
+            STARTED,
+            *exec_call("c1", TOUCH, "Script running with cell ID 7"),
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "wait",
+                    "call_id": "w1",
+                    "arguments": '{"cell_id":"7"}',
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {"type": "function_call_output", "call_id": "w1", "output": REFUSED},
+            },
             *exec_call("c2", "*** Begin Patch", "applied", name="apply_patch"),
-            {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": "turn-fake-1"}},
+            COMPLETE,
         ],
     )
     lab.fake.set_script({"turn": TURN})
@@ -468,9 +485,17 @@ def test_the_turns_code_mode_calls_are_journaled_once_from_the_rollout(
                 {
                     "thread_id": "thr-fake-1",
                     "call_id": "c1",
-                    "code": "await tools.exec_command({cmd: 'touch x'})",
+                    "tool": "exec",
+                    "code": TOUCH,
+                    "output": "Script running with cell ID 7",
+                },
+                {
+                    "thread_id": "thr-fake-1",
+                    "call_id": "w1",
+                    "tool": "wait",
+                    "code": '{"cell_id":"7"}',
                     "output": REFUSED,
-                }
+                },
             ],
         }
     ]
@@ -487,6 +512,31 @@ def test_a_turn_without_a_rollout_journals_that_its_code_mode_calls_are_unknown(
             "error": f"no rollout for thread thr-fake-1 in {lab.sessions}",
         }
     ]
+
+
+def test_a_rollout_without_the_turns_end_journals_its_calls_as_possibly_incomplete(
+    lab, write_rollout, exec_call
+):
+    write_rollout("12-00-00", "thr-fake-1", [STARTED, *exec_call("c1", TOUCH, REFUSED)])
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    assert lab.run(job_dir) == 0
+    (entry,) = lab.events(job_dir, "code_mode_calls")
+    assert [call["call_id"] for call in entry["calls"]] == ["c1"]
+    assert entry["error"] == (
+        "the rollout does not show the end of turn turn-fake-1; calls may be missing"
+    )
+
+
+def test_an_unreadable_rollout_is_journaled_and_the_job_still_settles(lab, write_rollout):
+    path = write_rollout("12-00-00", "thr-fake-1", [STARTED, COMPLETE])
+    path.write_bytes(path.read_bytes() + b"\xff\xfe\n")  # cut inside a multibyte character
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    assert lab.run(job_dir) == 0
+    assert lab.load(job_dir)["state"] == "succeeded"
+    (entry,) = lab.events(job_dir, "code_mode_calls")
+    assert (entry["calls"], entry["error"].startswith("rollout unreadable: ")) == ([], True)
 
 
 @pytest.mark.parametrize("runner_pid", [None, os.getpid()], ids=["runner starting", "runner alive"])

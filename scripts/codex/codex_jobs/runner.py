@@ -481,12 +481,16 @@ def _journal_code_mode_calls(job_dir: Path, job: dict[str, Any], sessions_dir: P
         for event in records.read_events(job_dir)
     ):
         return
-    entry = rollout.turn_code_mode_calls(
-        sessions_dir,
-        job["thread_id"],
-        job["turn_id"],
-        native_review=job["review_target"] is not None,
-    )
+    try:
+        entry = rollout.turn_code_mode_calls(
+            sessions_dir,
+            job["thread_id"],
+            job["turn_id"],
+            native_review=job["review_target"] is not None,
+        )
+    # Codex may move or still be writing a rollout; the job's result must not wait on this record.
+    except (OSError, ValueError) as exc:
+        entry = {"turn_id": job["turn_id"], "calls": [], "error": f"rollout unreadable: {exc}"}
     records.append_event(job_dir, "code_mode_calls", entry)
 
 
