@@ -57,7 +57,12 @@ def _session_meta(path: Path) -> dict[str, Any]:
     """The payload of the rollout's first row when it is `session_meta`, else {}; reads only
     that line."""
     with _open(path) as handle:
-        first = _row(handle.readline()) or {}
+        return _meta(_row(handle.readline()))
+
+
+def _meta(first: dict[str, Any] | None) -> dict[str, Any]:
+    """The payload of a rollout's first row when it is `session_meta`, else {}."""
+    first = first or {}
     return (first.get("type") == "session_meta" and first.get("payload")) or {}
 
 
@@ -167,7 +172,9 @@ def turn_code_mode_calls(
                 "error": f"{len(subthreads)} review sub-thread rollouts for thread {thread_id}",
             }
         items = list(rows(subthreads[0]))
-        entry["calls"], unusable = _code_mode_calls(_session_meta(subthreads[0]).get("id"), items)
+        # the id comes from the rows read: Codex can archive the file the moment they are
+        child_id = _meta(items[0] if items else None).get("id")
+        entry["calls"], unusable = _code_mode_calls(child_id, items)
         ended = _ended(items, None)
     else:
         items = [row for path in found for row in _turn_rows(rows(path), turn_id)]

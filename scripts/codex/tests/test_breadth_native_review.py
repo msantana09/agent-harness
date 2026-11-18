@@ -211,6 +211,35 @@ def test_a_rollout_cut_inside_a_character_does_not_hide_the_review_sub_thread(
     assert rollouts.review_subthreads(tmp_path / "sessions", "thr-fake-1", parent) == [sub]
 
 
+def test_a_review_sub_thread_archived_once_read_keeps_its_calls(
+    tmp_path, write_rollout, exec_call, monkeypatch
+):
+    write_rollout("12-00-00", "thr-fake-1", [])
+    sub = write_rollout(
+        "12-00-01",
+        "thr-review",
+        [
+            *exec_call("c1", "await tools.exec_command({cmd: 'git diff'})", "diff --git"),
+            {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": "turn-review"}},
+        ],
+        source={"subagent": "review"},
+        parent_thread_id="thr-fake-1",
+    )
+    read_rows = rollouts.rows
+
+    def archived_once_read(path):
+        yield from read_rows(path)
+        if path == sub:
+            path.unlink()  # Codex archives a rollout by moving it
+
+    monkeypatch.setattr(rollouts, "rows", archived_once_read)
+    entry = rollouts.turn_code_mode_calls(
+        tmp_path / "sessions", "thr-fake-1", "turn-fake-1", native_review=True
+    )
+    calls = [(call["thread_id"], call["call_id"]) for call in entry["calls"]]
+    assert (calls, "error" in entry) == ([("thr-review", "c1")], False)
+
+
 @pytest.mark.parametrize(
     "target, wire",
     [
