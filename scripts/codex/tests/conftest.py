@@ -151,6 +151,47 @@ def fake_codex(tmp_path: Path) -> Iterator[FakeCodex]:
     fake.shutdown()
 
 
+def _exec_call(call_id: str, code: str, output: Any, name: str = "exec") -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "response_item",
+            "payload": {
+                "type": "custom_tool_call",
+                "call_id": call_id,
+                "name": name,
+                "input": code,
+            },
+        },
+        {
+            "type": "response_item",
+            "payload": {"type": "custom_tool_call_output", "call_id": call_id, "output": output},
+        },
+    ]
+
+
+@pytest.fixture
+def exec_call() -> Callable[..., list[dict[str, Any]]]:
+    """`call(call_id, code, output, name="exec")`: the two rollout rows of one code-mode tool call,
+    the script Codex ran and its output."""
+    return _exec_call
+
+
+@pytest.fixture
+def write_rollout(tmp_path: Path) -> Callable[..., Path]:
+    """`write(stamp, thread_id, rows, **meta)`: a rollout file under `<tmp>/sessions`, the sessions
+    folder of the fake's `codexHome`, opening with a `session_meta` row that carries `meta`."""
+
+    def write(stamp: str, thread_id: str, rows: list[dict[str, Any]], **meta: Any) -> Path:
+        day = tmp_path / "sessions" / "2026" / "11" / "08"
+        day.mkdir(parents=True, exist_ok=True)
+        path = day / f"rollout-2026-11-08T{stamp}-{thread_id}.jsonl"
+        head = {"type": "session_meta", "payload": {"id": thread_id, **meta}}
+        path.write_text("".join(json.dumps(row) + "\n" for row in [head, *rows]))
+        return path
+
+    return write
+
+
 @pytest.fixture
 def hold_slots(tmp_path: Path) -> Iterator[Callable[[Path, int], list[subprocess.Popen]]]:
     """`hold(root, n)`: n `admitted` jobs under `root` whose runner is a live `sleep`; returns the

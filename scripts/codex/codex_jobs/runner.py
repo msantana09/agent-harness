@@ -29,7 +29,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from . import admission, appserver, attestation, permissions, records, review
+from . import admission, appserver, attestation, permissions, records, review, rollout
 from .appserver import AppServerClient, RpcError
 from .worktrees import WorktreeError
 
@@ -468,10 +468,40 @@ def _timeout_journaled(job_dir: Path, turn_id: str | None) -> bool:
     )
 
 
+def codex_sessions_dir(initialized: dict[str, Any]) -> Path:
+    """Codex's sessions folder, where it writes rollouts, from the `initialize` reply."""
+    return Path(initialized["codexHome"]) / "sessions"
+
+
+def _journal_code_mode_calls(job_dir: Path, job: dict[str, Any], sessions_dir: Path) -> None:
+    """Journal the turn's code-mode calls from Codex's rollout files, once per turn: the stream
+    has no item for a command the sandbox refused inside a code-mode script."""
+    if any(
+        event["kind"] == "code_mode_calls" and event["data"]["turn_id"] == job["turn_id"]
+        for event in records.read_events(job_dir)
+    ):
+        return
+    entry = rollout.turn_code_mode_calls(
+        sessions_dir,
+        job["thread_id"],
+        job["turn_id"],
+        native_review=job["review_target"] is not None,
+    )
+    records.append_event(job_dir, "code_mode_calls", entry)
+
+
 def finalize(
-    job_dir: Path, outcome: TurnOutcome, *, recovered_via: str | None, crash_at: str | None = None
+    job_dir: Path,
+    outcome: TurnOutcome,
+    *,
+    recovered_via: str | None,
+    sessions_dir: Path | None,
+    crash_at: str | None = None,
 ) -> dict[str, Any]:
     """Write the job's result, deliver it to `output_dir`, then move the job to its terminal state.
+
+    A job with a turn first has the turn's code-mode calls journaled from the rollouts in
+    `sessions_dir`, Codex's sessions folder, which is None only where no turn was started.
 
     The terminal state comes last so that a crash anywhere before it leaves the job non-terminal
     and recoverable: reconcile runs this again and rewrites the same files. The result's `ran` is
@@ -483,6 +513,10 @@ def finalize(
     """
     root, job_id = job_dir.parent, job_dir.name
     job = records.load_job(root, job_id)
+    if job["turn_id"] is not None:
+        if sessions_dir is None:
+            raise RunnerError(f"job {job_id} has turn {job['turn_id']} but no sessions folder")
+        _journal_code_mode_calls(job_dir, job, sessions_dir)
     job["effort_used"] = applied_effort(job_dir, job["thread_id"]) or job["effort_used"]
     if outcome.status == "interrupted" and _timeout_journaled(job_dir, job["turn_id"]):
         outcome = replace(outcome, timed_out=True)
@@ -903,13 +937,18 @@ def _run_new(run: _Run) -> None:
         ),
     )
     with run.connect(server.socket_path) as client:
-        client.initialize()
+        sessions_dir = codex_sessions_dir(client.initialize())
         run.check_not_cancelled()
         # Read at the turn's own start, after any wait for a slot, so the number is not stale.
         decision = admission.read_usage(client, config)
         records.update_job(run.root, run.job_id, admission=decision.record)
         if not decision.allowed:
-            finalize(run.job_dir, TurnOutcome("failed", error=decision.reason), recovered_via=None)
+            finalize(
+                run.job_dir,
+                TurnOutcome("failed", error=decision.reason),
+                recovered_via=None,
+                sessions_dir=None,
+            )
             return
         thread_id, model_used = open_thread(client, job)
         records.update_job(
@@ -935,6 +974,7 @@ def _run_new(run: _Run) -> None:
                 run.job_dir,
                 TurnOutcome("interrupted", timed_out=True),
                 recovered_via=None,
+                sessions_dir=None,
                 crash_at=run.crash_at,
             )
             return
@@ -964,7 +1004,9 @@ def _run_new(run: _Run) -> None:
         run.crash_point("after-accept")
         outcome = _follow_turn(run, client, thread_id, turn_id, deadline)
         outcome.rate_limits_after = _rate_limits_after(run.job_dir, client)
-    finalize(run.job_dir, outcome, recovered_via=None, crash_at=run.crash_at)
+    finalize(
+        run.job_dir, outcome, recovered_via=None, sessions_dir=sessions_dir, crash_at=run.crash_at
+    )
 
 
 def _adopt(run: _Run) -> None:
@@ -983,7 +1025,7 @@ def _adopt(run: _Run) -> None:
     interrupted = False
     limit = deadline
     with run.connect(run.job_dir / "app.sock") as client:
-        client.initialize()
+        sessions_dir = codex_sessions_dir(client.initialize())
         while True:
             turn = read_turn(client, thread_id, turn_id)
             if turn is None and not thread_is_active(client, thread_id):
@@ -1009,7 +1051,13 @@ def _adopt(run: _Run) -> None:
                     run.journal(note)
         outcome.rate_limits_after = _rate_limits_after(run.job_dir, client)
     run.crash_point("after-complete")
-    finalize(run.job_dir, outcome, recovered_via="thread/read", crash_at=run.crash_at)
+    finalize(
+        run.job_dir,
+        outcome,
+        recovered_via="thread/read",
+        sessions_dir=sessions_dir,
+        crash_at=run.crash_at,
+    )
 
 
 def _log(job_id: str, message: str) -> None:
@@ -1047,7 +1095,7 @@ def run_job(
             outcome = (
                 TurnOutcome("interrupted") if cancelled else TurnOutcome("failed", error=message)
             )
-            finalize(run.job_dir, outcome, recovered_via=None)
+            finalize(run.job_dir, outcome, recovered_via=None, sessions_dir=None)
             stop_server(run.job_dir)
         else:
             traceback.print_exc()

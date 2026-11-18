@@ -168,7 +168,7 @@ still exists.
 | Outcome | Action |
 |---------|--------|
 | `SUCCESS:` | Read `answer.md` (a review: `review.md`, `references/jobs.md` § Review Jobs), verify claims (`references/checking-output.md` § Claim Verification), present with § Output Format |
-| `FAILURE: timeout after Ns (job <id>)` | No `answer.md`, but the run may have found things: `$XDG_DATA_HOME/agent-harness/codex-jobs/<id>/events.jsonl` (default `~/.local/share/agent-harness/codex-jobs`) journals every notification. Recover what it reproduced before relaunching |
+| `FAILURE: timeout after Ns (job <id>)` | No `answer.md`, but the run may have found things: `$XDG_DATA_HOME/agent-harness/codex-jobs/<id>/events.jsonl` (default `~/.local/share/agent-harness/codex-jobs`) journals every notification, and at the end each code-mode script Codex ran with its output (`code_mode_calls`; a command the sandbox refused is only there). Recover what it reproduced before relaunching |
 | `FAILURE: head moved during review`, `tracked files changed during review` or `the repository could not be read at completion` | The review read a state the branch no longer has; its `attestation.json` `exit_status` says which. Relaunch once the branch is settled: `references/jobs.md` § Review Jobs |
 | `FAILURE:` otherwise | `codex-jobs status <id>` prints `job.json`; its `error` field names the cause |
 | state `outcome_unknown` | The turn's outcome could not be derived from the thread or rollout. Report it as such; never resubmit as if it failed |

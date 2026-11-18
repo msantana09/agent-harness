@@ -28,12 +28,12 @@ as it is.
 import fcntl
 import json
 import os
-from collections.abc import Generator, Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from . import records, review, runner
+from . import records, review, rollout, runner
 from .appserver import AppServerClient, ConnectionClosed, ProtocolError, RpcError
 from .runner import TurnOutcome
 
@@ -72,30 +72,6 @@ def _probe_server(job_dir: Path, job: dict[str, Any]) -> TurnOutcome | str | Non
         return None
 
 
-# the filename prefix that orders rollouts in time
-ROLLOUT_STAMP_LENGTH = len("rollout-") + len("2026-11-08T12-00-00")
-
-
-def _rollout_rows(path: Path) -> Iterator[dict[str, Any]]:
-    for line in path.read_text().splitlines():
-        try:
-            yield json.loads(line)
-        except json.JSONDecodeError:  # a line cut off by a crash
-            continue
-
-
-def _is_review_subthread(path: Path, parent_thread_id: str) -> bool:
-    """Whether the rollout's first row says it is a review sub-agent thread of
-    `parent_thread_id`."""
-    first = next(_rollout_rows(path), None)
-    meta = (first or {}).get("payload") or {}
-    return (
-        (first or {}).get("type") == "session_meta"
-        and meta.get("source") == {"subagent": "review"}
-        and meta.get("parent_thread_id") == parent_thread_id
-    )
-
-
 def _native_review_outcome(job: dict[str, Any], sessions_dir: Path, parent: Path) -> TurnOutcome:
     """A native review's text from the rollout of its review sub-agent thread, which started after
     `parent` did.
@@ -104,12 +80,7 @@ def _native_review_outcome(job: dict[str, Any], sessions_dir: Path, parent: Path
     rendered to prose. Anything but exactly one such sub-thread is `unknown`.
     """
     thread_id = job["thread_id"]
-    found = [
-        path
-        for path in sorted(Path(sessions_dir).rglob("rollout-*.jsonl"))
-        if path.name[:ROLLOUT_STAMP_LENGTH] >= parent.name[:ROLLOUT_STAMP_LENGTH]
-        and _is_review_subthread(path, thread_id)
-    ]
+    found = rollout.review_subthreads(sessions_dir, thread_id, parent)
     if len(found) != 1:
         count = (
             "no review sub-thread rollout"
@@ -122,7 +93,7 @@ def _native_review_outcome(job: dict[str, Any], sessions_dir: Path, parent: Path
         )
     ends = [
         row["payload"]
-        for row in _rollout_rows(found[0])
+        for row in rollout.rows(found[0])
         if row.get("type") == "event_msg"
         and (row.get("payload") or {}).get("type") == "task_complete"
     ]
@@ -141,8 +112,8 @@ def _native_review_outcome(job: dict[str, Any], sessions_dir: Path, parent: Path
 def _outcome_from_rollout(job: dict[str, Any], sessions_dir: Path) -> TurnOutcome | None:
     """The end of the job's turn as Codex wrote it to `rollout-*-<thread id>.jsonl`, or None if it
     never ended there."""
-    for path in sorted(Path(sessions_dir).rglob(f"rollout-*-{job['thread_id']}.jsonl")):
-        for row in _rollout_rows(path):
+    for path in rollout.thread_rollouts(sessions_dir, job["thread_id"]):
+        for row in rollout.rows(path):
             payload = row.get("payload") or {}
             if row.get("type") != "event_msg" or payload.get("turn_id") != job["turn_id"]:
                 continue
@@ -155,8 +126,10 @@ def _outcome_from_rollout(job: dict[str, Any], sessions_dir: Path) -> TurnOutcom
     return None
 
 
-def _settle(job_dir: Path, outcome: TurnOutcome, recovered_via: str | None) -> dict[str, Any]:
-    runner.finalize(job_dir, outcome, recovered_via=recovered_via)
+def _settle(
+    job_dir: Path, outcome: TurnOutcome, recovered_via: str | None, sessions_dir: Path
+) -> dict[str, Any]:
+    runner.finalize(job_dir, outcome, recovered_via=recovered_via, sessions_dir=sessions_dir)
     runner.stop_server(job_dir)
     return records.load_job(job_dir.parent, job_dir.name)
 
@@ -200,6 +173,7 @@ def _reconcile_undispatched(
                 "failed", error="never dispatched: the runner stopped before its turn was accepted"
             ),
             None,
+            sessions_dir,
         )
     verdict, turn_id = _probe_dispatch(job_dir, sent)
     if verdict == "started":
@@ -225,6 +199,7 @@ def _reconcile_undispatched(
                 error="never dispatched: turn/start was sent but the app-server shows no new turn",
             ),
             None,
+            sessions_dir,
         )
     records.append_event(job_dir, "reconciled", {"route": "dispatch-unknown"})
     return _settle(
@@ -237,6 +212,7 @@ def _reconcile_undispatched(
             ),
         ),
         None,
+        sessions_dir,
     )
 
 
@@ -250,11 +226,11 @@ def _reconcile(job_dir: Path, job: dict[str, Any], sessions_dir: Path) -> dict[s
         return records.load_job(job_dir.parent, job_dir.name)
     if isinstance(probe, TurnOutcome):
         records.append_event(job_dir, "reconciled", {"route": "thread/read"})
-        return _settle(job_dir, probe, "thread/read")
+        return _settle(job_dir, probe, "thread/read", sessions_dir)
     outcome = _outcome_from_rollout(job, sessions_dir)
     if outcome is not None:
         records.append_event(job_dir, "reconciled", {"route": "rollout"})
-        return _settle(job_dir, outcome, "rollout")
+        return _settle(job_dir, outcome, "rollout", sessions_dir)
     records.append_event(job_dir, "reconciled", {"route": "outcome-unknown"})
     return _settle(
         job_dir,
@@ -263,6 +239,7 @@ def _reconcile(job_dir: Path, job: dict[str, Any], sessions_dir: Path) -> dict[s
             error="the app-server is gone and Codex's rollout does not show the turn's end",
         ),
         None,
+        sessions_dir,
     )
 
 
