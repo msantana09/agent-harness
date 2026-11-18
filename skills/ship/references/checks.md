@@ -19,5 +19,6 @@ summary; a fix agent's brief carries the tests line verbatim. A red that also fa
 finding,priority:<level>`), link it in the PR body below the divider, and don't fix it
 here. A red is root-caused before any edit (hard rules). A red test of behavior the PR set out
 to change, other than a contract or a past bug, is deleted or rewritten to the new behavior,
-never patched until it passes, and listed in the PR body with its reason; a red the PR did not
+never patched until it passes; a deleted one is listed in the PR body with its reason. A red the
+PR did not
 intend is a bug to fix in the code (`rules/engineering.md` § Tests and Docs Ship with the Change).

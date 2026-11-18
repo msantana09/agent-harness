@@ -161,8 +161,8 @@ must be followed in all contexts.
 1. **EXHAUSTIVE INVESTIGATION**: Finding a cause is not finding the root cause. After
    identifying a bug, grep for the same class across the whole codebase and count every
    instance before declaring the root cause found, then prefer systemic prevention (a conftest
-   guardrail or lint rule) over a per-instance patch. The guardrail replaces per-instance tests
-   of that class rather than joining them (the removal counterpart in
+   guardrail or lint rule) over a per-instance patch. The guardrail replaces the per-instance
+   tests whose assertions it makes, rather than joining them (the removal counterpart in
    `engineering.md` § Tests and Docs Ship with the Change). One instance means it's a pattern,
    and fixing 1 of 5 is a patch, not a fix. An accepted review finding counts as an identified bug:
    sweep its class before pushing the fix, not only the line it cites. Every other site showing

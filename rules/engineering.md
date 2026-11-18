@@ -144,4 +144,5 @@ tests these rules keep, no more:
   change did not intend is a bug in the code: fix the code, not the test.
 - **Deleted tests are listed**: the PR body names every test the change deletes, with its reason.
 - **Review findings**: a finding becomes a test only when it reports a real bug. Missing coverage
-  alone adds no test.
+  alone adds no test, unless it is a case this section requires: an endpoint's denial cases, or
+  the reproducing test for the bug a change fixes.
