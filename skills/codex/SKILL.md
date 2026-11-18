@@ -41,7 +41,7 @@ approval request, and writes nothing to the repository.
 - **Sol** (default) handles every review kind at `high`. `xhigh` is the escalation for plan
   gap-analysis when a `high` round missed gaps a later round caught, and the regression-bisect
   step.
-- **Astra** costs $10/$50 per 1M tokens in/out, 5x Sol's $2/$10 (a request over 272K input tokens
+- **Astra** costs $8/$40 per 1M tokens in/out, 4x Sol's $2/$10 (a request over 272K input tokens
   reprices at 2x input, 1.5x output). Run it at `low` or `medium` only. Subject matter (security,
   migrations, billing) never routes to Astra by itself.
 - **`max` is not used.** A blocker that survives Sol at `high` goes to Astra at `low`/`medium`.
