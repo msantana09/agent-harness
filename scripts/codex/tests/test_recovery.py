@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from codex_jobs import admission, permissions, reconcile, records, review, runner
+from codex_jobs import admission, permissions, reconcile, records, review, rollout, runner
 from codex_jobs.appserver import AppServerClient
 
 ANSWER = {"status": "completed", "answer": "The answer.", "open_questions": []}
@@ -549,6 +549,74 @@ def test_rollout_rows_that_are_not_objects_are_skipped(lab, write_rollout, exec_
     assert lab.run(job_dir) == 0
     (entry,) = lab.events(job_dir, "code_mode_calls")
     assert ([call["call_id"] for call in entry["calls"]], "error" in entry) == (["c1"], False)
+
+
+def test_calls_without_a_usable_call_id_are_counted_and_the_job_still_settles(
+    lab, write_rollout, exec_call
+):
+    unusable = [
+        {"type": "response_item", "payload": {**row["payload"], "call_id": call_id}}
+        for row, call_id in zip(exec_call("_", TOUCH, REFUSED), (["c2"], {"id": "c2"}), strict=True)
+    ]
+    write_rollout(
+        "12-00-00", "thr-fake-1", [STARTED, *exec_call("c1", TOUCH, REFUSED), *unusable, COMPLETE]
+    )
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    assert lab.run(job_dir) == 0
+    assert lab.load(job_dir)["state"] == "succeeded"
+    (entry,) = lab.events(job_dir, "code_mode_calls")
+    assert [call["call_id"] for call in entry["calls"]] == ["c1"]
+    assert entry["error"] == (
+        "2 rollout rows of the turn have no usable call id; calls may be missing"
+    )
+
+
+def test_a_unicode_line_separator_inside_a_row_keeps_the_row_whole(lab, write_rollout, exec_call):
+    output = "touch: x y: Operation not permitted"
+    path = write_rollout(
+        "12-00-00", "thr-fake-1", [STARTED, *exec_call("c1", TOUCH, output), COMPLETE]
+    )
+    path.write_text(path.read_text().replace("\\u2028", " "))  # Codex writes it unescaped
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    assert lab.run(job_dir) == 0
+    (entry,) = lab.events(job_dir, "code_mode_calls")
+    assert ([call["output"] for call in entry["calls"]], "error" in entry) == ([output], False)
+
+
+def test_a_reverted_threads_replacement_rollout_is_read(lab, write_rollout, exec_call):
+    # Codex names the rollout that replaces a reverted thread's `<thread id>_<rollout id>`
+    earlier = {"type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn-earlier"}}
+    write_rollout("11-00-00", "thr-fake-1", [earlier])
+    write_rollout(
+        "12-00-00",
+        "thr-fake-1_rlt-2",
+        [STARTED, *exec_call("c1", TOUCH, REFUSED), COMPLETE],
+        id="thr-fake-1",
+    )
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    assert lab.run(job_dir) == 0
+    (entry,) = lab.events(job_dir, "code_mode_calls")
+    assert ([call["call_id"] for call in entry["calls"]], "error" in entry) == (["c1"], False)
+
+
+def test_any_fault_reading_the_rollouts_is_journaled_instead_of_raised(lab, monkeypatch):
+    def fault(*args, **kwargs):
+        raise RuntimeError("unexpected rollout shape")
+
+    monkeypatch.setattr(rollout, "turn_code_mode_calls", fault)
+    job_dir = lab.job()
+    job = {**lab.load(job_dir), "thread_id": "thr-fake-1", "turn_id": "turn-fake-1"}
+    runner._journal_code_mode_calls(job_dir, job, lab.sessions)
+    assert lab.events(job_dir, "code_mode_calls") == [
+        {
+            "turn_id": "turn-fake-1",
+            "calls": [],
+            "error": "rollout unreadable: unexpected rollout shape",
+        }
+    ]
 
 
 @pytest.mark.parametrize("runner_pid", [None, os.getpid()], ids=["runner starting", "runner alive"])

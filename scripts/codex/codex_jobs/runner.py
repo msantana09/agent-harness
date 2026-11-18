@@ -488,8 +488,9 @@ def _journal_code_mode_calls(job_dir: Path, job: dict[str, Any], sessions_dir: P
             job["turn_id"],
             native_review=job["review_target"] is not None,
         )
-    # Codex may move or still be writing a rollout; the job's result must not wait on this record.
-    except (OSError, ValueError) as exc:
+    # Codex may move, still be writing or newly shape a rollout; the job's result must not wait on
+    # this record, so any fault reading it is journaled in its place.
+    except Exception as exc:
         entry = {"turn_id": job["turn_id"], "calls": [], "error": f"rollout unreadable: {exc}"}
     records.append_event(job_dir, "code_mode_calls", entry)
 
