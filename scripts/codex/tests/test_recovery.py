@@ -539,6 +539,18 @@ def test_an_unreadable_rollout_is_journaled_and_the_job_still_settles(lab, write
     assert (entry["calls"], entry["error"].startswith("rollout unreadable: ")) == ([], True)
 
 
+def test_rollout_rows_that_are_not_objects_are_skipped(lab, write_rollout, exec_call):
+    odd_rows = [None, 7, {"type": "response_item", "payload": "text"}]
+    write_rollout(
+        "12-00-00", "thr-fake-1", [STARTED, *odd_rows, *exec_call("c1", TOUCH, REFUSED), COMPLETE]
+    )
+    lab.fake.set_script({"turn": TURN})
+    job_dir = lab.job()
+    assert lab.run(job_dir) == 0
+    (entry,) = lab.events(job_dir, "code_mode_calls")
+    assert ([call["call_id"] for call in entry["calls"]], "error" in entry) == (["c1"], False)
+
+
 @pytest.mark.parametrize("runner_pid", [None, os.getpid()], ids=["runner starting", "runner alive"])
 def test_reconcile_leaves_a_job_alone_while_its_runner_may_be_alive(lab, runner_pid):
     job_dir = lab.job()
