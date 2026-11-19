@@ -37,18 +37,23 @@ def snapshot(repo: Path) -> dict[str, str]:
 
 def test_tests_run_under_an_exported_git_dir_leave_that_repo_untouched(tmp_path: Path) -> None:
     decoy = tmp_path / "decoy"
-    subprocess.run(["git", "init", "-q", "-b", "main", str(decoy)], check=True)
+    no_global = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull}
+    subprocess.run(["git", "init", "-q", "-b", "main", str(decoy)], check=True, env=no_global)
     (decoy / "decoy.txt").write_text("decoy\n")
-    subprocess.run(["git", "-C", str(decoy), "add", "decoy.txt"], check=True)
+    subprocess.run(["git", "-C", str(decoy), "add", "decoy.txt"], check=True, env=no_global)
     subprocess.run(
-        ["git", "-C", str(decoy), *GIT_IDENTITY, "commit", "-q", "-m", "decoy"], check=True
+        ["git", "-C", str(decoy), *GIT_IDENTITY, "commit", "-q", "-m", "decoy"],
+        check=True,
+        env=no_global,
     )
     before = snapshot(decoy)
 
+    # The caller's PYTEST_ADDOPTS (a -k, --lf or --deselect) could deselect the nested targets.
+    nested = {k: v for k, v in os.environ.items() if k not in ("PYTEST_ADDOPTS", "PYTEST_PLUGINS")}
     run = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *GIT_USING_TESTS],
         cwd=ROOT,
-        env={**os.environ, "GIT_DIR": str(decoy / ".git")},
+        env={**nested, "GIT_DIR": str(decoy / ".git")},
         capture_output=True,
         text=True,
     )
