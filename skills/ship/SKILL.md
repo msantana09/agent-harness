@@ -62,7 +62,8 @@ has no pre-hand-off checks beyond Step 5's.
 - **Reviewer suggestions are not scope.** `Missed Opportunities` and any "also add X"
   inside a finding are never built or filed by `/ship`: log them as declined in the round
   block, and name each one declined as "not requested" in the hand-off summary (Step 5), so
-  the user decides on it. Only accepted findings get fixes, and only a verified bug outside the
+  the user decides on it. A remedy declined this way is its own line; the bug it came with
+  keeps its own verdict. Only accepted findings get fixes, and only a verified bug outside the
   PR is filed. The exception is another input, shape or site where the defect this PR fixes
   still occurs, whichever section names it and whether or not the diff touches its file: it
   is the fix's scope (`rules/core-rules.md` § Discovery Protocol), neither a suggestion nor a
@@ -76,8 +77,8 @@ has no pre-hand-off checks beyond Step 5's.
   budget (Step 4) is spent. Only the merge waits for the user; never end a round with "on
   your word".
 - **Every finding is verified before it is accepted.** Codex is an external reviewer, not
-  an authority; the `external-feedback` verdict tables govern. Record ACCEPT/REJECT/FILE with
-  a one-line reason for every finding, including the rejected ones.
+  an authority; the `external-feedback` verdict tables govern. Record every finding's verdict
+  in Step 3's shape, the rejected ones included: a typed REJECT carries its evidence.
 - **Launch Codex directly** - write the prompt file and run `codex-jobs review` with
   `run_in_background=True` on the Bash call. Never wrap the launch in a relay agent
   (`Skill("codex")` § Wait for the Result).
@@ -161,14 +162,24 @@ A diff of 300 or more files takes `--timeout 3600`. While the round runs and whe
 Goal: every finding adjudicated on evidence, accepted ones and red checks fixed, pushed.
 
 1. **Verify before accepting.** Per finding, read the cited `file:line` and confirm the
-   behavior is what Codex claims. Then apply the `external-feedback` verdict tables (bug
-   claim or addition → ACCEPT, REJECT or FILE); an addition nobody asked for is REJECT,
-   reason "not requested". Partially-valid findings keep the correct half and say what was
-   dropped.
+   behavior is what Codex claims; a claim reading cannot settle is settled by running it. Then
+   apply the `external-feedback` verdict tables (bug claim or addition → ACCEPT, REJECT or
+   FILE); an addition nobody asked for is `REJECT not requested`. Partially-valid
+   findings keep the correct half and say what was dropped.
 1. **Record the verdict** for every finding - `ACCEPT`/`REJECT`/`FILE`, severity,
-   `file:line`, one line of reason. A FILE finding gets its issue (`gh issue create --label
-   finding,priority:<level>`) and the issue number on its line. This log is the deliverable
-   of the round; it goes on the PR in Step 4.
+   `file:line`, one line of reason; a FILE finding gets its issue (`gh issue create --label
+   finding,priority:<level>`) and its number on the line. A REJECT of a bug claim is typed,
+   with its evidence on the line:
+   - `incorrect`: the `file:line` that disproves the claim, or the run that does and its result.
+   - `unreachable`: the `file:line` that gates the trigger off; for an absence claim (no
+     caller, nothing configures it), the search or command and what it returned.
+   - `out of scope`: a class from the repo notes' `Out of scope` list, word for word. A repo
+     with no such list has no out-of-scope REJECT.
+
+   Outside that list, a reason that grants the mechanism (rare, a narrow window, a retry
+   converges, low impact, pre-existing) is never a REJECT: ACCEPT the bug (Low allowed) when
+   this change introduced it, FILE it when it is pre-existing. This log is the deliverable of the round; it goes on
+   the PR in Step 4.
 1. **Fix the accepted findings** and every red from Step 2's checks in the worktree. A
    finding that reports a behavioral bug gets a failing test first, then the fix; a finding
    that reports only missing coverage adds a test only where
@@ -212,24 +223,9 @@ The round table and the round block: [references/round-budget.md](references/rou
 
 ## Step 6 - post-merge follow-through
 
-Start the merge watch and keep working: the loop below as a Bash call with
-`run_in_background=True`. It polls every 60s and exits on **merged or on
-closed-without-merge** (a filter that only matches the happy path is silent through a
-close); its completion notification is the event. Not `Monitor`: Claude Code runs a
-Monitor command through the Bash hooks with no background flag, so any Bash hook that
-refuses sleep-polling also refuses its `sleep 60`.
-
-Keep the loop a plain `until` over a `gh | grep` pipeline. In an `EnterWorktree` session,
-worktree isolation refuses `gh` inside `$(…)` with `case`, or inside a `for`/`eval` loop,
-as "too complex to verify". Stacked PRs get one merge watch per PR.
-
-```bash
-until gh pr view <N> --json state,mergedAt --jq '[.state, .mergedAt // empty] | join(" ")' | grep -E '^(MERGED|CLOSED)'; do sleep 60; done
-```
-
-Its output ends with one line, `MERGED <timestamp>` or `CLOSED`, from the poll that saw it;
-read it from the completion notification. A failed `gh` call matches nothing and the loop
-polls again.
+Start the merge watch and keep working: a background `gh` loop that exits on merged or on
+closed-without-merge, its completion notification the event. Its command and the forms
+that pass the hooks: [references/merge-watch.md](references/merge-watch.md).
 
 On the merged event (the user merged on GitHub): the cleanup block, then the repo notes'
 post-merge steps. The cleanup block, the merge-by-instruction sequence (the user said "merge

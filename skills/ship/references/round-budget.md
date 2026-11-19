@@ -26,14 +26,21 @@ gh pr view <N> --json body --jq .body > <scratchpad>/pr-body-current.md
 gh pr edit <N> --body-file <scratchpad>/pr-body-current.md
 ```
 
-Round block shape - one line per finding, no prose, and no `Open question` lines (a fact
-goes in as a fact; anything unresolved is resolved before the block is written):
+Round block shape - one line per finding, each with its severity, no prose, and no
+`Open question` lines (a fact goes in as a fact; anything unresolved is resolved before the
+block is written). A REJECT names its type after the verdict: a bug claim takes one of the
+three typed forms (Step 3), and an addition `not requested`, or `incorrect` with its evidence.
+A finding whose remedy is declined takes two lines, the bug's own and the remedy's:
 
 ```markdown
 ### Codex review round <N> — <output-dir>
 
 - ACCEPT · High · `path/to/file.py:120` — <reason> → fixed in <sha>
-- REJECT · Medium · `path/to/other.ts:44` — <reason the claim does not hold>
+- REJECT incorrect · Medium · `path/to/other.ts:44` — <what it does instead>: `other.ts:51`
+- REJECT unreachable · Medium · `path/to/a.py:30` — <the trigger> is gated off at `a.py:12`
+- REJECT unreachable · Low · `path/to/b.py:9` — no caller: `<search command>` → <its result>
+- REJECT out of scope · Medium · `path/to/c.py:70` — <class, word for word from the list>
+- REJECT not requested · Low · `path/to/d.py:15` — <the addition or remedy declined>
 - FILE · Medium · `path/to/third.py:88` — <why pre-existing or outside this PR> → #<issue>
 ```
 
