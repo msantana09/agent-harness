@@ -178,8 +178,9 @@ Goal: every finding adjudicated on evidence, accepted ones and red checks fixed,
 
    Outside that list, a reason that grants the mechanism (rare, a narrow window, a retry
    converges, low impact, pre-existing) is never a REJECT: ACCEPT the bug (Low allowed) when
-   this change introduced it, FILE it when it is pre-existing. This log is the deliverable of the round; it goes on
-   the PR in Step 4.
+   this change introduced it, FILE it when it is pre-existing, unless it is another site of the
+   defect this PR fixes (hard rules: ACCEPT). This log is the deliverable of the round; it goes
+   on the PR in Step 4.
 1. **Fix the accepted findings** and every red from Step 2's checks in the worktree. A
    finding that reports a behavioral bug gets a failing test first, then the fix; a finding
    that reports only missing coverage adds a test only where

@@ -96,7 +96,8 @@ addition rejected as not worth it rests on the fit check above instead. "I can't
 not disproof - judge the claim, not the quote. A reason that grants the mechanism (it is rare,
 the window is narrow, a retry converges, the impact is low, it is pre-existing) is not a Reject
 at all: the claim holds, so it is Accept (at a low severity if that fits) when this change
-introduced it, File when pre-existing. The one exception is a class on a fixed out-of-scope
+introduced it, File when pre-existing (Accept when it is another site of the defect this change
+fixes, as above). The one exception is a class on a fixed out-of-scope
 list the caller keeps (`ship`'s repo notes). A claim that reading cannot settle is settled by
 running: a failing test that reproduces it accepts it, and a passing test that exercises its
 trigger disproves it; a reversible experiment works the same way. The failing test is committed
