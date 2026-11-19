@@ -16,7 +16,7 @@ page nobody loaded. It also names what no reviewer read: every change pushed aft
 round reviewed (that round's fixes, a stacked parent's merge and its conflict
 resolutions, any later fix), as unreviewed. While one exists the summary never calls the
 PR reviewed, complete or safe to merge. Below the status block, a `Not requested:` line per
-addition logged REJECT "not requested" (valid and worth having, outside the request), in plain
-words with what it would add; the round block below the PR divider is not read, so this
-line is the only place the user sees it. `Next:` is at most "waiting on your merge" - never the
-Step 6 cleanup commands, which run on the merge event, not by the user.
+addition or remedy logged `REJECT not requested` (valid and worth having, outside the
+request), in plain words with what it would add; the round block below the PR divider is not
+read, so this line is the only place the user sees it. `Next:` is at most "waiting on your
+merge" - never the Step 6 cleanup commands, which run on the merge event, not by the user.

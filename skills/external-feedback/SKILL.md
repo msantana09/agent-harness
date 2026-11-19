@@ -61,7 +61,7 @@ worth it:
 |--------------|------------|---------|
 | Yes | Yes, introduced by this change | Accept |
 | Yes | Yes, pre-existing or outside this change | File (an issue per rules/core-rules.md § Discovery Protocol) |
-| Yes | No | Reject: cite the `file:line` that gates the trigger off |
+| Yes | No | Reject (unreachable): cite the `file:line` that gates the trigger off; for an absence claim, the search that shows it and its result |
 | No | — | Reject (incorrect) |
 
 A pre-existing site of the defect this change fixes is not filed: it is the fix's scope
@@ -89,10 +89,15 @@ it to fit the codebase, and say explicitly what was dropped and why.
 
 **Burden of proof for a Reject on the facts**: dropping a right finding silently destroys it,
 and nobody learns it was dropped. So a REJECT of a bug claim, or of an addition as incorrect,
-must cite the `file:line` that disproves the claim or gates its trigger off; an addition
-rejected as not worth it rests on the fit check above instead. "I can't verify this", "the code
-looks fine to me", "I wouldn't have raised it", and "the citation is slightly off" are not
-disproof - judge the claim, not the quote. A claim that reading cannot settle is settled by
+must cite the `file:line` that disproves the claim or gates its trigger off; an absence claim
+("no caller", "nothing configures it") cites the search that shows it and what it returned; an
+addition rejected as not worth it rests on the fit check above instead. "I can't verify this",
+"the code looks fine to me", "I wouldn't have raised it", and "the citation is slightly off" are
+not disproof - judge the claim, not the quote. A reason that grants the mechanism (it is rare,
+the window is narrow, a retry converges, the impact is low, it is pre-existing) is not a Reject
+at all: the claim holds, so it is Accept (at a low severity if that fits) when this change
+introduced it, File when pre-existing. The one exception is a class on a fixed out-of-scope
+list the caller keeps (`ship`'s repo notes). A claim that reading cannot settle is settled by
 running: a failing test that reproduces it accepts it, and a passing test that exercises its
 trigger disproves it; a reversible experiment works the same way. The failing test is committed
 with the fix; the passing one is scratch and is deleted. Only a check that needs
