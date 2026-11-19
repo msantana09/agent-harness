@@ -170,7 +170,9 @@ Goal: every finding adjudicated on evidence, accepted ones and red checks fixed,
    `file:line`, one line of reason; a FILE finding gets its issue (`gh issue create --label
    finding,priority:<level>`) and its number on the line. A REJECT of a bug claim is typed,
    with its evidence on the line:
-   - `incorrect`: the `file:line` that disproves the claim, or the run that does and its result.
+   - `incorrect`: the `file:line` that disproves the claim, or the run that does and its result;
+     for a behavior change the claim calls a regression, the user's request or approval of that
+     exact change (an author-written `Decision:` line alone is not one).
    - `unreachable`: the `file:line` that gates the trigger off; for an absence claim (no
      caller, nothing configures it), the search or command and what it returned.
    - `out of scope`: a class from the repo notes' `Out of scope` list, word for word. A repo

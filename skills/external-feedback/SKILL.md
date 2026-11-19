@@ -59,6 +59,7 @@ worth it:
 
 | Claim holds? | Reachable? | Verdict |
 |--------------|------------|---------|
+| Yes | Yes, in a class on the caller's fixed out-of-scope list (`ship`'s repo notes) | Reject (out of scope): name the class word for word |
 | Yes | Yes, introduced by this change | Accept |
 | Yes | Yes, pre-existing or outside this change | File (an issue per rules/core-rules.md § Discovery Protocol) |
 | Yes | No | Reject (unreachable): cite the `file:line` that gates the trigger off; for an absence claim, the search that shows it and its result |
@@ -97,9 +98,9 @@ not disproof - judge the claim, not the quote. A reason that grants the mechanis
 the window is narrow, a retry converges, the impact is low, it is pre-existing) is not a Reject
 at all: the claim holds, so it is Accept (at a low severity if that fits) when this change
 introduced it, File when pre-existing (Accept when it is another site of the defect this change
-fixes, as above). The one exception is a class on a fixed out-of-scope
-list the caller keeps (`ship`'s repo notes). A claim that reading cannot settle is settled by
-running: a failing test that reproduces it accepts it, and a passing test that exercises its
+fixes, as above). The one exception is the out-of-scope row of the table. A claim that reading
+cannot settle is settled by running: a failing test that reproduces it accepts it, and a passing
+test that exercises its
 trigger disproves it; a reversible experiment works the same way. The failing test is committed
 with the fix; the passing one is scratch and is deleted. Only a check that needs
 something out of reach (an environment, a third party) stays open, named with what would settle it
@@ -134,7 +135,7 @@ assessment as the chat reply, in this shape:
 1. [Suggestion] - [what it would add, why it is not in the request]
 
 **Rejected** ([Y] items):
-1. [Suggestion] - [YAGNI / Invalid / Unreachable] - [rationale + evidence]
+1. [Suggestion] - [YAGNI / Invalid / Unreachable / Out of scope] - [rationale + evidence]
 
 **Open** ([V] items):
 1. [Suggestion] - [what would settle it] - [owner]
