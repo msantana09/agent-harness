@@ -72,7 +72,7 @@ Install the Claude Code plugin to try skills such as self-optimize without the f
 ```
 
 Plugin commands use a prefix, such as `/agent-harness:self-optimize`. The plugin includes no
-rules, hooks or shared scripts; codex, ship, command-output-patterns and agent-patterns need
+rules, hooks or shared scripts; codex, wrapup, command-output-patterns and agent-patterns need
 the full setup above.
 
 **Updating**
@@ -91,7 +91,7 @@ use only the standard library. The review workflow also needs the
 
 CI runs `python3 -m pytest -q`, `ruff check .` and `ruff format --check .`. The manual
 [install check](tests/container/run.sh) needs Docker and a Claude login. It covers hooks,
-`/commit`, `triage_run.sh`, `git_state.sh` and self-optimize, not ship or the Codex review.
+`/commit`, `triage_run.sh`, `git_state.sh` and self-optimize, not wrapup or the Codex review.
 
 ## How a change ships
 

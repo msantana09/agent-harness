@@ -85,7 +85,7 @@ has no pre-hand-off checks beyond Step 5's.
 - **Never `sleep`-poll for the merge in the foreground.** Step 6's merge watch runs in the
   background. A polling loop in the foreground burns the session and tells you nothing the
   watch's completion notification wouldn't.
-- **Redirect every slow run to a distinct temp file** (`<scratchpad>/ship-round1-tests.txt`,
+- **Redirect every slow run to a distinct temp file** (`<scratchpad>/wrapup-round1-tests.txt`,
   `…-round2-…`) and grep the file - never re-run a command to extract different info.
 - Run everything from the tree root; `cd` into a subdirectory only *inside* a subcommand,
   never as a session-wide chdir. The one exception is Step 6's `cd` into the main tree,
@@ -145,7 +145,7 @@ blocking form is the default, so the Bash exit is the completion notice and its 
 `SUCCESS: <output-dir>` or `FAILURE: <reason>`:
 
 ```bash
-~/.claude/scripts/codex/codex-jobs review <scratchpad>/ship-review-round<N>.txt \
+~/.claude/scripts/codex/codex-jobs review <scratchpad>/wrapup-review-round<N>.txt \
   --project-dir <worktree> --effort high
 ```
 
