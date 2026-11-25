@@ -8,7 +8,7 @@ Start with:
 
 - [self-optimize](docs/self-optimize.md): find recurring corrections and test instruction changes.
 - [transcripts](skills/transcripts/SKILL.md): search past sessions and read what led to a decision.
-- [Review workflow](skills/ship/SKILL.md): review, fix and prepare a change for the user's merge.
+- [Review workflow](skills/wrapup/SKILL.md): review, fix and prepare a change for the user's merge.
 
 ## Positions
 
@@ -21,7 +21,7 @@ Start with:
   [review suggestions](rules/communication.md#surface--scope-in)
 - Edits use worktrees, and the user decides every merge. [Worktrees](rules/core-rules.md#worktrees)
 - A second model reviews each PR; its findings are verified before acceptance.
-  [Review](skills/ship/SKILL.md), [verification](skills/external-feedback/SKILL.md)
+  [Review](skills/wrapup/SKILL.md), [verification](skills/external-feedback/SKILL.md)
 - Instruction changes are tested against real-session cases and checked again after use.
   [self-optimize](docs/self-optimize.md)
 

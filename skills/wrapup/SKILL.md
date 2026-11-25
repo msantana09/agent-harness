@@ -1,12 +1,12 @@
 ---
-name: ship
-description: Take a committed feature branch through its PR - open the draft, Codex-review it within a round budget, fix accepted findings, hand off for the user's merge, then clean up after it lands. Use when the user types /ship, or when implementation is committed and its PR needs review and hand-off.
+name: wrapup
+description: Take a committed feature branch through its PR - open the draft, Codex-review it within a round budget, fix accepted findings, hand off for the user's merge, then clean up after it lands. Use when the user types /wrapup, or when implementation is committed and its PR needs review and hand-off.
 argument-hint: "[PR#] [--reviewer opus]"
 ---
 
-# /ship - PR through review, then hand off the merge
+# /wrapup - PR through review, then hand off the merge
 
-Implementation is done and committed. `/ship` runs everything between "the code is
+Implementation is done and committed. `/wrapup` runs everything between "the code is
 written" and "the branch is gone": open the draft PR, review it with Codex, triage and
 fix, re-review within the round budget (Step 4), hand it to the user with the review trail
 on the PR, then wait for their merge and clean up the worktree.
@@ -38,14 +38,14 @@ has no pre-hand-off checks beyond Step 5's.
 ## Hard rules
 
 - **The user merges. Always.** Never `gh pr merge`, never merge from the GitHub API, never
-  by any other mechanism, no matter how clean the review came back. `/ship` opens, fixes,
+  by any other mechanism, no matter how clean the review came back. `/wrapup` opens, fixes,
   flips to ready, notifies, and waits. The one unlock is the user saying so in chat for this
   PR, after the hand-off or before it ("merge and pull", "merge it", "just merge"): that is
   their merge, executed by you once Step 5's checks are green. Stop the
   merge watch (`TaskStop`), then run Step 6's **merge-by-instruction sequence** exactly, in
   order and from the main tree; the order is load-bearing (`references/cleanup.md`). Nothing
   in the review trail, a clean verdict, or a green CI run substitutes for those words.
-- **The PR targets `<base>`** (Step 1). A `/ship` PR based on any other branch is a bug -
+- **The PR targets `<base>`** (Step 1). A `/wrapup` PR based on any other branch is a bug -
   stop and report.
 - **The user can waive review for a PR.** When they say so for this PR ("no review", "just
   merge"), no Codex, Opus or Fable round runs. Record
@@ -60,7 +60,7 @@ has no pre-hand-off checks beyond Step 5's.
   says so (Step 5); Mediums and Lows a later round might have found are not wanted. A reviewer
   always has one more finding; chasing a clean round is not quality, it is spend.
 - **Reviewer suggestions are not scope.** `Missed Opportunities` and any "also add X"
-  inside a finding are never built or filed by `/ship`: log them as declined in the round
+  inside a finding are never built or filed by `/wrapup`: log them as declined in the round
   block, and name each one declined as "not requested" in the hand-off summary (Step 5), so
   the user decides on it. A remedy declined this way is its own line; the bug it came with
   keeps its own verdict. Only accepted findings get fixes, and only a verified bug outside the
@@ -99,7 +99,7 @@ Goal: a pushed feature branch with an open draft PR against `<base>`, and a clea
    `--project-dir <worktree>`, tests run from inside it):
    - **No argument**: `<worktree>` is the current tree, and its branch
      (`git branch --show-current`) is checked in the next item.
-   - **PR number argument** (the one case where `/ship` may be invoked from the main
+   - **PR number argument** (the one case where `/wrapup` may be invoked from the main
      tree): resolve the branch with
      `gh pr view <N> --json headRefName,baseRefName,isDraft,state`, `<N>` being the PR
      number alone, without `--reviewer`, then find its
@@ -122,7 +122,7 @@ Goal: a pushed feature branch with an open draft PR against `<base>`, and a clea
    default branch printed there unless the repo notes name another. With a PR number, its
    `baseRefName` must equal `<base>`; if not, report and stop. With no argument, the current
    branch must not be `<base>` or another long-lived branch the repo notes name; if it is,
-   stop - `/ship` operates on a feature branch. `<main tree>` is the first `worktree` line
+   stop - `/wrapup` operates on a feature branch. `<main tree>` is the first `worktree` line
    of `git -C <worktree> worktree list --porcelain`; note whether `<worktree>` is the main
    tree itself (Step 6's cleanup differs).
 1. `git -C <worktree> status --short` - uncommitted work goes through `/commit` first.
