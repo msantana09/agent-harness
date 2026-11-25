@@ -59,7 +59,7 @@ worth it:
 
 | Claim holds? | Reachable? | Verdict |
 |--------------|------------|---------|
-| Yes | Yes, in a class on the caller's fixed out-of-scope list (`ship`'s repo notes) | Reject (out of scope): name the class word for word |
+| Yes | Yes, in a class on the caller's fixed out-of-scope list (`wrapup`'s repo notes) | Reject (out of scope): name the class word for word |
 | Yes | Yes, introduced by this change | Accept |
 | Yes | Yes, pre-existing or outside this change | File (an issue per rules/core-rules.md § Discovery Protocol) |
 | Yes | No | Reject (unreachable): cite the `file:line` that gates the trigger off; for an absence claim, the search that shows it and its result |
@@ -114,7 +114,7 @@ against it; a `Decision:` or `Regresses:` line the author wrote alone settles no
 
 ### 3. Report Results
 
-A caller's own record (`ship`'s round block) replaces this shape. Invoked directly, give the
+A caller's own record (`wrapup`'s round block) replaces this shape. Invoked directly, give the
 assessment as the chat reply, in this shape:
 
 ```markdown

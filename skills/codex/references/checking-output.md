@@ -14,7 +14,7 @@ Check Codex output for common mistakes:
 If the output rests on an obvious factual error about the project (wrong database, wrong
 framework), write a new prompt file with a correction note (e.g. "NOTE: We use PostgreSQL, not
 MySQL") and submit it as a new job. This cap is for correcting a broken premise, not a limit on
-review rounds: `/ship` sets its own round budget (its Step 4).
+review rounds: `/wrapup` sets its own round budget (its Step 4).
 
 ## Claim Verification
 

@@ -137,7 +137,7 @@ Reject candidates based only on:
 
 ## Multi-Round Mode
 
-When the caller runs review rounds against successive heads (the `/ship` command does this), the
+When the caller runs review rounds against successive heads (the `/wrapup` command does this), the
 PR body carries the prior rounds below its `---` divider as `### <Reviewer> review round <N>`
 blocks (Codex, Opus or Fable, whichever ran that round), one `ACCEPT`/`REJECT`/`FILE` line per finding with the fixing commit for accepted ones and the
 issue for filed ones. Read them in Phase 1 and apply:

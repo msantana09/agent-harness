@@ -27,7 +27,7 @@ read-only. A fork of a `run` job that gets its own worktree (`--branch` or `--wo
 ```
 
 `review` takes the flags of `consult` (`../SKILL.md` § 3. Submit), runs read-only, and is what
-`/ship` launches. Codex answers with a structured review; on `SUCCESS: <output-dir>` the directory
+`/wrapup` launches. Codex answers with a structured review; on `SUCCESS: <output-dir>` the directory
 holds:
 
 | File | Content |

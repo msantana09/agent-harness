@@ -24,7 +24,7 @@ session only if a hook actually refuses it.
 The gate names `<branch>`, not `<N>`: `gh pr view <branch>` resolves that branch's own PR
 (merged or closed ones too, after the remote branch is gone). A gate on a number can let a
 merged PR clear the delete of another, closed PR's branch. A branch whose PR closed without
-merging is not `/ship`'s to delete: the user deletes it.
+merging is not `/wrapup`'s to delete: the user deletes it.
 
 `<remove worktree>` is the repo notes' worktree-removal command when they name one, else the
 repo's own worktree-removal script when it ships one (raw `git worktree remove` skips its

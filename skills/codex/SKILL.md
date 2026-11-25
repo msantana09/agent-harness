@@ -62,7 +62,7 @@ Pick the framework by what is being reviewed, before writing any prompt:
 
 | Subject | Framework |
 |---------|-----------|
-| A PR or branch diff (correctness, regression, test adequacy, merge-readiness) | **`inspect-pr`**: put `Use $inspect-pr to inspect PR #<N>` in the GOAL; Codex loads the skill from `~/.agents/skills/inspect-pr` (link it once: `mkdir -p ~/.agents/skills && ln -s <clone>/skills/inspect-pr ~/.agents/skills/`) and returns its response contract (`## Findings` … `## Verdict`). `/ship` is the canonical caller. |
+| A PR or branch diff (correctness, regression, test adequacy, merge-readiness) | **`inspect-pr`**: put `Use $inspect-pr to inspect PR #<N>` in the GOAL; Codex loads the skill from `~/.agents/skills/inspect-pr` (link it once: `mkdir -p ~/.agents/skills && ln -s <clone>/skills/inspect-pr ~/.agents/skills/`) and returns its response contract (`## Findings` … `## Verdict`). `/wrapup` is the canonical caller. |
 | A plan, design or architecture question; debugging; a security consultation | The prompt template in § Write the Prompt File. |
 
 Do not hand-write a diff-review checklist in a prompt: `inspect-pr` carries snapshot discipline,
@@ -74,7 +74,7 @@ round 1 add to the prompt: enumerate every remaining gap you can reproduce in ON
 whether the pattern exists in this codebase (cite the file) or is conceivable only;
 conceivable-only is Low. Then decide the detector's scope once (record `Decision:` /
 `Instead of:` on the PR and a Known-limits block in the file) and declare the rejected patterns
-settled in later prompts. `/ship` runs two rounds by default and a third only on a Blocker/High,
+settled in later prompts. `/wrapup` runs two rounds by default and a third only on a Blocker/High,
 so there is no later round to count on.
 
 ## Run a Job
